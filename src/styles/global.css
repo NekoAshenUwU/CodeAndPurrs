@@ -347,7 +347,6 @@ a {
   line-heigh
 
 
-cat > src/styles/global.css <<'EOF'
 :root {
   color: #5f5877;
   background: #f9e7ef;
