@@ -346,7 +346,6 @@ a {
   color: rgba(95, 88, 119, 0.82);
   line-heigh
 
-cd /root/CodeAndPurrs
 
 cat > src/styles/global.css <<'EOF'
 :root {
