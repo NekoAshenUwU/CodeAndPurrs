@@ -6,3 +6,7 @@ build/
 !.env.example
 .DS_Store
 *.log
+
+# Python
+__pycache__/
+*.pyc
