@@ -46,7 +46,8 @@ function readJSON(req) {
     let raw = '';
     req.on('data', (chunk) => {
       raw += chunk;
-      if (raw.length > 1_000_000) reject(new Error('请求体太大了'));
+      // 语音转写会带 base64 音频，放宽到 ~20MB
+      if (raw.length > 20_000_000) reject(new Error('请求体太大了'));
     });
     req.on('end', () => {
       try {
@@ -158,6 +159,41 @@ async function callGemini({ res, key, model, messages }) {
   });
 }
 
+// ---------- 语音转文字（复用 Gemini 听音频）----------
+async function transcribe({ audioBase64, mimeType }) {
+  const key = PROVIDERS.gemini.key();
+  if (!key) {
+    // 没配 Gemini key：返回一段提示，让前端流程能跑通
+    return '（mock 转写）配上 GEMINI_API_KEY 我就能听懂你的语音啦～';
+  }
+
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/${PROVIDERS.gemini.defaultModel}:generateContent?key=${key}`;
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            { inline_data: { mime_type: mimeType || 'audio/webm', data: audioBase64 } },
+            { text: '请把这段语音逐字转成文字，只输出文字本身，不要加任何解释或标点说明。' },
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => '');
+    throw new Error(`转写失败 (${resp.status})：${text.slice(0, 200)}`);
+  }
+
+  const data = await resp.json();
+  const parts = data?.candidates?.[0]?.content?.parts ?? [];
+  return parts.map((p) => p.text).filter(Boolean).join('').trim();
+}
+
 // ---------- Mock（没配 key 时）----------
 async function callMock({ res, provider, messages }) {
   const last = [...messages].reverse().find((m) => m.role === 'user')?.content ?? '';
@@ -181,7 +217,9 @@ async function callMock({ res, provider, messages }) {
 
 // ---------- 路由 ----------
 const server = http.createServer(async (req, res) => {
-  if (req.method !== 'POST' || !req.url?.startsWith('/api/chat')) {
+  const isChat = req.url?.startsWith('/api/chat');
+  const isTranscribe = req.url?.startsWith('/api/transcribe');
+  if (req.method !== 'POST' || (!isChat && !isTranscribe)) {
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'not found' }));
     return;
@@ -196,6 +234,20 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ----- 语音转文字 -----
+  if (isTranscribe) {
+    try {
+      const text = await transcribe({ audioBase64: body.audioBase64, mimeType: body.mimeType });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ text }));
+    } catch (err) {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err?.message || err) }));
+    }
+    return;
+  }
+
+  // ----- 聊天 -----
   const provider = body.provider === 'gemini' ? 'gemini' : 'deepseek';
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const model = typeof body.model === 'string' ? body.model : undefined;

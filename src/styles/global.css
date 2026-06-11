@@ -669,6 +669,98 @@ a {
   background: rgba(243, 191, 208, 0.3);
 }
 
+/* ---------- 语音气泡（微信式）---------- */
+.voice-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  max-width: 82%;
+}
+
+.voice-bubble {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  color: #6b4350;
+  border: 0;
+  border-radius: 20px;
+  border-bottom-right-radius: 6px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(243, 191, 208, 0.82));
+  box-shadow: 0 6px 18px rgba(118, 96, 132, 0.12);
+  cursor: pointer;
+}
+
+.voice-bubble:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.voice-bubble__icon {
+  font-size: 0.9rem;
+}
+
+.voice-bubble__bars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 20px;
+  flex: 1;
+}
+
+.voice-bubble__bars i {
+  width: 3px;
+  border-radius: 2px;
+  background: rgba(142, 100, 114, 0.55);
+}
+
+.voice-bubble.is-playing .voice-bubble__bars i {
+  animation: voice-pulse 0.9s infinite ease-in-out;
+}
+
+.voice-bubble.is-playing .voice-bubble__bars i:nth-child(odd) {
+  animation-delay: 0.25s;
+}
+
+@keyframes voice-pulse {
+  0%, 100% { transform: scaleY(0.6); }
+  50% { transform: scaleY(1.15); }
+}
+
+.voice-bubble__dur {
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.voice-wrap__t2t {
+  padding: 3px 12px;
+  color: #7a6bb0;
+  font-family: var(--round);
+  font-size: 0.76rem;
+  border: 1px solid rgba(201, 184, 241, 0.6);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+}
+
+.voice-wrap__t2t:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.voice-wrap__text {
+  padding: 9px 13px;
+  color: var(--ink);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  border-radius: 16px;
+  border-top-right-radius: 6px;
+  background: rgba(255, 255, 255, 0.78);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* ---------- 思考链折叠卡片 ---------- */
 .think-card {
   align-self: flex-start;
@@ -752,6 +844,56 @@ a {
   background: linear-gradient(0deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.46));
   backdrop-filter: blur(18px) saturate(1.4);
   -webkit-backdrop-filter: blur(18px) saturate(1.4);
+}
+
+.chat-input__mode {
+  flex-shrink: 0;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: transform 0.16s ease;
+}
+
+.chat-input__mode:active {
+  transform: scale(0.92);
+}
+
+.chat-input__mode:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.chat-input__hold {
+  flex: 1;
+  height: 44px;
+  color: #6b4350;
+  font-family: var(--round);
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  transition: background 0.16s ease, transform 0.16s ease;
+}
+
+.chat-input__hold.is-recording {
+  color: #fff;
+  background: linear-gradient(135deg, #d59ab0, #a98fd0);
+  transform: scale(1.01);
+  box-shadow: 0 0 0 4px rgba(201, 184, 241, 0.25);
+}
+
+.chat-input__hold:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .chat-input textarea {
