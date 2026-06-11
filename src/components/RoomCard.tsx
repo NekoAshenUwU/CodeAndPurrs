@@ -9,35 +9,31 @@ type RoomCardProps = {
 export function RoomCard({ room, onSelect }: RoomCardProps) {
   const [iconOk, setIconOk] = useState(true);
   const iconSrc = `${import.meta.env.BASE_URL}assets/icons/${room.id}.png`;
+  const isReady = room.status === 'ready';
 
   return (
     <button
-      className="room-card"
+      className={isReady ? 'room-tile is-ready' : 'room-tile'}
       type="button"
-      aria-label={`${room.name} ${room.englishName}`}
+      aria-label={`${room.name} ${room.englishName} · ${isReady ? 'Ready' : 'Soon'}`}
       onClick={() => onSelect(room)}
     >
-      <span className="room-card__icon" aria-hidden="true">
+      <span className="room-tile__icon" aria-hidden="true">
         {iconOk ? (
           <img
-            className="room-card__img"
+            className="room-tile__img"
             src={iconSrc}
             alt=""
             loading="lazy"
             onError={() => setIconOk(false)}
           />
         ) : (
-          room.emoji
+          <span className="room-tile__emoji">{room.emoji}</span>
         )}
+        <span className={isReady ? 'room-tile__dot is-ready' : 'room-tile__dot'} />
       </span>
-      <span className="room-card__copy">
-        <span className="room-card__name">{room.name}</span>
-        <span className="room-card__english">{room.englishName}</span>
-      </span>
-      <span className="room-card__summary">{room.summary}</span>
-      <span className={room.status === 'ready' ? 'room-card__status ready' : 'room-card__status'}>
-        {room.status === 'ready' ? 'Ready' : 'Soon'} · {room.actionLabel}
-      </span>
+      <span className="room-tile__name">{room.name}</span>
+      <span className="room-tile__english">{room.englishName}</span>
     </button>
   );
 }
