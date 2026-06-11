@@ -10,3 +10,6 @@ build/
 # Python
 __pycache__/
 *.pyc
+
+# TypeScript build cache
+*.tsbuildinfo
