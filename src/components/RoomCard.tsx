@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Room } from '../data/rooms';
 
 type RoomCardProps = {
@@ -6,6 +7,9 @@ type RoomCardProps = {
 };
 
 export function RoomCard({ room, onSelect }: RoomCardProps) {
+  const [iconOk, setIconOk] = useState(true);
+  const iconSrc = `${import.meta.env.BASE_URL}assets/icons/${room.id}.png`;
+
   return (
     <button
       className="room-card"
@@ -14,7 +18,17 @@ export function RoomCard({ room, onSelect }: RoomCardProps) {
       onClick={() => onSelect(room)}
     >
       <span className="room-card__icon" aria-hidden="true">
-        {room.emoji}
+        {iconOk ? (
+          <img
+            className="room-card__img"
+            src={iconSrc}
+            alt=""
+            loading="lazy"
+            onError={() => setIconOk(false)}
+          />
+        ) : (
+          room.emoji
+        )}
       </span>
       <span className="room-card__copy">
         <span className="room-card__name">{room.name}</span>
