@@ -28,6 +28,14 @@ const PROVIDERS = {
   },
 };
 
+// ElevenLabs：AI 给你发语音用的好音色
+const ELEVEN = {
+  key: () => process.env.ELEVENLABS_API_KEY,
+  voiceId: () => process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM',
+  model: () => process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2',
+};
+
+
 // ---------- 小工具 ----------
 function send(res, obj) {
   res.write(`data: ${JSON.stringify(obj)}\n\n`);
@@ -194,6 +202,62 @@ async function transcribe({ audioBase64, mimeType }) {
   return parts.map((p) => p.text).filter(Boolean).join('').trim();
 }
 
+// ---------- 文字转语音（ElevenLabs，AI 给你发语音）----------
+// 返回 { audio: Buffer, contentType }。按需调用，不自动每条都生成（省额度）。
+async function speak(text) {
+  const key = ELEVEN.key();
+  if (!key) {
+    // 没配 key：回一段 0.4s 的「哔」声占位，让播放流程能跑通
+    return { audio: beepWav(), contentType: 'audio/wav' };
+  }
+  const url = `https://api.elevenlabs.io/v1/text-to-speech/${ELEVEN.voiceId()}`;
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'xi-api-key': key,
+      'Content-Type': 'application/json',
+      Accept: 'audio/mpeg',
+    },
+    body: JSON.stringify({
+      text,
+      model_id: ELEVEN.model(),
+      voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+    }),
+  });
+  if (!resp.ok) {
+    const detail = await resp.text().catch(() => '');
+    throw new Error(`发声失败 (${resp.status})：${detail.slice(0, 200)}`);
+  }
+  const audio = Buffer.from(await resp.arrayBuffer());
+  return { audio, contentType: 'audio/mpeg' };
+}
+
+// 生成一段很短的正弦「哔」声 WAV（mock 占位用）
+function beepWav(freq = 523, ms = 400, rate = 16000) {
+  const n = Math.floor((rate * ms) / 1000);
+  const data = Buffer.alloc(n * 2);
+  for (let i = 0; i < n; i++) {
+    const fade = Math.min(1, i / 400, (n - i) / 400); // 淡入淡出，别太刺耳
+    const v = Math.sin((2 * Math.PI * freq * i) / rate) * 0.3 * fade;
+    data.writeInt16LE((v * 32767) | 0, i * 2);
+  }
+  const header = Buffer.alloc(44);
+  header.write('RIFF', 0);
+  header.writeUInt32LE(36 + data.length, 4);
+  header.write('WAVE', 8);
+  header.write('fmt ', 12);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20); // PCM
+  header.writeUInt16LE(1, 22); // mono
+  header.writeUInt32LE(rate, 24);
+  header.writeUInt32LE(rate * 2, 28);
+  header.writeUInt16LE(2, 32);
+  header.writeUInt16LE(16, 34);
+  header.write('data', 36);
+  header.writeUInt32LE(data.length, 40);
+  return Buffer.concat([header, data]);
+}
+
 // ---------- Mock（没配 key 时）----------
 async function callMock({ res, provider, messages }) {
   const last = [...messages].reverse().find((m) => m.role === 'user')?.content ?? '';
@@ -219,7 +283,8 @@ async function callMock({ res, provider, messages }) {
 const server = http.createServer(async (req, res) => {
   const isChat = req.url?.startsWith('/api/chat');
   const isTranscribe = req.url?.startsWith('/api/transcribe');
-  if (req.method !== 'POST' || (!isChat && !isTranscribe)) {
+  const isSpeak = req.url?.startsWith('/api/speak');
+  if (req.method !== 'POST' || (!isChat && !isTranscribe && !isSpeak)) {
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'not found' }));
     return;
@@ -240,6 +305,25 @@ const server = http.createServer(async (req, res) => {
       const text = await transcribe({ audioBase64: body.audioBase64, mimeType: body.mimeType });
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ text }));
+    } catch (err) {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err?.message || err) }));
+    }
+    return;
+  }
+
+  // ----- 文字转语音 -----
+  if (isSpeak) {
+    const text = String(body.text || '').trim();
+    if (!text) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: '没有要读的文字' }));
+      return;
+    }
+    try {
+      const { audio, contentType } = await speak(text.slice(0, 2000));
+      res.writeHead(200, { 'Content-Type': contentType, 'Content-Length': audio.length });
+      res.end(audio);
     } catch (err) {
       res.writeHead(502, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: String(err?.message || err) }));

@@ -799,6 +799,38 @@ a {
   word-break: break-word;
 }
 
+/* ---------- 听一声（AI 语音）---------- */
+.speak-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  padding: 4px 11px;
+  color: #7a6bb0;
+  font-family: var(--round);
+  font-size: 0.74rem;
+  border: 1px solid rgba(201, 184, 241, 0.55);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition: background 0.16s ease, transform 0.16s ease;
+}
+
+.speak-btn:active {
+  transform: scale(0.95);
+}
+
+.speak-btn.is-playing {
+  color: #8e6472;
+  background: rgba(243, 191, 208, 0.35);
+}
+
+.speak-btn.is-loading {
+  opacity: 0.7;
+  cursor: default;
+}
+
 /* ---------- 打字省略号 ---------- */
 .typing-dots {
   display: inline-flex;

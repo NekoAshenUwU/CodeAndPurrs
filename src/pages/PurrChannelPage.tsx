@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { streamChat, type ChatMessage, type Provider } from '../services/chat';
 import { clearLocal, loadLocal, saveLocal } from '../services/storage';
-import { transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
+import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
 
 const HISTORY_KEY = 'purr-channel:turns';
 const PROVIDER_KEY = 'purr-channel:provider';
@@ -110,6 +110,50 @@ function VoiceBubble({ voice, transcript, transcribing }: { voice: Voice; transc
       </button>
       {showText && !transcribing ? <div className="voice-wrap__text">{transcript || '（没听清）'}</div> : null}
     </div>
+  );
+}
+
+// 猫咪消息旁的「听一声」：点了才生成（ElevenLabs），生成过的缓存起来，再点不重复烧额度。
+function SpeakButton({ text }: { text: string }) {
+  const [state, setState] = useState<'idle' | 'loading' | 'playing'>('idle');
+  const urlRef = useRef<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const play = (url: string) => {
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    audio.onended = () => setState('idle');
+    audio.onerror = () => setState('idle');
+    void audio.play();
+    setState('playing');
+  };
+
+  const onClick = async () => {
+    if (state === 'playing') {
+      audioRef.current?.pause();
+      setState('idle');
+      return;
+    }
+    if (urlRef.current) {
+      play(urlRef.current);
+      return;
+    }
+    setState('loading');
+    try {
+      const url = await speak(text);
+      urlRef.current = url;
+      play(url);
+    } catch (err) {
+      setState('idle');
+      window.alert(`没发出声音：${(err as Error).message}`);
+    }
+  };
+
+  return (
+    <button type="button" className={`speak-btn is-${state}`} onClick={() => void onClick()} title="听猫咪念这句">
+      {state === 'loading' ? '…' : state === 'playing' ? '⏸' : '🔊'}
+      <span>{state === 'loading' ? '生成中' : state === 'playing' ? '播放中' : '听一声'}</span>
+    </button>
   );
 }
 
@@ -326,6 +370,7 @@ export function PurrChannelPage() {
                 <div className={`bubble bubble--bot${turn.status === 'error' ? ' is-error' : ''}`}>
                   {turn.content || (turn.status === 'streaming' ? <span className="typing-dots"><i /><i /><i /></span> : '')}
                 </div>
+                {turn.status === 'done' && turn.content ? <SpeakButton text={turn.content} /> : null}
               </div>
             </div>
           ),

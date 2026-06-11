@@ -84,6 +84,23 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+// AI 给你发语音：把一段文字交给后端（ElevenLabs）合成，拿回可播放的音频 URL。
+// 按需调用——你点了「听一声」才生成，不自动每条都烧额度。
+export async function speak(text: string, signal?: AbortSignal): Promise<string> {
+  const resp = await fetch('/api/speak', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+    signal,
+  });
+  if (!resp.ok) {
+    const data = await resp.json().catch(() => ({}));
+    throw new Error(data.error || `发声失败 (${resp.status})`);
+  }
+  const blob = await resp.blob();
+  return URL.createObjectURL(blob);
+}
+
 // 把一段录音转成文字。失败会 throw。
 export async function transcribeAudio(rec: Recording): Promise<string> {
   const audioBase64 = await blobToBase64(rec.blob);
