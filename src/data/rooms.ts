@@ -17,7 +17,7 @@ export const rooms: Room[] = [
     englishName: 'Purr Channel',
     emoji: '💬',
     status: 'ready',
-    summary: '先从这里开始聊天，之后接 DeepSeek 和 Gemini。',
+    summary: '在这里跟猫咪聊天，已接 DeepSeek 和 Gemini，带思考链。',
     actionLabel: '进入呼噜',
   },
   {
@@ -26,7 +26,7 @@ export const rooms: Room[] = [
     englishName: 'Whisperline',
     emoji: '🎧',
     status: 'soon',
-    summary: '语音气泡、播放、下载和以后接 ElevenLabs 的低音炮。',
+    summary: '微信式发语音：录音气泡、播放，还能一键转文字。',
     actionLabel: '听一声',
   },
   {
