@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { streamChat, type ChatMessage, type Provider } from '../services/chat';
+import { clearLocal, loadLocal, saveLocal } from '../services/storage';
+
+const HISTORY_KEY = 'purr-channel:turns';
+const PROVIDER_KEY = 'purr-channel:provider';
 
 type Turn = {
   id: string;
@@ -47,9 +51,16 @@ function ThinkingCard({ text, streaming }: { text: string; streaming: boolean })
 }
 
 export function PurrChannelPage() {
-  const [turns, setTurns] = useState<Turn[]>([]);
+  // 从小暗格读出上次的聊天记录；半截没说完的(streaming)归位成 done
+  const [turns, setTurns] = useState<Turn[]>(() =>
+    loadLocal<Turn[]>(HISTORY_KEY, []).map((t) =>
+      t.status === 'streaming' ? { ...t, status: 'done' } : t,
+    ),
+  );
   const [input, setInput] = useState('');
-  const [provider, setProvider] = useState<Provider>('deepseek');
+  const [provider, setProvider] = useState<Provider>(() =>
+    loadLocal<Provider>(PROVIDER_KEY, 'deepseek'),
+  );
   const [sending, setSending] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -58,6 +69,22 @@ export function PurrChannelPage() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [turns]);
+
+  // 聊天记录睡进小暗格（不在流式中途反复写，省一点）
+  useEffect(() => {
+    if (!sending) saveLocal(HISTORY_KEY, turns);
+  }, [turns, sending]);
+
+  useEffect(() => {
+    saveLocal(PROVIDER_KEY, provider);
+  }, [provider]);
+
+  const clearHistory = () => {
+    if (sending) return;
+    if (turns.length && !window.confirm('清空这间房的聊天记录？暗格里也会一起删掉哦。')) return;
+    setTurns([]);
+    clearLocal(HISTORY_KEY);
+  };
 
   const patchTurn = (id: string, patch: Partial<Turn>) =>
     setTurns((prev) =>
@@ -146,6 +173,16 @@ export function PurrChannelPage() {
             </button>
           ))}
         </div>
+        <button
+          type="button"
+          className="chat-head__clear"
+          onClick={clearHistory}
+          disabled={sending || turns.length === 0}
+          aria-label="清空聊天记录"
+          title="清空聊天记录"
+        >
+          🧹
+        </button>
       </header>
 
       <div className="chat-scroll" ref={scrollRef}>

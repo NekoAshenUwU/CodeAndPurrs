@@ -13,3 +13,6 @@ __pycache__/
 
 # TypeScript build cache
 *.tsbuildinfo
+
+# screenshots (本地预览用，不入库)
+shots/

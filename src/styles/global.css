@@ -570,6 +570,28 @@ a {
   cursor: default;
 }
 
+.chat-head__clear {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.16s ease, opacity 0.16s ease;
+}
+
+.chat-head__clear:active {
+  transform: scale(0.92);
+}
+
+.chat-head__clear:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* ---------- 消息区 ---------- */
 .chat-scroll {
   flex: 1;

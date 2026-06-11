@@ -21,6 +21,7 @@
     "@types/react-dom": "latest",
     "@vitejs/plugin-react": "latest",
     "concurrently": "^10.0.3",
+    "playwright": "^1.56.1",
     "typescript": "latest",
     "vite": "latest"
   }
