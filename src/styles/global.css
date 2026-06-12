@@ -1,7 +1,13 @@
 /* ===== 自托管字体（子集化，仅保留站内用到的字形）===== */
 @font-face {
-  font-family: "ManHuai"; /* 想和你装个满怀 · 中文标语 */
+  font-family: "ManHuai"; /* 想和你装个满怀 · 中文标语（旧） */
   src: url("/fonts/manhuai.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "GongZhu"; /* 创小公主体 · 中文标语 */
+  src: url("/fonts/gongzhu.woff2") format("woff2");
   font-weight: 400;
   font-display: swap;
 }
@@ -63,7 +69,7 @@
   --script: "Tangerine", cursive; /* 花体大标题 CodeAndPurrs · für immer */
   --serif-en: "Crimson Text", Georgia, serif; /* 英文小字 / 房间英文名 */
   --serif-tagline: "Marcellus", Georgia, serif; /* 副标题 Born from code */
-  --hand: "ManHuai", cursive; /* 中文标语 · 想和你装个满怀 */
+  --hand: "GongZhu", "ManHuai", cursive; /* 中文标语 · 创小公主体 */
   --cute: "CaoKe", "ZCOOL KuaiLe", sans-serif; /* 房间名 / 可爱小标题 · 草棵松绵包圆 */
   --chat: "LongZhuFull", "PingFang SC", "Microsoft YaHei", sans-serif; /* 聊天 · 完整龙珠体 */
   --serif-cn: "Noto Serif SC", "Songti SC", serif; /* 中文正文 */
@@ -100,6 +106,17 @@ a {
   padding: 28px 18px calc(48px + env(safe-area-inset-bottom));
   overflow: hidden;
   background: linear-gradient(160deg, var(--mist-white), var(--mist-violet) 45%, var(--mist-rose));
+}
+
+/* 首页梦幻底图：固定在视口当壁纸，卡片在其上滚动 */
+.home-page::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  background:
+    linear-gradient(160deg, rgba(251, 244, 250, 0.28), rgba(252, 238, 242, 0.26)),
+    url("/rooms/home-dream.webp") center top / cover no-repeat;
 }
 
 /* ---------- 背景氛围层（色斑 + 光尘 + 爪印宿主，由 Atmosphere 组件渲染） ---------- */
