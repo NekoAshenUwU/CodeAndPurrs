@@ -102,6 +102,7 @@ a {
 
 .home-page {
   position: relative;
+  isolation: isolate;
   min-height: 100vh;
   padding: 28px 18px calc(48px + env(safe-area-inset-bottom));
   overflow: hidden;

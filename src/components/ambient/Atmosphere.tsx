@@ -76,9 +76,6 @@ export function Atmosphere() {
 
   return (
     <div className="atmosphere" aria-hidden="true">
-      <div className="blob blob--a" />
-      <div className="blob blob--b" />
-      <div className="blob blob--c" />
       {!reduced &&
         DUST.map((d, i) => (
           <span
