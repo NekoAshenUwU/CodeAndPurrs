@@ -24,6 +24,14 @@
 5. 让 Purr Channel 真正调用 DeepSeek V4 和 Gemini 2.5 Flash。
 6. 后面再做 Whisperline、红包金库、导出舱等房间。
 
+## 猫爪足迹 / Neko Usage Bridge（重做计划）
+
+- 旧版桥接是给华为搭的，换红米后一直报错；决定**重做红米版**而不是硬修。
+- 已定架构：桥接 App **单向推送**使用数据到 VPS，网页从 VPS 读（不在手机上开本地服务，避开 MIUI 杀后台/混合内容/IP 变动）。
+- 主视觉 = 发光爪印活动环；含猫咪 AI 点评、爪印榜、24h 时间线、7 天趋势、小指标。
+- 分工：Codex 做红米桥接，Claude 做网页 + VPS 接收端。
+- 完整规格与数据契约见 `docs/neko-usage-bridge-spec.md`（§4 契约为两边唯一真相）。
+
 ## 注意
 
 GitHub token 不要截图，不要发给任何人。
