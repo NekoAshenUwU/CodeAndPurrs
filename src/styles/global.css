@@ -1,3 +1,17 @@
+/* ===== 自托管字体（子集化，仅保留站内用到的汉字，~150KB）===== */
+@font-face {
+  font-family: "LongZhu"; /* 标小智龙珠体 · 标语 */
+  src: url("/fonts/longzhu.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "CaoKe"; /* Aa草棵松绵包圆 · 房间名 */
+  src: url("/fonts/caoke.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
   color: #5f5877;
   background: #f9e7ef;
@@ -30,8 +44,9 @@
   /* 字体角色 */
   --script: "Niconne", cursive; /* 花体英文大标题 */
   --serif-en: "Crimson Text", Georgia, serif; /* 英文小字 / 房间英文名 */
-  --hand: "Ma Shan Zheng", "ZCOOL KuaiLe", cursive; /* 中文手写标语 */
-  --serif-cn: "Noto Serif SC", "Songti SC", serif; /* 中文正文 / 标题 */
+  --hand: "LongZhu", "Ma Shan Zheng", cursive; /* 中文标语 · 标小智龙珠体 */
+  --cute: "CaoKe", "ZCOOL KuaiLe", sans-serif; /* 房间名 / 可爱小标题 · 草棵松绵包圆 */
+  --serif-cn: "Noto Serif SC", "Songti SC", serif; /* 中文正文 */
 }
 
 * {
@@ -421,7 +436,7 @@ a {
 .rooms-section__header h2 {
   margin: 4px 0 0;
   color: var(--iris-deep);
-  font-family: var(--serif-cn);
+  font-family: var(--cute);
   font-size: clamp(1.5rem, 6vw, 2.3rem);
   font-weight: 500;
   line-height: 1.2;
@@ -536,8 +551,8 @@ a {
 }
 
 .room-tile__name {
-  font-family: var(--serif-cn);
-  font-size: 0.96rem;
+  font-family: var(--cute);
+  font-size: 1.02rem;
   font-weight: 500;
   line-height: 1.2;
   letter-spacing: 0.06em;
