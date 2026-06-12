@@ -114,9 +114,7 @@ a {
   inset: 0;
   z-index: -1;
   content: "";
-  background:
-    linear-gradient(160deg, rgba(251, 244, 250, 0.28), rgba(252, 238, 242, 0.26)),
-    url("/rooms/home-dream.webp") center top / cover no-repeat;
+  background: url("/rooms/home-dream.webp") center / cover no-repeat;
 }
 
 /* ---------- 背景氛围层（色斑 + 光尘 + 爪印宿主，由 Atmosphere 组件渲染） ---------- */
