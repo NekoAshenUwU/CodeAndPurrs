@@ -309,27 +309,59 @@ a {
 }
 
 .hero-card h1 {
-  margin: 6px 0 16px;
+  margin: 8px 0 18px;
   font-family: var(--script);
   /* 用容器单位 cqi，始终按卡片宽度缩放，永不溢出 */
-  font-size: min(11cqi, 4.2rem);
+  font-size: min(17cqi, 5.6rem);
   white-space: nowrap;
-  font-weight: 400;
-  line-height: 0.95;
-  background: linear-gradient(120deg, var(--blueviolet), var(--iris) 45%, var(--sakura));
+  font-weight: 700;
+  line-height: 1.02;
+  /* 流动渐变 */
+  background: linear-gradient(
+    110deg,
+    #7b8fe8 0%,
+    #8e6bc2 24%,
+    #c77fb4 46%,
+    #f2a9c4 60%,
+    #9b7bc8 82%,
+    #7b8fe8 100%
+  );
+  background-size: 260% auto;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  /* 流动光 + 呼吸发光 */
+  animation:
+    titleflow 8s linear infinite,
+    titleglow 3.6s ease-in-out infinite;
+}
+
+@keyframes titleflow {
+  to {
+    background-position: 260% center;
+  }
+}
+
+@keyframes titleglow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 5px rgba(216, 180, 254, 0.35))
+      drop-shadow(0 2px 7px rgba(242, 169, 196, 0.28));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(216, 180, 254, 0.72))
+      drop-shadow(0 0 28px rgba(242, 169, 196, 0.5));
+  }
 }
 
 /* 中文流动渐变标语 */
 .vow {
-  margin: 6px 0 16px;
+  margin: 8px 0 18px;
   font-family: var(--hand);
-  font-size: clamp(1.35rem, 6.6vw, 2rem);
+  font-size: clamp(1.62rem, 7.8vw, 2.5rem);
   font-weight: 400;
   line-height: 1.5;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
   background: linear-gradient(
     110deg,
     #7b8fe8 0%,
