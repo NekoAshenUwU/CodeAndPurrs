@@ -8,15 +8,24 @@ type RoomCardProps = {
 
 export function RoomCard({ room, onSelect }: RoomCardProps) {
   const [iconOk, setIconOk] = useState(true);
+  const [tapped, setTapped] = useState(false);
   const iconSrc = `${import.meta.env.BASE_URL}assets/icons/${room.id}.png`;
   const isReady = room.status === 'ready';
 
+  const classes = ['room-tile'];
+  if (isReady) classes.push('is-ready');
+  if (tapped) classes.push('is-tapped');
+
   return (
     <button
-      className={isReady ? 'room-tile is-ready' : 'room-tile'}
+      className={classes.join(' ')}
       type="button"
       aria-label={`${room.name} ${room.englishName} · ${isReady ? 'Ready' : 'Soon'}`}
-      onClick={() => onSelect(room)}
+      onClick={() => {
+        setTapped(true);
+        onSelect(room);
+      }}
+      onAnimationEnd={() => setTapped(false)}
     >
       <span className="room-tile__icon" aria-hidden="true">
         {iconOk ? (
