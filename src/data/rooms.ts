@@ -21,6 +21,7 @@ export const rooms: Room[] = [
     status: 'ready',
     summary: '在这里跟猫咪聊天，已接 DeepSeek 和 Gemini，带思考链。',
     actionLabel: '进入呼噜',
+    scene: true,
   },
   {
     id: 'whisperline',
@@ -30,6 +31,7 @@ export const rooms: Room[] = [
     status: 'soon',
     summary: '微信式发语音：录音气泡、播放，还能一键转文字。',
     actionLabel: '听一声',
+    scene: true,
   },
   {
     id: 'meme-box',
@@ -69,6 +71,7 @@ export const rooms: Room[] = [
     status: 'soon',
     summary: '绑定日、纪念日、第一次和每一个想记住的星星。',
     actionLabel: '看星星',
+    scene: true,
   },
   {
     id: 'catch-purring',
@@ -98,6 +101,7 @@ export const rooms: Room[] = [
     status: 'soon',
     summary: '任务、笔记、小提醒，完成后还能联动甜甜口袋。',
     actionLabel: '写待办',
+    scene: true,
   },
   {
     id: 'switchcore',
@@ -107,6 +111,7 @@ export const rooms: Room[] = [
     status: 'soon',
     summary: '切换 DeepSeek、Gemini 和以后接进来的更多模型。',
     actionLabel: '去调频',
+    scene: true,
   },
   {
     id: 'hidey-hole',
@@ -116,6 +121,7 @@ export const rooms: Room[] = [
     status: 'soon',
     summary: '聊天记录先睡在这台设备里，安全、私密、可导出。',
     actionLabel: '看暗格',
+    scene: true,
   },
   {
     id: 'export-pod',
@@ -125,5 +131,6 @@ export const rooms: Room[] = [
     status: 'soon',
     summary: '把小暗格打包，换手机时带去下一台设备。',
     actionLabel: '准备导出',
+    scene: true,
   },
 ];
