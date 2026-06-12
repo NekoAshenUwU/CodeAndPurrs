@@ -83,9 +83,9 @@ App 第一次启动给一个**引导页**，带按钮跳到对应设置（跳不
 
 ### 2.5 网络与安全
 
-- VPS 现在是 `http://178.128.127.91`（裸 IP、可能无 TLS）。两条路二选一，**强烈建议第一条**：
-  1. **给 VPS 配个域名 + Let's Encrypt TLS**，App 走 https（最稳，无明文告警）。
-  2. 临时方案：`android:usesCleartextTraffic` 仅对该 IP 放行（`network_security_config.xml` 里只白名单这个域/IP），**不要全局开明文**。
+- **`VPS_BASE = https://api.nekopurrs.uk`**（已有域名 `nekopurrs.uk`，VPS = `178.128.127.91`）。App 一律走这个 https 地址，**不要用裸 IP、不要走明文**。
+- 域名 + TLS 配置见 §5.1（一次性，配好后 App/网页都走 https，无明文告警）。
+- 万一 TLS 还没配好的临时兜底：`android:usesCleartextTraffic` 仅对 `api.nekopurrs.uk` 放行（`network_security_config.xml` 白名单单域），**不要全局开明文**；TLS 一上线就撤掉。
 - **鉴权**：请求头带 `X-Bridge-Token: <共享密钥>`。密钥写在 App 的 `local.properties`/BuildConfig，**别硬编码进提交的源码**，也别截图。VPS 侧用同一个密钥校验（§5）。
 - 超时设短（连接 10s / 读 15s），失败交给 WorkManager 重试，别让 UI 卡。
 
@@ -125,6 +125,8 @@ App 第一次启动给一个**引导页**，带按钮跳到对应设置（跳不
 ---
 
 ## 4. 数据契约（两边唯一真相）｜`schemaVersion: 1`
+
+> **`VPS_BASE = https://api.nekopurrs.uk`**（域名 `nekopurrs.uk` → VPS `178.128.127.91`，配置见 §5.1）。下文所有 `{VPS_BASE}` 都替换成它。
 
 ### 4.1 上传（桥接 → VPS）
 
@@ -209,6 +211,20 @@ GET {VPS_BASE}/api/usage/trend?owner=neko&days=7    → [{ date, totalForeground
 ---
 
 ## 5. VPS 接收端｜Claude 实现（接进 `server/proxy.mjs`，零依赖）
+
+### 5.1 域名 + HTTPS（一次性，先做这步）
+
+- 已有域名 **`nekopurrs.uk`**，VPS IP **`178.128.127.91`**。规划：
+  - `nekopurrs.uk`（或 `www`）→ 网站本体
+  - **`api.nekopurrs.uk` → VPS 接口（聊天后端 + 足迹接收，即 `VPS_BASE`）**
+- DNS：在域名商后台给 `api` 加一条 **A 记录 → `178.128.127.91`**（先关 Cloudflare 橙云/代理，确认直连通了再说）。
+- TLS（VPS 上跑一次，Nginx 反代到本地 Node 端口 `8787`）：
+  ```bash
+  sudo certbot --nginx -d api.nekopurrs.uk     # 自动签发 + 配置 https + 自动续期
+  ```
+  Nginx 把 `api.nekopurrs.uk:443` 反代到 `127.0.0.1:8787`。配好后 App/网页统一用 `https://api.nekopurrs.uk`。
+
+### 5.2 接收端实现
 
 - 沿用现有零依赖 Node http 风格，按 path 加分支：`/api/usage/ingest|ping|latest|day|trend`。
 - **存储**：零依赖，写 JSON 文件即可。目录 `server/data/usage/<owner>/<date>.json`；另存一个 `latest.json` 指针。`.gitignore` 掉 `server/data/`。
