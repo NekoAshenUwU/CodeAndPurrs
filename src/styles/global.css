@@ -612,11 +612,6 @@ a {
   width: clamp(58px, 18vw, 76px);
   aspect-ratio: 1;
   place-items: center;
-  border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.1));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  overflow: hidden;
 }
 
 .room-tile__img {
