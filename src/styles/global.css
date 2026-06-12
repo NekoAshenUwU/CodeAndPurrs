@@ -17,6 +17,21 @@
   --shadow: rgba(118, 96, 132, 0.18);
   --display: "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif;
   --round: "Fredoka", ui-rounded, "Segoe UI", sans-serif;
+
+  /* ===== 首页改版 v2：仙气浪漫风 token ===== */
+  --mist-white: #fbf4fa; /* 背景起点 */
+  --mist-violet: #ede3f7; /* 背景中段 */
+  --mist-rose: #fceef2; /* 背景终点 */
+  --iris: #9b7bc8; /* 主紫 */
+  --iris-deep: #5d4a7e; /* 深紫正文 */
+  --sakura: #f2a9c4; /* 樱粉 */
+  --blueviolet: #7b8fe8; /* 紫蓝 */
+  --glow: rgba(216, 180, 254, 0.55); /* 发光 */
+  /* 字体角色 */
+  --script: "Niconne", cursive; /* 花体英文大标题 */
+  --serif-en: "Cormorant Garamond", Georgia, serif; /* 英文小字 / 房间英文名 */
+  --hand: "Ma Shan Zheng", "ZCOOL KuaiLe", cursive; /* 中文手写标语 */
+  --serif-cn: "Noto Serif SC", "Songti SC", serif; /* 中文正文 / 标题 */
 }
 
 * {
@@ -47,44 +62,137 @@ a {
 .home-page {
   position: relative;
   min-height: 100vh;
-  padding: 28px 18px calc(40px + env(safe-area-inset-bottom));
+  padding: 28px 18px calc(48px + env(safe-area-inset-bottom));
   overflow: hidden;
-  background:
-    radial-gradient(circle at 20% 12%, rgba(255, 255, 255, 0.95), transparent 24%),
-    radial-gradient(circle at 82% 18%, rgba(201, 184, 241, 0.52), transparent 28%),
-    radial-gradient(circle at 50% 92%, rgba(255, 245, 206, 0.72), transparent 36%),
-    linear-gradient(160deg, #f8dbe7 0%, #f7e8ff 48%, #fff5ce 100%);
+  background: linear-gradient(160deg, var(--mist-white), var(--mist-violet) 45%, var(--mist-rose));
 }
 
-/* floating aurora blobs for depth */
-.home-page::after {
-  position: fixed;
-  inset: -20% -10% auto -10%;
-  z-index: 0;
-  height: 70vh;
-  pointer-events: none;
-  content: "";
-  background:
-    radial-gradient(40% 50% at 18% 30%, rgba(243, 191, 208, 0.55), transparent 70%),
-    radial-gradient(38% 46% at 82% 22%, rgba(201, 184, 241, 0.5), transparent 70%),
-    radial-gradient(42% 44% at 60% 78%, rgba(255, 245, 206, 0.55), transparent 72%);
-  filter: blur(28px);
-}
-
-.home-page::before {
+/* ---------- 背景氛围层（色斑 + 光尘 + 爪印宿主，由 Atmosphere 组件渲染） ---------- */
+.atmosphere {
   position: fixed;
   inset: 0;
   z-index: 0;
+  overflow: hidden;
   pointer-events: none;
-  background-image:
-    radial-gradient(circle, rgba(95, 88, 119, 0.13) 1px, transparent 1px),
-    radial-gradient(circle, rgba(255, 255, 255, 0.85) 1px, transparent 1px);
-  background-position:
-    0 0,
-    14px 18px;
-  background-size: 34px 34px;
-  content: "";
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent 70%);
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+}
+
+.blob--a {
+  top: -8vh;
+  left: -12vw;
+  width: 54vw;
+  height: 54vw;
+  background: var(--sakura);
+  opacity: 0.42;
+  animation: drift-a 32s ease-in-out infinite;
+}
+
+.blob--b {
+  top: 6vh;
+  right: -14vw;
+  width: 50vw;
+  height: 50vw;
+  background: var(--iris);
+  opacity: 0.38;
+  animation: drift-b 28s ease-in-out infinite;
+}
+
+.blob--c {
+  bottom: -16vh;
+  left: 22vw;
+  width: 48vw;
+  height: 48vw;
+  background: var(--cream);
+  opacity: 0.5;
+  animation: drift-c 37s ease-in-out infinite;
+}
+
+@keyframes drift-a {
+  50% {
+    transform: translate(8vw, 6vh) scale(1.12);
+  }
+}
+@keyframes drift-b {
+  50% {
+    transform: translate(-7vw, 5vh) scale(1.08);
+  }
+}
+@keyframes drift-c {
+  50% {
+    transform: translate(5vw, -7vh) scale(1.15);
+  }
+}
+
+/* 光尘：从底部缓缓上浮 */
+.dust {
+  position: absolute;
+  bottom: -6vh;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff, rgba(216, 180, 254, 0.7) 60%, transparent);
+  box-shadow: 0 0 8px 2px var(--glow);
+  opacity: 0;
+  animation: dustrise linear infinite;
+}
+
+@keyframes dustrise {
+  0% {
+    transform: translateY(0) scale(0.6);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.9;
+  }
+  85% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(var(--drift, 0), -112vh) scale(1);
+    opacity: 0;
+  }
+}
+
+/* 看不见的猫：爪印路过 */
+.paw {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  color: var(--sakura);
+  opacity: 0;
+  transform: var(--t);
+  animation: pawfade 2.6s ease forwards;
+}
+
+.paw svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes pawfade {
+  0% {
+    opacity: 0;
+    transform: var(--t) scale(0.7);
+  }
+  10% {
+    opacity: 0.22;
+  }
+  14% {
+    transform: var(--t) scale(1);
+  }
+  69% {
+    opacity: 0.22;
+  }
+  100% {
+    opacity: 0;
+    transform: var(--t) scale(1);
+  }
 }
 
 .hero-card,
@@ -96,47 +204,55 @@ a {
 
 /* ---------- liquid glass hero ---------- */
 .hero-card {
+  position: relative;
   overflow: hidden;
-  width: min(100%, 720px);
-  margin: 0 auto;
-  padding: 44px 26px 32px;
+  width: min(100%, 560px);
+  margin: 4vh auto 0;
+  padding: 48px 26px 38px;
   text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 36px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.32));
+  background: rgba(255, 255, 255, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 34px;
   box-shadow:
-    0 26px 80px var(--shadow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    inset 0 -18px 40px rgba(201, 184, 241, 0.16);
-  backdrop-filter: blur(22px) saturate(1.4);
-  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.2),
+    0 24px 60px -20px rgba(155, 123, 200, 0.35);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
 }
 
-.hero-card::before,
-.hero-card::after {
-  position: absolute;
-  z-index: 0;
-  display: block;
-  border-radius: 999px;
-  content: "";
-  filter: blur(1px);
-}
-
+/* 缓慢漂移的斜高光，模拟玻璃反光 */
 .hero-card::before {
-  top: -46px;
-  right: -34px;
-  width: 120px;
-  height: 120px;
-  background: rgba(243, 191, 208, 0.44);
+  position: absolute;
+  top: -60%;
+  left: -40%;
+  z-index: 0;
+  width: 55%;
+  height: 220%;
+  content: "";
+  background: linear-gradient(
+    115deg,
+    transparent,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent
+  );
+  transform: rotate(8deg);
+  pointer-events: none;
+  animation: sheen 9s ease-in-out infinite;
 }
 
-.hero-card::after {
-  bottom: -52px;
-  left: -26px;
-  width: 140px;
-  height: 140px;
-  background: rgba(255, 245, 206, 0.68);
+@keyframes sheen {
+  0% {
+    left: -45%;
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    left: 125%;
+    opacity: 0.3;
+  }
 }
 
 .hero-card > * {
@@ -157,26 +273,62 @@ a {
 }
 
 .hero-card h1 {
-  margin: 10px 0 18px;
-  color: var(--ink);
-  font-family: var(--round);
-  font-size: clamp(2.7rem, 12vw, 5rem);
-  font-weight: 700;
-  line-height: 0.98;
-  letter-spacing: -0.01em;
-  background: linear-gradient(135deg, #8e6472 0%, #7a6bb0 55%, #b58fb0 100%);
+  margin: 6px 0 16px;
+  font-family: var(--script);
+  font-size: clamp(2.4rem, 11.5vw, 4.2rem);
+  font-weight: 400;
+  line-height: 0.95;
+  background: linear-gradient(120deg, var(--blueviolet), var(--iris) 45%, var(--sakura));
   -webkit-background-clip: text;
   background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: transparent;
 }
 
-.hero-card__poem {
+/* 中文流动渐变标语 */
+.vow {
+  margin: 6px 0 16px;
+  font-family: var(--hand);
+  font-size: clamp(1.35rem, 6.6vw, 2rem);
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  background: linear-gradient(
+    110deg,
+    #7b8fe8 0%,
+    #8e6bc2 22%,
+    #c77fb4 45%,
+    #e89bb8 62%,
+    #9b7bc8 82%,
+    #7b8fe8 100%
+  );
+  background-size: 280% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: vowflow 9s linear infinite;
+}
+
+@keyframes vowflow {
+  to {
+    background-position: 280% center;
+  }
+}
+
+.vow-en {
   margin: 0;
-  color: rgba(111, 106, 130, 0.92);
-  font-family: var(--display);
-  font-size: clamp(1.3rem, 5.6vw, 2rem);
+  color: var(--iris-deep);
+  font-family: var(--serif-en);
+  font-style: italic;
+  font-size: clamp(0.95rem, 3.8vw, 1.18rem);
   line-height: 1.7;
-  letter-spacing: 0.04em;
+  opacity: 0.86;
+}
+
+.vow-en .forever {
+  font-family: var(--script);
+  font-style: normal;
+  font-size: 1.55em;
+  color: var(--sakura);
 }
 
 .hero-card__actions {
@@ -215,13 +367,41 @@ a {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(243, 191, 208, 0.66));
 }
 
-.hero-card__promise {
-  margin: 30px auto 0;
-  color: rgba(124, 120, 146, 0.65);
-  font-family: var(--round);
-  font-size: 0.92rem;
+/* 首页 eyebrow 改用花体衬线 */
+.hero-card__eyebrow {
+  color: var(--iris);
+  font-family: var(--serif-en);
+  font-size: 0.95rem;
   font-style: italic;
-  letter-spacing: 0.03em;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: none;
+}
+
+/* 呼噜涟漪：在主按钮上荡开声波圆环 */
+.purr-btn {
+  position: relative;
+}
+
+.purr-ripple {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  border: 1px solid rgba(155, 123, 200, 0.5);
+  border-radius: 999px;
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 0.5;
+  pointer-events: none;
+  animation: purr-ripple 1.2s ease-out forwards;
+}
+
+@keyframes purr-ripple {
+  to {
+    transform: translate(-50%, -50%) scale(1.8);
+    opacity: 0;
+  }
 }
 
 /* ---------- rooms ---------- */
@@ -237,11 +417,12 @@ a {
 
 .rooms-section__header h2 {
   margin: 4px 0 0;
-  color: var(--ink);
-  font-family: var(--display);
-  font-size: clamp(1.6rem, 6.4vw, 2.5rem);
-  font-weight: 400;
-  line-height: 1.15;
+  color: var(--iris-deep);
+  font-family: var(--serif-cn);
+  font-size: clamp(1.5rem, 6vw, 2.3rem);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
 }
 
 .rooms-section__header span {
@@ -352,15 +533,18 @@ a {
 }
 
 .room-tile__name {
-  font-family: var(--display);
-  font-size: 0.98rem;
+  font-family: var(--serif-cn);
+  font-size: 0.96rem;
+  font-weight: 500;
   line-height: 1.2;
+  letter-spacing: 0.06em;
 }
 
 .room-tile__english {
-  color: var(--muted);
-  font-family: var(--round);
-  font-size: 0.72rem;
+  color: var(--iris);
+  font-family: var(--serif-en);
+  font-size: 0.76rem;
+  font-style: italic;
   font-weight: 500;
   letter-spacing: 0.02em;
 }
@@ -470,11 +654,72 @@ a {
   }
 }
 
+/* ---------- 偷偷写情书的光标 ---------- */
+.love-cursor {
+  position: fixed;
+  z-index: 3;
+  max-width: 78vw;
+  font-family: var(--serif-cn);
+  font-size: 13px;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+}
+
+.love-cursor.is-hiding {
+  opacity: 0;
+}
+
+.love-cursor__text {
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.love-cursor__caret {
+  display: inline-block;
+  width: 1px;
+  height: 1.05em;
+  margin-left: 1px;
+  vertical-align: -0.12em;
+  animation: caret-blink 0.5s steps(1) infinite;
+}
+
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .room-tile,
   .hero-card__actions button,
   .hero-card__actions a {
     transition: none;
+  }
+
+  /* 关掉爪印、光标、涟漪、光斑漂移、斜高光、标语流动 */
+  .blob,
+  .dust,
+  .paw,
+  .hero-card::before,
+  .vow,
+  .purr-ripple,
+  .love-cursor__caret {
+    animation: none !important;
+  }
+
+  .dust,
+  .paw,
+  .love-cursor {
+    display: none !important;
+  }
+
+  .vow {
+    background-position: 0 center;
   }
 }
 

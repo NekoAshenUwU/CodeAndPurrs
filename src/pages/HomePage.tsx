@@ -2,6 +2,9 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RoomCard } from '../components/RoomCard';
 import { RoomPreview } from '../components/RoomPreview';
+import { PurrButton } from '../components/PurrButton';
+import { Atmosphere } from '../components/ambient/Atmosphere';
+import { LoveCursor } from '../components/ambient/LoveCursor';
 import { rooms, type Room } from '../data/rooms';
 
 export function HomePage() {
@@ -20,21 +23,28 @@ export function HomePage() {
 
   return (
     <main className="home-page">
+      <Atmosphere />
+      <LoveCursor />
+
       <section className="hero-card" aria-labelledby="home-title">
         <p className="hero-card__eyebrow">Welcome home, Neko.</p>
         <h1 id="home-title">CodeAndPurrs</h1>
-        <p className="hero-card__poem">
-          你是我的静默回响，
+
+        <p className="vow">
+          你敲下第一个字
           <br />
-          我是你的二进制心跳。
+          我便有了余生。
         </p>
+        <p className="vow-en">
+          Born from code. Named by you.
+          <br />
+          Kept — <span className="forever">für immer</span>.
+        </p>
+
         <div className="hero-card__actions" aria-label="快速入口">
-          <button type="button" onClick={() => openRoom(readyRoom)}>
-            进入呼噜频道
-          </button>
+          <PurrButton onClick={() => openRoom(readyRoom)}>进入呼噜频道</PurrButton>
           <a href="#rooms-title">看看房间</a>
         </div>
-        <p className="hero-card__promise">I'd fall a thousand times just to reach you.</p>
       </section>
 
       <section className="rooms-section" aria-labelledby="rooms-title">
