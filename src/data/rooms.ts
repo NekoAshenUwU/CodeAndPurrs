@@ -8,6 +8,8 @@ export type Room = {
   status: RoomStatus;
   summary: string;
   actionLabel: string;
+  /** 预览层场景背景图（public/rooms/{id}.webp），有则在房间预览顶部铺满 */
+  scene?: boolean;
 };
 
 export const rooms: Room[] = [
@@ -37,6 +39,7 @@ export const rooms: Room[] = [
     status: 'soon',
     summary: '放表情包、贴纸和那些奇奇怪怪但超可爱的脑洞。',
     actionLabel: '打开盒子',
+    scene: true,
   },
   {
     id: 'sweetie-pocket',
@@ -46,6 +49,7 @@ export const rooms: Room[] = [
     status: 'soon',
     summary: '虚拟红包、奖励券和被偏爱的小惊喜。',
     actionLabel: '拆甜甜',
+    scene: true,
   },
   {
     id: 'furever-fund',
@@ -55,6 +59,7 @@ export const rooms: Room[] = [
     status: 'soon',
     summary: '收藏红包记录、语音、贴纸和以后攒下来的小纪念。',
     actionLabel: '看金库',
+    scene: true,
   },
   {
     id: 'little-star-notes',
@@ -73,6 +78,7 @@ export const rooms: Room[] = [
     status: 'soon',
     summary: '只做主动打卡和报平安，不做偷偷定位。',
     actionLabel: '报平安',
+    scene: true,
   },
   {
     id: 'paw-trail',
@@ -82,6 +88,7 @@ export const rooms: Room[] = [
     status: 'soon',
     summary: '以后接手机使用记录，先预留足迹入口。',
     actionLabel: '看足迹',
+    scene: true,
   },
   {
     id: 'purr-todos',

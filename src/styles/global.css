@@ -591,6 +591,22 @@ a {
   -webkit-backdrop-filter: blur(22px) saturate(1.4);
 }
 
+/* 带场景头图的房间预览 */
+.room-preview--scene {
+  overflow: hidden;
+  padding-top: 0;
+}
+
+.room-preview__hero {
+  height: clamp(260px, 56vw, 360px);
+  margin: 0 -20px 16px;
+  background-size: cover;
+  background-position: center 48%;
+  /* 底部柔化，让场景图与玻璃卡片自然过渡 */
+  -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent);
+  mask-image: linear-gradient(180deg, #000 72%, transparent);
+}
+
 .room-preview__close {
   position: absolute;
   top: 12px;
