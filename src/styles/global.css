@@ -1,7 +1,19 @@
-/* ===== 自托管字体（子集化，仅保留站内用到的汉字，~150KB）===== */
+/* ===== 自托管字体（子集化，仅保留站内用到的字形）===== */
 @font-face {
-  font-family: "LongZhu"; /* 标小智龙珠体 · 标语 */
-  src: url("/fonts/longzhu.woff2") format("woff2");
+  font-family: "ManHuai"; /* 想和你装个满怀 · 中文标语 */
+  src: url("/fonts/manhuai.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Tangerine"; /* 大标题 CodeAndPurrs · 花体签名 */
+  src: url("/fonts/tangerine.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Marcellus"; /* 副标题 Born from code · 优雅衬线 */
+  src: url("/fonts/marcellus.woff2") format("woff2");
   font-weight: 400;
   font-display: swap;
 }
@@ -48,9 +60,10 @@
   --blueviolet: #7b8fe8; /* 紫蓝 */
   --glow: rgba(216, 180, 254, 0.55); /* 发光 */
   /* 字体角色 */
-  --script: "Niconne", cursive; /* 花体英文大标题 */
+  --script: "Tangerine", cursive; /* 花体大标题 CodeAndPurrs · für immer */
   --serif-en: "Crimson Text", Georgia, serif; /* 英文小字 / 房间英文名 */
-  --hand: "LongZhu", "Ma Shan Zheng", cursive; /* 中文标语 · 标小智龙珠体 */
+  --serif-tagline: "Marcellus", Georgia, serif; /* 副标题 Born from code */
+  --hand: "ManHuai", cursive; /* 中文标语 · 想和你装个满怀 */
   --cute: "CaoKe", "ZCOOL KuaiLe", sans-serif; /* 房间名 / 可爱小标题 · 草棵松绵包圆 */
   --chat: "LongZhuFull", "PingFang SC", "Microsoft YaHei", sans-serif; /* 聊天 · 完整龙珠体 */
   --serif-cn: "Noto Serif SC", "Songti SC", serif; /* 中文正文 */
@@ -342,11 +355,12 @@ a {
 .vow-en {
   margin: 0;
   color: var(--iris-deep);
-  font-family: var(--serif-en);
-  font-style: italic;
-  font-size: clamp(0.95rem, 3.8vw, 1.18rem);
+  font-family: var(--serif-tagline);
+  font-style: normal;
+  font-size: clamp(0.98rem, 3.9vw, 1.22rem);
+  letter-spacing: 0.02em;
   line-height: 1.7;
-  opacity: 0.86;
+  opacity: 0.88;
 }
 
 .vow-en .forever {
