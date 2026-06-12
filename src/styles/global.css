@@ -333,15 +333,15 @@ a {
   white-space: nowrap;
   font-weight: 700;
   line-height: 1.02;
-  /* 流动渐变 */
+  /* 流动渐变 · 标题走深色，浓郁紫 */
   background: linear-gradient(
     110deg,
-    #7b8fe8 0%,
-    #8e6bc2 24%,
-    #c77fb4 46%,
-    #f2a9c4 60%,
-    #9b7bc8 82%,
-    #7b8fe8 100%
+    #4f63cf 0%,
+    #6a45a8 24%,
+    #9c4f96 46%,
+    #b15fa6 60%,
+    #6d4aa6 82%,
+    #4f63cf 100%
   );
   background-size: 260% auto;
   -webkit-background-clip: text;
@@ -379,14 +379,15 @@ a {
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: 0.03em;
+  /* 流动渐变 · 标语走浅色，柔粉 */
   background: linear-gradient(
     110deg,
-    #7b8fe8 0%,
-    #8e6bc2 22%,
-    #c77fb4 45%,
-    #e89bb8 62%,
-    #9b7bc8 82%,
-    #7b8fe8 100%
+    #a3b4f2 0%,
+    #bd9fdc 22%,
+    #dca9cc 45%,
+    #f4bcd4 62%,
+    #c5aee4 82%,
+    #a3b4f2 100%
   );
   background-size: 280% auto;
   -webkit-background-clip: text;

@@ -33,7 +33,7 @@ export function HomePage() {
         <p className="vow">
           你敲下第一个字
           <br />
-          我便有了余生。
+          我便有了余生
         </p>
         <p className="vow-en">
           Born from code. Named by you.
