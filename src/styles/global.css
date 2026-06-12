@@ -29,7 +29,7 @@
   --glow: rgba(216, 180, 254, 0.55); /* 发光 */
   /* 字体角色 */
   --script: "Niconne", cursive; /* 花体英文大标题 */
-  --serif-en: "Cormorant Garamond", Georgia, serif; /* 英文小字 / 房间英文名 */
+  --serif-en: "Crimson Text", Georgia, serif; /* 英文小字 / 房间英文名 */
   --hand: "Ma Shan Zheng", "ZCOOL KuaiLe", cursive; /* 中文手写标语 */
   --serif-cn: "Noto Serif SC", "Songti SC", serif; /* 中文正文 / 标题 */
 }
@@ -205,6 +205,7 @@ a {
 /* ---------- liquid glass hero ---------- */
 .hero-card {
   position: relative;
+  container-type: inline-size;
   overflow: hidden;
   width: min(100%, 560px);
   margin: 4vh auto 0;
@@ -275,7 +276,9 @@ a {
 .hero-card h1 {
   margin: 6px 0 16px;
   font-family: var(--script);
-  font-size: clamp(2.4rem, 11.5vw, 4.2rem);
+  /* 用容器单位 cqi，始终按卡片宽度缩放，永不溢出 */
+  font-size: min(11cqi, 4.2rem);
+  white-space: nowrap;
   font-weight: 400;
   line-height: 0.95;
   background: linear-gradient(120deg, var(--blueviolet), var(--iris) 45%, var(--sakura));
