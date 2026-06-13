@@ -1875,13 +1875,13 @@ a {
   z-index: -1;
   overflow: hidden;
 }
-/* 用 GPT 原图本身，仅轻微模糊留点梦幻，保证猫咪/气泡/图标清楚可辨 */
+/* 用 GPT 新画的画框背景(中间留白给内容、四周边轨猫咪/图标)；几乎不模糊，留住可爱细节 */
 .paw-sky__photo {
   position: absolute;
   inset: 0;
-  background: url("/rooms/paw-trail.webp") center / cover no-repeat;
-  filter: blur(4px) saturate(1.05);
-  transform: scale(1.05);
+  background: url("/rooms/paw-trail-bg.webp") center / cover no-repeat;
+  filter: blur(2px) saturate(1.04);
+  transform: scale(1.03);
 }
 .paw-sky__tint {
   position: absolute;
