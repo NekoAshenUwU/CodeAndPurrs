@@ -109,14 +109,7 @@ a {
   background: linear-gradient(160deg, var(--mist-white), var(--mist-violet) 45%, var(--mist-rose));
 }
 
-/* 首页梦幻底图：固定在视口当壁纸，卡片在其上滚动 */
-.home-page::before {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  content: "";
-  background: url("/rooms/home-dream.webp") center / cover no-repeat;
-}
+/* 底图已移到 Atmosphere 的 .timesky__photo（带时段色纱），这里不再重复铺壁纸 */
 
 /* ---------- 背景氛围层（时段天空 + 光尘 + 星点 + 爪印宿主，由 Atmosphere 组件渲染） ---------- */
 .atmosphere {
@@ -127,11 +120,16 @@ a {
   pointer-events: none;
 }
 
-/* 会呼吸的时间背景：四套渐变叠放，按 tod crossfade（饱和度压低，跟马卡龙图标协调） */
+/* 会呼吸的时间背景：GPT 梦境底图常驻，上叠随时段 crossfade 的薄色纱 */
 .timesky,
+.timesky__photo,
 .timesky__layer {
   position: absolute;
   inset: 0;
+}
+
+.timesky__photo {
+  background: url("/rooms/home-dream.webp") center / cover no-repeat;
 }
 
 .timesky__layer {
@@ -139,22 +137,26 @@ a {
   transition: opacity 1.8s ease;
 }
 
-.timesky__layer--dawn {
-  background: linear-gradient(165deg, #fdeede 0%, #fce1ec 50%, #f7dfe9 100%);
-}
-
+/* 白天：几乎透明，让原图发光（用户最爱的就是这张白天图） */
 .timesky__layer--day {
-  background: linear-gradient(165deg, #e6effb 0%, #ece4f7 50%, #f4ebfb 100%);
+  background: linear-gradient(165deg, rgba(210, 230, 255, 0.14), rgba(225, 215, 245, 0.1));
 }
 
+/* 清晨：奶橘柔雾 */
+.timesky__layer--dawn {
+  background: linear-gradient(165deg, rgba(255, 214, 180, 0.38), rgba(250, 200, 220, 0.26));
+}
+
+/* 傍晚：粉紫晚霞 */
 .timesky__layer--dusk {
-  background: linear-gradient(165deg, #f7e2ec 0%, #ecdcf3 45%, #e2cfee 78%, #d6c2e8 100%);
+  background: linear-gradient(165deg, rgba(245, 180, 210, 0.4), rgba(150, 120, 200, 0.4));
 }
 
+/* 深夜：压暗成深空（若放了 home-dream-night.webp 则用夜图，否则把原图压暗兜底） */
 .timesky__layer--night {
   background:
-    radial-gradient(120% 80% at 50% 0%, rgba(91, 74, 126, 0.5), transparent 60%),
-    linear-gradient(165deg, #332d4f 0%, #3f3760 52%, #463a5e 100%);
+    linear-gradient(165deg, rgba(38, 32, 60, 0.84), rgba(52, 44, 78, 0.78)),
+    url("/rooms/home-dream-night.webp") center / cover no-repeat;
 }
 
 .timesky.is-dawn .timesky__layer--dawn,
@@ -848,6 +850,33 @@ a {
   pointer-events: none;
 }
 
+/* 光跟着手走：高光焦点随指针流动，像光在玻璃表面滑过（位置由 RoomCard 写入 --mx/--my） */
+.room-tile__glow {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  content: "";
+  border-radius: inherit;
+  background: radial-gradient(
+    58% 58% at var(--mx, 50%) var(--my, 26%),
+    rgba(255, 255, 255, 0.82),
+    rgba(255, 255, 255, 0.2) 34%,
+    transparent 62%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.room-tile:hover .room-tile__glow,
+.room-tile:focus-visible .room-tile__glow {
+  opacity: 0.85;
+}
+
+.room-tile:active .room-tile__glow {
+  opacity: 1;
+}
+
 /* 点击光环（默认隐藏，点一下扩散一圈） */
 .room-tile__icon::after {
   position: absolute;
@@ -878,18 +907,27 @@ a {
   animation: tap-ripple 0.52s ease-out;
 }
 
+/* 液态按压：非等比挤压 + 圆角形变，回弹时像果冻/水珠晃一下 */
 @keyframes tap-pop {
   0% {
-    transform: scale(1);
+    transform: scale(1, 1);
+    border-radius: 22px;
   }
-  35% {
-    transform: scale(0.86);
+  28% {
+    transform: scale(0.9, 0.84);
+    border-radius: 30px 24px 26px 22px;
   }
-  65% {
-    transform: scale(1.09);
+  58% {
+    transform: scale(1.07, 1.11);
+    border-radius: 16px 22px 18px 26px;
+  }
+  80% {
+    transform: scale(0.98, 0.99);
+    border-radius: 24px 20px 24px 20px;
   }
   100% {
-    transform: scale(1);
+    transform: scale(1, 1);
+    border-radius: 22px;
   }
 }
 
@@ -926,6 +964,7 @@ a {
 
 .room-tile__dot {
   position: absolute;
+  z-index: 3;
   top: 8px;
   right: 8px;
   width: 9px;

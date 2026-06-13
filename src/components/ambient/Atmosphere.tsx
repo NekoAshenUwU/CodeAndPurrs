@@ -110,8 +110,9 @@ export function Atmosphere({ tod }: { tod: TimeOfDay }) {
 
   return (
     <div className="atmosphere" aria-hidden="true">
-      {/* 会呼吸的时间背景：四套渐变叠放，按 tod crossfade */}
+      {/* 会呼吸的时间背景：GPT 梦境底图 + 随时段叠的薄色纱 crossfade */}
       <div className={`timesky is-${tod}`}>
+        <div className="timesky__photo" />
         {TODS.map((t) => (
           <div key={t} className={`timesky__layer timesky__layer--${t}`} />
         ))}
