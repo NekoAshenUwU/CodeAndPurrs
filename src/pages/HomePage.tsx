@@ -31,6 +31,10 @@ export function HomePage() {
       navigate('/purr-channel');
       return;
     }
+    if (room.id === 'paw-trail') {
+      navigate('/paw-trail');
+      return;
+    }
     setSelectedRoom(room);
   };
 
