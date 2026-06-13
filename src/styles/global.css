@@ -152,10 +152,10 @@ a {
   background: linear-gradient(165deg, rgba(245, 180, 210, 0.4), rgba(150, 120, 200, 0.4));
 }
 
-/* 深夜：压暗成深空（若放了 home-dream-night.webp 则用夜图，否则把原图压暗兜底） */
+/* 深夜：用 home-dream-night.webp 夜图（已就位）；只叠极薄深色纱保文字可读，不盖掉画面 */
 .timesky__layer--night {
   background:
-    linear-gradient(165deg, rgba(38, 32, 60, 0.84), rgba(52, 44, 78, 0.78)),
+    linear-gradient(165deg, rgba(26, 22, 50, 0.22), rgba(40, 32, 66, 0.16)),
     url("/rooms/home-dream-night.webp") center / cover no-repeat;
 }
 
@@ -1155,6 +1155,66 @@ a {
   color: #d3c4f3;
 }
 
+/* 深夜按钮换浅色，别沉进夜里 */
+.home-page.is-night .hero-card__actions a,
+.home-page.is-night .hero-card__actions button {
+  color: #6b4d77;
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(255, 255, 255, 0.92);
+}
+
+.home-page.is-night .hero-card__actions button:first-child {
+  color: #8e4f63;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(243, 191, 208, 0.85));
+}
+
+/* ===== 深夜/傍晚：标题与标语字体边缘呼吸柔光（英文暖白、中文粉紫）；白天浅底关闭 ===== */
+.home-page.is-night .hero-card h1,
+.home-page.is-dusk .hero-card h1 {
+  animation:
+    titleflow 8s linear infinite,
+    title-glow-night 3.4s ease-in-out infinite;
+}
+
+.home-page.is-night .vow,
+.home-page.is-dusk .vow {
+  animation:
+    vowflow 9s linear infinite,
+    vow-glow-night 3.6s ease-in-out infinite;
+}
+
+/* 英文标题：暖白光多层叠加 */
+@keyframes title-glow-night {
+  0%,
+  100% {
+    text-shadow:
+      0 0 6px rgba(255, 246, 224, 0.45),
+      0 0 14px rgba(255, 236, 200, 0.3);
+  }
+  50% {
+    text-shadow:
+      0 0 12px rgba(255, 248, 230, 0.85),
+      0 0 26px rgba(255, 232, 190, 0.6),
+      0 0 44px rgba(255, 224, 180, 0.4);
+  }
+}
+
+/* 中文标语：粉紫光多层叠加 */
+@keyframes vow-glow-night {
+  0%,
+  100% {
+    text-shadow:
+      0 0 6px rgba(216, 180, 254, 0.45),
+      0 0 15px rgba(242, 169, 196, 0.32);
+  }
+  50% {
+    text-shadow:
+      0 0 12px rgba(216, 180, 254, 0.85),
+      0 0 26px rgba(242, 169, 196, 0.6),
+      0 0 44px rgba(190, 150, 245, 0.42);
+  }
+}
+
 @media (min-width: 560px) {
   .rooms-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1224,6 +1284,7 @@ a {
   .paw,
   .star,
   .hero-card,
+  .hero-card h1,
   .hero-card::before,
   .hero::before,
   .hero-mascot,
@@ -1234,6 +1295,21 @@ a {
   .purr-ripple,
   .love-cursor__caret {
     animation: none !important;
+  }
+
+  /* 减动时，深夜/傍晚的标题与标语保留静态发光（不明灭） */
+  .home-page.is-night .hero-card h1,
+  .home-page.is-dusk .hero-card h1 {
+    text-shadow:
+      0 0 12px rgba(255, 248, 230, 0.72),
+      0 0 24px rgba(255, 232, 190, 0.5);
+  }
+
+  .home-page.is-night .vow,
+  .home-page.is-dusk .vow {
+    text-shadow:
+      0 0 12px rgba(216, 180, 254, 0.75),
+      0 0 24px rgba(242, 169, 196, 0.5);
   }
 
   .dust,
