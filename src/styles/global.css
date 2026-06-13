@@ -1867,19 +1867,20 @@ a {
 .cat-other { --cc: #bfc3d0; }
 
 /* 时段背景：paw-trail 场景图 + 随 tod 的薄色纱 */
+/* 背景：单层贯穿全页（absolute inset:0，随内容高度撑满，绝无横向接缝） */
 .paw-sky {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: -1;
   overflow: hidden;
 }
-/* Fix A：同一张背景图高斯模糊 + 放大铺底，页面再长也兜得住，糊化后内容更可读 */
+/* 用 GPT 原图本身高斯模糊 + 放大铺底；模糊别太狠，留住猫咪/气泡的可爱形状 */
 .paw-sky__photo {
   position: absolute;
   inset: 0;
   background: url("/rooms/paw-trail.webp") center / cover no-repeat;
-  filter: blur(22px) saturate(1.12);
-  transform: scale(1.18);
+  filter: blur(16px) saturate(1.12);
+  transform: scale(1.12);
 }
 .paw-sky__tint {
   position: absolute;
@@ -2513,13 +2514,12 @@ a {
   .paw-ring__time { animation: none; background-position: 0 center; }
 }
 
-/* ===== 第四轮：背景兜底色 + 统计 chip 龙珠体 ===== */
-/* 即便 fixed 背景未覆盖到（超长/overscroll），底色也是柔和晚霞，绝不露纯白 */
+/* ===== 背景兜底色：单一柔色，绝不出现多段渐变的横带接缝 ===== */
 .paw-page {
-  background: linear-gradient(180deg, #efd7ec 0%, #f7e0d3 42%, #fbe9cf 60%, #d6edf0 100%);
+  background: #f3dcec;
 }
 .paw-page.is-night {
-  background: linear-gradient(180deg, #2c2548 0%, #3a3158 55%, #34304e 100%);
+  background: #2f2850;
 }
 
 /* 底部四排统计文案用龙珠体（子集化字体，仅 3.9KB） */
