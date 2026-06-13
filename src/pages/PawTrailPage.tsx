@@ -12,6 +12,7 @@ import {
 } from '../services/usageBridge';
 
 const MASCOT = `${import.meta.env.BASE_URL}assets/mascot/neko.png`;
+const PAW_HERO = `${import.meta.env.BASE_URL}assets/mascot/paw-hero.webp`;
 
 // ---------- 小工具 ----------
 function fmtDuration(ms: number): string {
@@ -80,24 +81,36 @@ function buildCommentary(env: UsageEnvelope): string {
   return `今天过得刚刚好~${top ? `${top.label}是你今天的最爱呢` : ''} 🐾`;
 }
 
-// App 颜色：莫兰迪低饱和柔色（真数据会带 iconBase64 显示真 logo）
+// App 玻璃珠 Icon 的品牌色（低饱和莫兰迪版；真数据会带 iconBase64 显示真 logo）
 const APP_COLOR: Record<string, string> = {
-  'com.xingin.xhs': '#e7a6ae', // 莫兰迪玫瑰
-  'com.tencent.mm': '#afcba6', // 莫兰迪鼠尾草绿
-  'com.ss.android.ugc.aweme': '#b3a9d6', // 莫兰迪薰衣草
-  'com.microsoft.vscode': '#a6c3df', // 莫兰迪雾蓝
-  'com.google.books': '#a6ccc2', // 莫兰迪青瓷
-  'com.android.settings': '#bfc3d0', // 莫兰迪灰
+  'com.xingin.xhs': '#f7b8cf', // 小红书 粉
+  'com.tencent.mm': '#9ed8b4', // 微信 绿
+  'com.ss.android.ugc.aweme': '#bdb4ff', // 抖音 紫
+  'com.openai.chatgpt': '#8fddd0', // ChatGPT 青
+  'com.anthropic.claude': '#fbc59a', // Claude 橙
 };
 const CAT_COLOR: Record<string, string> = {
-  social: '#e7a6ae',
-  work: '#b3a9d6',
-  entertainment: '#e3c29a',
+  social: '#f0bcd0',
+  work: '#bdb4ff',
+  entertainment: '#bdb4ff',
   reading: '#a6ccc2',
   tool: '#bfc3d0',
 };
 function appColor(pkg: string, category?: string | null): string {
   return APP_COLOR[pkg] ?? (category ? CAT_COLOR[category] : undefined) ?? '#c9c3d8';
+}
+
+// 进度条专用双色渐变（按 App 指定；时间字色与进度条不同色，见 CSS）
+const APP_BAR: Record<string, [string, string]> = {
+  'com.xingin.xhs': ['#f7b8cf', '#f09bc0'],
+  'com.tencent.mm': ['#b8e8c7', '#8ed8af'],
+  'com.ss.android.ugc.aweme': ['#cfc9ff', '#afa4ff'],
+  'com.openai.chatgpt': ['#9fe2d7', '#67d0c3'],
+  'com.anthropic.claude': ['#ffd3b8', '#f6b98a'],
+};
+function appBar(pkg: string): string | undefined {
+  const g = APP_BAR[pkg];
+  return g ? `linear-gradient(90deg, ${g[0]} 0%, ${g[1]} 100%)` : undefined;
 }
 
 function bubbleText(category?: string | null): string {
@@ -291,7 +304,7 @@ function PawTrailView({
           <i className="paw-bubble paw-bubble--3" />
         </div>
         <div className="paw-ring__center" role="img" aria-label="今日使用时长">
-          <img src={MASCOT} alt="" className="paw-ring__cat" />
+          <img src={PAW_HERO} alt="" className="paw-ring__cat" />
           <span className="paw-ring__time">{fmtDuration(summary.totalForegroundMs)}</span>
           <span className="paw-ring__label">今日</span>
         </div>
@@ -333,7 +346,10 @@ function PawTrailView({
                 <div className="paw-app__bar">
                   <span
                     className="paw-app__fill"
-                    style={{ width: `${Math.max(8, (app.foregroundMs / maxApp) * 100)}%` }}
+                    style={{
+                      width: `${Math.max(8, (app.foregroundMs / maxApp) * 100)}%`,
+                      background: appBar(app.package),
+                    }}
                   />
                 </div>
               </div>

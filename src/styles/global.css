@@ -2373,3 +2373,27 @@ a {
   color: rgba(74, 58, 96, 0.78);
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
+
+/* ===== 玻璃珠 Icon + 统一字色（VisionOS Jelly Glass · Morandi）===== */
+.paw-tile {
+  border-radius: 16px;
+  color: #534c74;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
+  /* 半透明玻璃珠：品牌色 → 奶白，叠强高光 */
+  background:
+    radial-gradient(120% 90% at 30% 18%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 56%),
+    linear-gradient(160deg, var(--cc, #c9c3d8), rgba(255, 255, 255, 0.28));
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.9),
+    inset 0 -8px 12px rgba(90, 60, 110, 0.16),
+    0 8px 16px -6px var(--cc, rgba(93, 74, 126, 0.5));
+}
+
+/* 应用名 / 时间 统一字色，且与进度条不同色 */
+.paw-app__name { color: #534c74; font-weight: 500; }
+.paw-app__dur { color: #7b7398; font-weight: 600; }
+.paw-page.is-night .paw-app__name { color: #e7e0f5; }
+.paw-page.is-night .paw-app__dur { color: #c9c0e6; }
+
+/* 活动环中心的「女孩抱猫」立绘 */
+.paw-ring__cat { width: 62%; margin-bottom: 0; }
