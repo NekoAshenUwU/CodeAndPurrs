@@ -1867,21 +1867,19 @@ a {
 .cat-other { --cc: #bfc3d0; }
 
 /* 时段背景：paw-trail 场景图 + 随 tod 的薄色纱 */
-/* 背景：这张是「画框」构图(中间留白、装饰在四周)，必须 fixed 铺满视口，
-   内容在其上滚动，四周猫咪/图标才露得出；绝不能 absolute+cover 裁到中间留白 */
+/* 背景：两张交叉淡化拼成的无缝循环长图，贯穿全页随内容滚动 */
 .paw-sky {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: -1;
   overflow: hidden;
 }
-/* 用 GPT 新画的画框背景(中间留白给内容、四周边轨猫咪/图标)；几乎不模糊，留住可爱细节 */
+/* 100% 宽不裁左右边轨；repeat-y 竖向无缝平铺，页面再长都铺满、装饰一路陪滚动 */
 .paw-sky__photo {
   position: absolute;
   inset: 0;
-  background: url("/rooms/paw-trail-bg.webp") center / cover no-repeat;
+  background: url("/rooms/paw-trail-loop.webp") top center / 100% auto repeat-y;
   filter: saturate(1.05);
-  transform: scale(1.02);
 }
 .paw-sky__tint {
   position: absolute;
