@@ -2352,3 +2352,18 @@ a {
     inset 0 -4px 7px rgba(60, 30, 90, 0.18),
     0 6px 13px -3px var(--cc, #c9c3d8);
 }
+
+/* ===== 爪印榜进度条：浅→品牌色 淡彩渐变果冻条（贴合参考图）===== */
+.paw-app__bar {
+  height: 11px;
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 1px 2px rgba(93, 74, 126, 0.12);
+}
+.paw-page.is-night .paw-app__bar { background: rgba(255, 255, 255, 0.12); }
+.paw-app__fill {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.9) 0%, var(--cc, #c9c3d8) 88%);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -3px 5px rgba(60, 30, 90, 0.12),
+    0 2px 7px -2px var(--cc, rgba(93, 74, 126, 0.4));
+}
