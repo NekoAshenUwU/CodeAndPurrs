@@ -80,21 +80,21 @@ function buildCommentary(env: UsageEnvelope): string {
   return `今天过得刚刚好~${top ? `${top.label}是你今天的最爱呢` : ''} 🐾`;
 }
 
-// App 颜色：已知包名用接近品牌色，其余按类别马卡龙色（真数据会带 iconBase64 显示真 logo）
+// App 颜色：莫兰迪低饱和柔色（真数据会带 iconBase64 显示真 logo）
 const APP_COLOR: Record<string, string> = {
-  'com.xingin.xhs': '#ff4d6d',
-  'com.tencent.mm': '#3fd06a',
-  'com.ss.android.ugc.aweme': '#7b6cf0',
-  'com.microsoft.vscode': '#4aa3f0',
-  'com.google.books': '#46c2a8',
-  'com.android.settings': '#9aa6c4',
+  'com.xingin.xhs': '#e7a6ae', // 莫兰迪玫瑰
+  'com.tencent.mm': '#afcba6', // 莫兰迪鼠尾草绿
+  'com.ss.android.ugc.aweme': '#b3a9d6', // 莫兰迪薰衣草
+  'com.microsoft.vscode': '#a6c3df', // 莫兰迪雾蓝
+  'com.google.books': '#a6ccc2', // 莫兰迪青瓷
+  'com.android.settings': '#bfc3d0', // 莫兰迪灰
 };
 const CAT_COLOR: Record<string, string> = {
-  social: '#f2a9c4',
-  work: '#b3a0ec',
-  entertainment: '#f6b863',
-  reading: '#8fd9c0',
-  tool: '#a9c4e8',
+  social: '#e7a6ae',
+  work: '#b3a9d6',
+  entertainment: '#e3c29a',
+  reading: '#a6ccc2',
+  tool: '#bfc3d0',
 };
 function appColor(pkg: string, category?: string | null): string {
   return APP_COLOR[pkg] ?? (category ? CAT_COLOR[category] : undefined) ?? '#c9c3d8';

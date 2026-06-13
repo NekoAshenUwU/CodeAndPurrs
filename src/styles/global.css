@@ -1851,13 +1851,13 @@ a {
   --paw-card-border: rgba(214, 200, 245, 0.28);
 }
 
-/* 类别马卡龙色（爪印/肉垫/时长条/时间线共用 --cc） */
-.cat-social { --cc: #f2a9c4; }
-.cat-work { --cc: #b3a0ec; }
-.cat-entertainment { --cc: #f6b863; }
-.cat-reading { --cc: #8fd9c0; }
-.cat-tool { --cc: #a9c4e8; }
-.cat-other { --cc: #c9c3d8; }
+/* 类别色：莫兰迪低饱和柔色（爪印/方块/时长条/星河石头共用 --cc） */
+.cat-social { --cc: #e7a6ae; }
+.cat-work { --cc: #b3a9d6; }
+.cat-entertainment { --cc: #e3c29a; }
+.cat-reading { --cc: #a6ccc2; }
+.cat-tool { --cc: #a6c3df; }
+.cat-other { --cc: #bfc3d0; }
 
 /* 时段背景：paw-trail 场景图 + 随 tod 的薄色纱 */
 .paw-sky {
@@ -2366,4 +2366,10 @@ a {
     inset 0 1.5px 0 rgba(255, 255, 255, 0.85),
     inset 0 -3px 5px rgba(60, 30, 90, 0.12),
     0 2px 7px -2px var(--cc, rgba(93, 74, 126, 0.4));
+}
+
+/* 莫兰迪柔色下，方块占位字改深色保证可读（真 logo 来了用图片不受影响） */
+.paw-tile {
+  color: rgba(74, 58, 96, 0.78);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
