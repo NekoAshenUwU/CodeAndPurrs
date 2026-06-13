@@ -113,6 +113,14 @@ function appBar(pkg: string): string | undefined {
   return g ? `linear-gradient(90deg, ${g[0]} 0%, ${g[1]} 100%)` : undefined;
 }
 
+// 占位字形：Claude 用放射星芒，避免和 ChatGPT 的「C」撞脸
+const APP_GLYPH: Record<string, string> = {
+  'com.anthropic.claude': '✦',
+};
+function appGlyph(pkg: string, label: string): string {
+  return APP_GLYPH[pkg] ?? label.slice(0, 1);
+}
+
 function bubbleText(category?: string | null): string {
   switch (category) {
     case 'social':
@@ -336,7 +344,7 @@ function PawTrailView({
               style={{ ['--cc' as string]: appColor(app.package, app.category) }}
             >
               <span className="paw-tile">
-                {app.iconBase64 ? <img src={app.iconBase64} alt="" /> : app.label.slice(0, 1)}
+                {app.iconBase64 ? <img src={app.iconBase64} alt="" /> : appGlyph(app.package, app.label)}
               </span>
               <div className="paw-app__body">
                 <div className="paw-app__row">
@@ -387,8 +395,8 @@ function PawTrailView({
                       onClick={() => onSelect(selected === s ? null : s)}
                       aria-label={`${s.label ?? s.package} ${tzClock(s.startAt, tz)}`}
                     >
+                      <span className="paw-step__mark" />
                       {night ? <span className="paw-step__moon">🌙</span> : null}
-                      {heaviest === s ? <span className="paw-step__bubble">{bubbleText(s.category)}</span> : null}
                     </button>
                   );
                 })
@@ -401,6 +409,7 @@ function PawTrailView({
                   />
                 ))}
           </div>
+          {heaviest ? <span className="paw-river__bubble">{bubbleText(heaviest.category)}</span> : null}
         </div>
         {selected ? (
           <div className="paw-river__detail">
@@ -437,19 +446,27 @@ function PawTrailView({
 
 function TrendBars({ points, todayDate }: { points: TrendPoint[]; todayDate: string }) {
   const max = Math.max(...points.map((p) => p.totalForegroundMs), 1);
+  const n = points.length;
+  const heightPct = (p: TrendPoint) => Math.max(6, (p.totalForegroundMs / max) * 100);
+  // 柱顶连成星座线（坐标用百分比，覆盖在柱状之上）
+  const nodes = points.map((p, i) => ({ x: ((i + 0.5) / n) * 100, y: 100 - heightPct(p) }));
+  const poly = nodes.map((nd) => `${nd.x.toFixed(2)},${nd.y.toFixed(2)}`).join(' ');
   return (
     <div className="paw-trend">
+      <svg className="paw-trend__sky" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <polyline className="paw-trend__line" points={poly} />
+        {nodes.map((nd, i) => (
+          <circle key={i} className="paw-trend__starpt" cx={nd.x} cy={nd.y} r="1.1" />
+        ))}
+      </svg>
       {points.map((p) => {
         const day = new Date(`${p.date}T00:00:00+08:00`).getDay();
         const weekend = day === 0 || day === 6;
         return (
           <div className={`paw-trend__col ${p.date === todayDate ? 'is-today' : ''}`} key={p.date}>
             <div className="paw-trend__barwrap">
-              <span
-                className={`paw-trend__bar ${weekend ? 'is-weekend' : ''}`}
-                style={{ height: `${Math.max(6, (p.totalForegroundMs / max) * 100)}%` }}
-              >
-                <i className="paw-trend__stars" />
+              <span className={`paw-trend__bar ${weekend ? 'is-weekend' : ''}`} style={{ height: `${heightPct(p)}%` }}>
+                <i className="paw-trend__paw" />
               </span>
             </div>
             <span className="paw-trend__day">{p.date.slice(5)}</span>
