@@ -538,6 +538,7 @@ a {
 }
 
 .hero-card h1 {
+  position: relative;
   margin: 8px 0 18px;
   font-family: var(--script);
   /* 用容器单位 cqi，始终按卡片宽度缩放，永不溢出 */
@@ -545,74 +546,95 @@ a {
   white-space: nowrap;
   font-weight: 700;
   line-height: 1.02;
-  /* 流动渐变 · 标题走深色，浓郁紫 */
-  background: linear-gradient(
-    110deg,
-    #4f63cf 0%,
-    #6a45a8 24%,
-    #9c4f96 46%,
-    #b15fa6 60%,
-    #6d4aa6 82%,
-    #4f63cf 100%
-  );
-  background-size: 260% auto;
+  /* 冷紫粉玻璃发光字（日间偏深一档，浅底也读得清；夜间见下方 is-night 覆盖成亮粉） */
+  background-image: linear-gradient(180deg, #d9a8f2 0%, #c3a3ef 38%, #9f9ff0 72%, #8fa0ec 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  /* 流动光 + 呼吸发光 */
-  animation:
-    titleflow 8s linear infinite,
-    titleglow 3.6s ease-in-out infinite;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 0.5px rgba(120, 90, 160, 0.28);
+  text-shadow:
+    0 0 8px rgba(216, 180, 254, 0.4),
+    0 0 18px rgba(170, 160, 255, 0.22),
+    0 2px 8px rgba(80, 50, 120, 0.22);
+  animation: heroGlowPulse 3.8s ease-in-out infinite;
 }
 
-@keyframes titleflow {
-  to {
-    background-position: 260% center;
-  }
+/* 扫光 shimmer：一束柔光斜斜扫过标题，像系统被点亮，字边缘忽闪 */
+.hero-card h1::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+  mix-blend-mode: screen;
+  animation: heroSweepLight 5.2s ease-in-out infinite;
 }
 
-@keyframes titleglow {
+@keyframes heroGlowPulse {
   0%,
   100% {
-    filter: drop-shadow(0 0 5px rgba(216, 180, 254, 0.35))
-      drop-shadow(0 2px 7px rgba(242, 169, 196, 0.28));
+    filter: brightness(1);
   }
   50% {
-    filter: drop-shadow(0 0 16px rgba(216, 180, 254, 0.72))
-      drop-shadow(0 0 28px rgba(242, 169, 196, 0.5));
+    filter: brightness(1.12);
   }
 }
 
-/* 中文流动渐变标语 */
+@keyframes heroSweepLight {
+  0%,
+  72%,
+  100% {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  36% {
+    opacity: 1;
+  }
+  52% {
+    transform: translateX(120%);
+    opacity: 1;
+  }
+}
+
+/* 中文标语：暖蜜桃粉发光字（和冷紫粉标题明显区分） */
 .vow {
+  position: relative;
   margin: 8px 0 18px;
   font-family: var(--hand);
   font-size: clamp(1.62rem, 7.8vw, 2.5rem);
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: 0.03em;
-  /* 流动渐变 · 标语加深一档，避免浅粉在浅底上发虚 */
-  background: linear-gradient(
-    110deg,
-    #7f93e6 0%,
-    #a87fce 22%,
-    #ce7fb0 45%,
-    #e695bd 62%,
-    #9f86d8 82%,
-    #7f93e6 100%
-  );
-  background-size: 280% auto;
+  /* 暖蜜桃粉渐变（日间偏深一档保可读；夜间见下方 is-night 覆盖成亮蜜桃） */
+  background-image: linear-gradient(180deg, #f7b9d3 0%, #f59ec0 38%, #ee8fb6 68%, #e87fb0 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  /* 微弱发光描边，保持可爱但读得清 */
-  filter: drop-shadow(0 1px 2px rgba(157, 123, 200, 0.35));
-  animation: vowflow 9s linear infinite;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 0.5px rgba(170, 90, 130, 0.22);
+  text-shadow:
+    0 0 8px rgba(255, 200, 225, 0.42),
+    0 0 18px rgba(255, 160, 200, 0.22),
+    0 2px 8px rgba(110, 40, 80, 0.2);
+  animation: sloganTwinkle 4.6s ease-in-out infinite;
 }
 
-@keyframes vowflow {
-  to {
-    background-position: 280% center;
+@keyframes sloganTwinkle {
+  0%,
+  100% {
+    filter: brightness(1);
+    transform: translateY(0);
+  }
+  50% {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
   }
 }
 
@@ -1132,30 +1154,28 @@ a {
 }
 
 /* 深夜档：英文标题换亮色，暗底才清楚 */
-.home-page.is-night .hero-card h1 {
-  background-image: linear-gradient(
-    110deg,
-    #d6dfff 0%,
-    #ecd6f6 30%,
-    #f8d2e8 50%,
-    #ffe2f1 66%,
-    #dccdff 84%,
-    #d6dfff 100%
-  );
+/* 深夜/傍晚：英文冷紫粉玻璃发光（指定渐变 + 白描边 + 多层柔光，配深烟熏卡清晰不糊） */
+.home-page.is-night .hero-card h1,
+.home-page.is-dusk .hero-card h1 {
+  background-image: linear-gradient(180deg, #f8d8ff 0%, #ead2ff 25%, #d8b8ff 55%, #b9b8ff 100%);
+  -webkit-text-stroke: 0.6px rgba(255, 255, 255, 0.36);
+  text-shadow:
+    0 0 8px rgba(255, 225, 255, 0.42),
+    0 0 18px rgba(210, 180, 255, 0.34),
+    0 0 36px rgba(170, 160, 255, 0.22),
+    0 2px 10px rgba(40, 30, 90, 0.4);
 }
 
-/* 深夜档：中文标语换亮色；只留 text-shadow 一层光（去掉重复的 filter 模糊光，否则糊成一片） */
-.home-page.is-night .vow {
-  background-image: linear-gradient(
-    110deg,
-    #cdd8ff 0%,
-    #e6c9f4 24%,
-    #f7c8de 48%,
-    #ffd9ea 64%,
-    #dcc8ff 84%,
-    #cdd8ff 100%
-  );
-  filter: none;
+/* 深夜/傍晚：中文暖蜜桃粉发光（指定渐变，明显区别于标题的冷紫粉） */
+.home-page.is-night .vow,
+.home-page.is-dusk .vow {
+  background-image: linear-gradient(180deg, #ffdff0 0%, #ffc7dd 35%, #ffb7cf 65%, #f39ac2 100%);
+  -webkit-text-stroke: 0.7px rgba(255, 245, 250, 0.32);
+  text-shadow:
+    0 0 8px rgba(255, 216, 236, 0.48),
+    0 0 20px rgba(255, 175, 210, 0.34),
+    0 0 34px rgba(230, 120, 180, 0.2),
+    0 2px 10px rgba(60, 30, 70, 0.32);
 }
 
 /* 同样坐在暗玻璃上的英文副标语 / eyebrow 一起提亮 */
@@ -1181,52 +1201,8 @@ a {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(243, 191, 208, 0.85));
 }
 
-/* ===== 深夜/傍晚：标题与标语字体边缘呼吸柔光（英文暖白、中文粉紫）；白天浅底关闭 ===== */
-.home-page.is-night .hero-card h1,
-.home-page.is-dusk .hero-card h1 {
-  animation:
-    titleflow 8s linear infinite,
-    title-glow-night 3.4s ease-in-out infinite;
-}
-
-.home-page.is-night .vow,
-.home-page.is-dusk .vow {
-  animation:
-    vowflow 9s linear infinite,
-    vow-glow-night 3.6s ease-in-out infinite;
-}
-
-/* 英文标题：极细暗描边保边缘清晰 + 暖白光（收小半径，不糊） */
-@keyframes title-glow-night {
-  0%,
-  100% {
-    text-shadow:
-      0 1px 1px rgba(26, 16, 46, 0.6),
-      0 0 7px rgba(255, 246, 224, 0.4);
-  }
-  50% {
-    text-shadow:
-      0 1px 1px rgba(26, 16, 46, 0.6),
-      0 0 13px rgba(255, 248, 230, 0.7),
-      0 0 22px rgba(255, 232, 190, 0.45);
-  }
-}
-
-/* 中文标语：极细暗描边 + 粉紫光（收小半径，不糊） */
-@keyframes vow-glow-night {
-  0%,
-  100% {
-    text-shadow:
-      0 1px 1px rgba(38, 18, 52, 0.55),
-      0 0 7px rgba(216, 180, 254, 0.4);
-  }
-  50% {
-    text-shadow:
-      0 1px 1px rgba(38, 18, 52, 0.55),
-      0 0 13px rgba(216, 180, 254, 0.7),
-      0 0 22px rgba(242, 169, 196, 0.45);
-  }
-}
+/* 深夜/傍晚的脉冲·微闪·扫光沿用基础 .hero-card h1 / .vow 的 heroGlowPulse / sloganTwinkle / heroSweepLight，
+   这里只覆盖颜色与描边/柔光，不再单独定义动画。 */
 
 @media (min-width: 560px) {
   .rooms-grid {
@@ -1310,19 +1286,10 @@ a {
     animation: none !important;
   }
 
-  /* 减动时，深夜/傍晚的标题与标语保留静态发光（不明灭） */
-  .home-page.is-night .hero-card h1,
-  .home-page.is-dusk .hero-card h1 {
-    text-shadow:
-      0 1px 1px rgba(26, 16, 46, 0.6),
-      0 0 12px rgba(255, 248, 230, 0.6);
-  }
-
-  .home-page.is-night .vow,
-  .home-page.is-dusk .vow {
-    text-shadow:
-      0 1px 1px rgba(38, 18, 52, 0.55),
-      0 0 12px rgba(216, 180, 254, 0.6);
+  /* 减动时关掉扫光；发光改静态（text-shadow 已在各自规则里静态保留，不明灭） */
+  .hero-card h1::after {
+    animation: none !important;
+    opacity: 0;
   }
 
   .dust,
