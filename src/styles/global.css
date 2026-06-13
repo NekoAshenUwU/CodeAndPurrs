@@ -1090,6 +1090,32 @@ a {
   background: rgba(255, 255, 255, 0.42);
 }
 
+/* 深夜档：中文标语换成会发光的亮色字，暗底也读得清 */
+.home-page.is-night .vow {
+  background-image: linear-gradient(
+    110deg,
+    #cdd8ff 0%,
+    #e6c9f4 24%,
+    #f7c8de 48%,
+    #ffd9ea 64%,
+    #dcc8ff 84%,
+    #cdd8ff 100%
+  );
+  filter:
+    drop-shadow(0 0 8px rgba(216, 180, 254, 0.7))
+    drop-shadow(0 0 18px rgba(242, 169, 196, 0.5));
+}
+
+/* 同样坐在暗玻璃上的英文副标语 / eyebrow 一起提亮 */
+.home-page.is-night .vow-en {
+  color: #e9e2fb;
+  opacity: 0.94;
+}
+
+.home-page.is-night .hero-card__eyebrow {
+  color: #d3c4f3;
+}
+
 @media (min-width: 560px) {
   .rooms-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
