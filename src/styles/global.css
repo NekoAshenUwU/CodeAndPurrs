@@ -35,6 +35,12 @@
   font-weight: 400;
   font-display: swap;
 }
+@font-face {
+  font-family: "LongZhuPaw"; /* 龙珠体子集 · 仅猫爪足迹统计 chip 用到的字(3.9KB) */
+  src: url("/fonts/longzhu-paw.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
 
 :root {
   color: #5f5877;
@@ -1867,10 +1873,13 @@ a {
   z-index: -1;
   overflow: hidden;
 }
+/* Fix A：同一张背景图高斯模糊 + 放大铺底，页面再长也兜得住，糊化后内容更可读 */
 .paw-sky__photo {
   position: absolute;
   inset: 0;
   background: url("/rooms/paw-trail.webp") center / cover no-repeat;
+  filter: blur(22px) saturate(1.12);
+  transform: scale(1.18);
 }
 .paw-sky__tint {
   position: absolute;
@@ -2502,4 +2511,20 @@ a {
 }
 @media (prefers-reduced-motion: reduce) {
   .paw-ring__time { animation: none; background-position: 0 center; }
+}
+
+/* ===== 第四轮：背景兜底色 + 统计 chip 龙珠体 ===== */
+/* 即便 fixed 背景未覆盖到（超长/overscroll），底色也是柔和晚霞，绝不露纯白 */
+.paw-page {
+  background: linear-gradient(180deg, #efd7ec 0%, #f7e0d3 42%, #fbe9cf 60%, #d6edf0 100%);
+}
+.paw-page.is-night {
+  background: linear-gradient(180deg, #2c2548 0%, #3a3158 55%, #34304e 100%);
+}
+
+/* 底部四排统计文案用龙珠体（子集化字体，仅 3.9KB） */
+.paw-chip {
+  font-family: "LongZhuPaw", var(--round);
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
 }

@@ -342,8 +342,16 @@ function PawTrailView({
   );
 }
 
-// 七根柱子各自一颗糖豆色（低饱和彩虹）
-const TREND_COLORS = ['#f4b8cf', '#ffd0b0', '#f1e0a0', '#b8e6c6', '#aed4f2', '#c3c4f2', '#d8b8e8'];
+// 七根柱子各取图二莫兰迪马卡龙一色的「浅→深」渐变（浅端也带饱和度，不发白）
+const TREND_GRADS: Array<[string, string]> = [
+  ['#cdb6e6', '#b294d2'], // 薰衣草
+  ['#f3bcd2', '#e89bbe'], // 藕粉
+  ['#f8c4b2', '#f2a48d'], // 蜜桃
+  ['#fbe3a6', '#f5d27e'], // 柠黄
+  ['#f8d3bb', '#f0bb9b'], // 浅杏
+  ['#c2e6ed', '#9bd2de'], // 浅天蓝
+  ['#93cfd4', '#67bdc8'], // 青碧
+];
 
 function TrendBars({ points, todayDate }: { points: TrendPoint[]; todayDate: string }) {
   const max = Math.max(...points.map((p) => p.totalForegroundMs), 1);
@@ -361,13 +369,13 @@ function TrendBars({ points, todayDate }: { points: TrendPoint[]; todayDate: str
         ))}
       </svg>
       {points.map((p, i) => {
-        const color = TREND_COLORS[i % TREND_COLORS.length];
+        const [light, deep] = TREND_GRADS[i % TREND_GRADS.length];
         return (
           <div className={`paw-trend__col ${p.date === todayDate ? 'is-today' : ''}`} key={p.date}>
             <div className="paw-trend__barwrap">
               <span
                 className="paw-trend__bar"
-                style={{ height: `${heightPct(p)}%`, ['--bar' as string]: color }}
+                style={{ height: `${heightPct(p)}%`, background: `linear-gradient(180deg, ${light} 0%, ${deep} 100%)` }}
               >
                 <i className="paw-trend__paw" />
               </span>
