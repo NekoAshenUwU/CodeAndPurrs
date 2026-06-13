@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { usePrefersReducedMotion } from './usePrefersReducedMotion';
+import type { TimeOfDay } from './timeOfDay';
 
 // 一只看不见的猫的爪印：1 个掌垫 + 4 个趾垫，很淡，氛围感。
 const PAW_SVG =
@@ -13,17 +14,29 @@ const PAW_SVG =
 
 const rand = (min: number, max: number) => min + Math.random() * (max - min);
 
-// 12~16 颗光尘，每颗随机起点、周期、延迟。
-const DUST = Array.from({ length: 14 }, () => ({
+// 10 颗光尘，每颗随机起点、周期、延迟（粒子总预算见首页规格 §7，故压到 10 颗）。
+const DUST = Array.from({ length: 10 }, () => ({
   left: rand(2, 98),
   duration: rand(14, 30),
   delay: rand(-30, 0),
   drift: rand(-30, 30),
 }));
 
-export function Atmosphere() {
+// 深夜星点：仅 night 档出现，缓慢闪烁。
+const STARS = Array.from({ length: 22 }, () => ({
+  left: rand(1, 99),
+  top: rand(2, 70),
+  size: rand(1.5, 3),
+  duration: rand(2.4, 5.5),
+  delay: rand(0, 4),
+}));
+
+const TODS: TimeOfDay[] = ['dawn', 'day', 'dusk', 'night'];
+
+export function Atmosphere({ tod }: { tod: TimeOfDay }) {
   const reduced = usePrefersReducedMotion();
   const pawHostRef = useRef<HTMLDivElement | null>(null);
+  const driftRef = useRef<HTMLDivElement | null>(null);
 
   // 看不见的猫：每隔 25~45 秒，一串爪印从随机一侧斜斜走过页面。
   useEffect(() => {
@@ -74,21 +87,67 @@ export function Atmosphere() {
     };
   }, [reduced]);
 
+  // 滚动视差：光尘 / 星点层以约 0.3 倍速反向移动，让背景「飘在云上」。
+  useEffect(() => {
+    if (reduced) return;
+    const drift = driftRef.current;
+    if (!drift) return;
+    let ticking = false;
+    const apply = () => {
+      drift.style.transform = `translate3d(0, ${window.scrollY * 0.3}px, 0)`;
+      ticking = false;
+    };
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(apply);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [reduced]);
+
+  const isNight = tod === 'night';
+
   return (
     <div className="atmosphere" aria-hidden="true">
-      {!reduced &&
-        DUST.map((d, i) => (
-          <span
-            key={i}
-            className="dust"
-            style={{
-              left: `${d.left}%`,
-              animationDuration: `${d.duration}s`,
-              animationDelay: `${d.delay}s`,
-              ['--drift' as string]: `${d.drift}px`,
-            }}
-          />
+      {/* 会呼吸的时间背景：四套渐变叠放，按 tod crossfade */}
+      <div className={`timesky is-${tod}`}>
+        {TODS.map((t) => (
+          <div key={t} className={`timesky__layer timesky__layer--${t}`} />
         ))}
+      </div>
+
+      <div className="atmosphere__drift" ref={driftRef}>
+        {!reduced &&
+          DUST.map((d, i) => (
+            <span
+              key={i}
+              className="dust"
+              style={{
+                left: `${d.left}%`,
+                animationDuration: `${d.duration}s`,
+                animationDelay: `${d.delay}s`,
+                ['--drift' as string]: `${d.drift}px`,
+              }}
+            />
+          ))}
+        {!reduced &&
+          isNight &&
+          STARS.map((s, i) => (
+            <span
+              key={i}
+              className="star"
+              style={{
+                left: `${s.left}%`,
+                top: `${s.top}%`,
+                width: `${s.size}px`,
+                height: `${s.size}px`,
+                animationDuration: `${s.duration}s`,
+                animationDelay: `${s.delay}s`,
+              }}
+            />
+          ))}
+      </div>
       <div ref={pawHostRef} />
     </div>
   );

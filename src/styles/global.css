@@ -118,13 +118,79 @@ a {
   background: url("/rooms/home-dream.webp") center / cover no-repeat;
 }
 
-/* ---------- 背景氛围层（色斑 + 光尘 + 爪印宿主，由 Atmosphere 组件渲染） ---------- */
+/* ---------- 背景氛围层（时段天空 + 光尘 + 星点 + 爪印宿主，由 Atmosphere 组件渲染） ---------- */
 .atmosphere {
   position: fixed;
   inset: 0;
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
+}
+
+/* 会呼吸的时间背景：四套渐变叠放，按 tod crossfade（饱和度压低，跟马卡龙图标协调） */
+.timesky,
+.timesky__layer {
+  position: absolute;
+  inset: 0;
+}
+
+.timesky__layer {
+  opacity: 0;
+  transition: opacity 1.8s ease;
+}
+
+.timesky__layer--dawn {
+  background: linear-gradient(165deg, #fdeede 0%, #fce1ec 50%, #f7dfe9 100%);
+}
+
+.timesky__layer--day {
+  background: linear-gradient(165deg, #e6effb 0%, #ece4f7 50%, #f4ebfb 100%);
+}
+
+.timesky__layer--dusk {
+  background: linear-gradient(165deg, #f7e2ec 0%, #ecdcf3 45%, #e2cfee 78%, #d6c2e8 100%);
+}
+
+.timesky__layer--night {
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(91, 74, 126, 0.5), transparent 60%),
+    linear-gradient(165deg, #332d4f 0%, #3f3760 52%, #463a5e 100%);
+}
+
+.timesky.is-dawn .timesky__layer--dawn,
+.timesky.is-day .timesky__layer--day,
+.timesky.is-dusk .timesky__layer--dusk,
+.timesky.is-night .timesky__layer--night {
+  opacity: 1;
+}
+
+/* 光尘 / 星点统一放进这层，滚动时做 0.2 倍速视差 */
+.atmosphere__drift {
+  position: absolute;
+  inset: -5% 0 0;
+  will-change: transform;
+}
+
+/* 深夜星点：仅 night 档渲染，缓慢闪烁 */
+.star {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff, rgba(216, 180, 254, 0.6) 60%, transparent);
+  box-shadow: 0 0 6px 1px rgba(216, 180, 254, 0.7);
+  opacity: 0;
+  animation: twinkle ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.7);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .blob {
@@ -246,20 +312,114 @@ a {
   }
 }
 
-.hero-card,
+/* ---------- 指尖留爪印（PawCursor 组件） ---------- */
+.paw-cursor {
+  position: fixed;
+  z-index: 4;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* 跟手的小爪印：position 用 fixed，左上角偏移半个身位居中到指尖 */
+.paw--trail {
+  position: fixed;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  color: var(--sakura);
+  opacity: 0;
+  transform: rotate(var(--rot, 0deg)) scale(0.5);
+  animation: paw-trail 0.95s ease forwards;
+}
+
+@keyframes paw-trail {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--rot, 0deg)) scale(0.5);
+  }
+  18% {
+    opacity: 0.3;
+  }
+  32% {
+    transform: rotate(var(--rot, 0deg)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--rot, 0deg)) scale(1.05);
+  }
+}
+
+.hero,
 .rooms-section,
 .room-preview {
   position: relative;
   z-index: 1;
 }
 
+/* ---------- hero 包裹层：装 mascot + 卡后极光，制造「窗」的层次 ---------- */
+.hero {
+  position: relative;
+  width: min(100%, 560px);
+  margin: calc(4vh + 40px) auto 0;
+}
+
+/* 卡片后方缓慢流动的极光（透过玻璃隐约可见，周期 24s 极慢） */
+.hero::before {
+  position: absolute;
+  z-index: 0;
+  inset: -14% -8%;
+  content: "";
+  background:
+    radial-gradient(42% 52% at 28% 30%, rgba(123, 143, 232, 0.5), transparent 70%),
+    radial-gradient(46% 56% at 76% 38%, rgba(242, 169, 196, 0.5), transparent 70%),
+    radial-gradient(52% 50% at 52% 82%, rgba(201, 184, 241, 0.46), transparent 72%);
+  filter: blur(38px);
+  opacity: 0.85;
+  pointer-events: none;
+  animation: aurora 24s ease-in-out infinite alternate;
+}
+
+@keyframes aurora {
+  0% {
+    transform: translate3d(-3%, -2%, 0) scale(1.04);
+  }
+  100% {
+    transform: translate3d(4%, 3%, 0) scale(1.12);
+  }
+}
+
+/* 呼噜本噜：趴在 hero 卡片右上沿，轻轻呼吸摆尾 */
+.hero-mascot {
+  position: absolute;
+  z-index: 2;
+  top: -56px;
+  right: 16px;
+  width: clamp(92px, 26vw, 124px);
+  height: auto;
+  transform-origin: 60% 100%;
+  filter: drop-shadow(0 10px 16px rgba(118, 96, 132, 0.32));
+  pointer-events: none;
+  animation: hero-breathe 3.6s ease-in-out infinite;
+}
+
+@keyframes hero-breathe {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(-1.6deg);
+  }
+}
+
 /* ---------- liquid glass hero ---------- */
 .hero-card {
   position: relative;
+  z-index: 1;
   container-type: inline-size;
   overflow: hidden;
-  width: min(100%, 560px);
-  margin: 4vh auto 0;
+  width: 100%;
+  margin: 0;
   padding: 48px 26px 38px;
   text-align: center;
   background: rgba(255, 255, 255, 0.34);
@@ -271,6 +431,57 @@ a {
     0 24px 60px -20px rgba(155, 123, 200, 0.35);
   backdrop-filter: blur(24px) saturate(1.5);
   -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  /* 边缘呼吸光晕 */
+  animation: hero-halo 5.5s ease-in-out infinite;
+}
+
+@keyframes hero-halo {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.75),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.2),
+      0 24px 60px -20px rgba(155, 123, 200, 0.35),
+      0 0 22px rgba(216, 180, 254, 0.15);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.75),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.2),
+      0 24px 60px -20px rgba(155, 123, 200, 0.42),
+      0 0 42px rgba(216, 180, 254, 0.36);
+  }
+}
+
+/* 卡内星屑：16 颗，透明度呼吸 + 轻飘，藏在文字之后 */
+.hero-sparks {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hero-spark {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff, rgba(242, 169, 196, 0.7) 60%, transparent);
+  box-shadow: 0 0 6px 1px var(--glow);
+  opacity: 0;
+  animation: spark-breathe ease-in-out infinite;
+}
+
+@keyframes spark-breathe {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateY(0) scale(calc(var(--spark-scale, 1) * 0.6));
+  }
+  50% {
+    opacity: 0.85;
+    transform: translateY(-6px) scale(var(--spark-scale, 1));
+  }
 }
 
 /* 缓慢漂移的斜高光，模拟玻璃反光 */
@@ -378,20 +589,22 @@ a {
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: 0.03em;
-  /* 流动渐变 · 标语走浅色，柔粉 */
+  /* 流动渐变 · 标语加深一档，避免浅粉在浅底上发虚 */
   background: linear-gradient(
     110deg,
-    #a3b4f2 0%,
-    #bd9fdc 22%,
-    #dca9cc 45%,
-    #f4bcd4 62%,
-    #c5aee4 82%,
-    #a3b4f2 100%
+    #7f93e6 0%,
+    #a87fce 22%,
+    #ce7fb0 45%,
+    #e695bd 62%,
+    #9f86d8 82%,
+    #7f93e6 100%
   );
   background-size: 280% auto;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  /* 微弱发光描边，保持可爱但读得清 */
+  filter: drop-shadow(0 1px 2px rgba(157, 123, 200, 0.35));
   animation: vowflow 9s linear infinite;
 }
 
@@ -528,6 +741,7 @@ a {
 
 /* ---------- room tile：小玻璃框装图标 + 名字在下 ---------- */
 .room-tile {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -541,8 +755,35 @@ a {
   transition: transform 0.2s ease;
 }
 
+/* 门牌底下的极淡云影，做出「飘在云上」的悬浮感 */
+.room-tile::after {
+  position: absolute;
+  z-index: 0;
+  top: calc(12px + clamp(56px, 17vw, 72px) - 4px);
+  left: 50%;
+  width: clamp(42px, 12vw, 56px);
+  height: 11px;
+  content: "";
+  border-radius: 50%;
+  background: rgba(93, 74, 126, 0.5);
+  filter: blur(7px);
+  opacity: 0.15;
+  transform: translateX(-50%);
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
 .room-tile:hover {
   transform: translateY(-4px);
+}
+
+.room-tile:hover::after {
+  opacity: 0.22;
+}
+
+/* 奇偶错落：偶数门牌下移，形成自然高低节奏 */
+.rooms-grid .room-tile:nth-child(2n) {
+  margin-top: 14px;
 }
 
 .room-tile:active {
@@ -576,6 +817,19 @@ a {
   -webkit-backdrop-filter: blur(9px) saturate(1.9) brightness(1.05);
   overflow: visible;
   transition: box-shadow 0.2s ease;
+  /* 缓慢上下浮动，相位由 RoomCard 错开 */
+  animation: tile-float 4s ease-in-out infinite;
+  animation-delay: var(--float-delay, 0s);
+}
+
+@keyframes tile-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
 }
 
 /* 斜向高光扫光（玻璃反光） */
@@ -814,6 +1068,28 @@ a {
   line-height: 1.6;
 }
 
+/* 深夜档：背景转深空，直接坐在背景上的文字/卡片要提亮，保证可读 */
+.home-page.is-night .rooms-section__header h2 {
+  color: #efe7ff;
+}
+
+.home-page.is-night .rooms-section__header p,
+.home-page.is-night .rooms-section__header span {
+  color: rgba(228, 222, 250, 0.82);
+}
+
+.home-page.is-night .room-tile {
+  color: #f0e9ff;
+}
+
+.home-page.is-night .room-tile__english {
+  color: #cdbdf2;
+}
+
+.home-page.is-night .hero-card {
+  background: rgba(255, 255, 255, 0.42);
+}
+
 @media (min-width: 560px) {
   .rooms-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -877,11 +1153,18 @@ a {
     transition: none;
   }
 
-  /* 关掉爪印、光标、涟漪、光斑漂移、斜高光、标语流动 */
+  /* 关掉爪印、光标、涟漪、光斑漂移、斜高光、标语流动，以及新增的氛围动效 */
   .blob,
   .dust,
   .paw,
+  .star,
+  .hero-card,
   .hero-card::before,
+  .hero::before,
+  .hero-mascot,
+  .hero-spark,
+  .room-tile__icon,
+  .timesky__layer,
   .vow,
   .purr-ripple,
   .love-cursor__caret {
@@ -890,8 +1173,16 @@ a {
 
   .dust,
   .paw,
+  .star,
+  .hero-spark,
+  .paw-cursor,
   .love-cursor {
     display: none !important;
+  }
+
+  /* 静止时把浮动的图标归位 */
+  .room-tile__icon {
+    transform: none !important;
   }
 
   .vow {
