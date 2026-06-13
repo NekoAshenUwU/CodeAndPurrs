@@ -1149,8 +1149,15 @@ a {
 
 /* 深夜：卡片改深色烟熏玻璃，浅色字才跳得出来（白卡配浅字会糊） */
 .home-page.is-night .hero-card {
-  background: rgba(42, 33, 66, 0.46);
+  /* 调实一档，让磨砂玻璃是一块均匀烟熏底，而不是把背后冷暖光斑透成两半 */
+  background: rgba(44, 35, 68, 0.66);
   border-color: rgba(214, 200, 245, 0.34);
+}
+
+/* 夜间把卡后极光调淡调柔，避免透过玻璃显成冷暖两色块 */
+.home-page.is-night .hero::before {
+  opacity: 0.4;
+  filter: blur(52px);
 }
 
 /* 深夜档：英文标题换亮色，暗底才清楚 */
