@@ -7,7 +7,6 @@ import {
   fetchTrend,
   type TrendPoint,
   type UsageEnvelope,
-  type UsageSession,
   type TrendResult,
 } from '../services/usageBridge';
 
@@ -41,15 +40,6 @@ function tzClock(iso: string | undefined, tz: string): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-function tzMinutes(iso: string, tz: string): number {
-  const { h, m } = tzParts(iso, tz);
-  return h * 60 + m;
-}
-
-const CATEGORIES = new Set(['social', 'work', 'entertainment', 'reading', 'tool']);
-function catClass(category?: string | null): string {
-  return category && CATEGORIES.has(category) ? `cat-${category}` : 'cat-other';
-}
 
 function relativeFromNow(iso: string | null): string {
   if (!iso) return '刚刚';
@@ -121,21 +111,6 @@ function appGlyph(pkg: string, label: string): string {
   return APP_GLYPH[pkg] ?? label.slice(0, 1);
 }
 
-function bubbleText(category?: string | null): string {
-  switch (category) {
-    case 'social':
-      return '在甜甜口袋待了好久呀~';
-    case 'entertainment':
-      return '刷得好开心，眼睛要休息一下哦~';
-    case 'work':
-      return '工作辛苦啦，记得喝口水 🍵';
-    case 'reading':
-      return '读了好久书，了不起 📖';
-    default:
-      return '这一段待了好久呢~';
-  }
-}
-
 // ---------- 页面 ----------
 export function PawTrailPage() {
   const navigate = useNavigate();
@@ -145,7 +120,6 @@ export function PawTrailPage() {
   const [env, setEnv] = useState<UsageEnvelope | null>(null);
   const [trend, setTrend] = useState<TrendResult | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<UsageSession | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -195,8 +169,6 @@ export function PawTrailPage() {
       trend={trend}
       tod={tod}
       reduced={reduced}
-      selected={selected}
-      onSelect={setSelected}
       onBack={() => navigate('/')}
     />
   );
@@ -258,20 +230,16 @@ function PawTrailView({
   trend,
   tod,
   reduced,
-  selected,
-  onSelect,
   onBack,
 }: {
   env: UsageEnvelope;
   trend: TrendResult | null;
   tod: string;
   reduced: boolean;
-  selected: UsageSession | null;
-  onSelect: (s: UsageSession | null) => void;
   onBack: () => void;
 }) {
   const { data, meta, source } = env;
-  const { summary, tz, apps, sessions } = data;
+  const { summary, tz, apps } = data;
 
   // 跟昨天比（trend 倒数第二天）
   const yesterday = trend && trend.data.length >= 2 ? trend.data[trend.data.length - 2] : null;
@@ -279,17 +247,6 @@ function PawTrailView({
 
   const topApps = apps.slice(0, 5);
   const maxApp = topApps.length ? topApps[0].foregroundMs : 1;
-
-  // 星河沙滩：最凶的一段（≥90min）冒气泡
-  const heaviest = useMemo(() => {
-    if (!sessions || !sessions.length) return null;
-    let best: { s: UsageSession; mins: number } | null = null;
-    for (const s of sessions) {
-      const mins = (Date.parse(s.endAt) - Date.parse(s.startAt)) / 60000;
-      if (mins >= 90 && (!best || mins > best.mins)) best = { s, mins };
-    }
-    return best?.s ?? null;
-  }, [sessions]);
 
   const commentary = buildCommentary(env);
 
@@ -366,66 +323,7 @@ function PawTrailView({
         </ul>
       </section>
 
-      {/* ④ 星河沙滩时间线 */}
-      <section className="paw-card">
-        <h2 className="paw-h2">一天的爪印 · 星河沙滩</h2>
-        <div className="paw-river">
-          {([['夜', '🌙'], ['晨', '🌅'], ['午', '☀️'], ['晚', '🌆']] as const).map(([seg, icon], i) => (
-            <span className="paw-river__seg" key={seg} style={{ left: `${(i / 4) * 100 + 12}%` }}>
-              {seg} {icon}
-            </span>
-          ))}
-          <div className="paw-river__track">
-            {sessions && sessions.length
-              ? sessions.map((s, i) => {
-                  const start = tzMinutes(s.startAt, tz);
-                  let end = tzMinutes(s.endAt, tz);
-                  if (end <= start) end = 1440;
-                  const left = (start / 1440) * 100;
-                  const width = Math.max(3, ((end - start) / 1440) * 100);
-                  const night = tzParts(s.startAt, tz).h < 5;
-                  return (
-                    <button
-                      type="button"
-                      key={i}
-                      className={`paw-step ${catClass(s.category)} ${night ? 'is-night' : ''} ${
-                        selected === s ? 'is-active' : ''
-                      }`}
-                      style={{ left: `${left}%`, width: `${width}%` }}
-                      onClick={() => onSelect(selected === s ? null : s)}
-                      aria-label={`${s.label ?? s.package} ${tzClock(s.startAt, tz)}`}
-                    >
-                      <span className="paw-step__mark" />
-                      {night ? <span className="paw-step__moon">🌙</span> : null}
-                    </button>
-                  );
-                })
-              : data.hourly.map((m, h) => (
-                  <span
-                    className="paw-hourbar"
-                    key={h}
-                    style={{ left: `${(h / 24) * 100}%`, height: `${Math.min(100, m * 2.2)}%` }}
-                    title={`${h}:00 · ${m}m`}
-                  />
-                ))}
-          </div>
-          {heaviest ? <span className="paw-river__bubble">{bubbleText(heaviest.category)}</span> : null}
-        </div>
-        {selected ? (
-          <div className="paw-river__detail">
-            <span className={`paw-dot ${catClass(selected.category)}`} />
-            <strong>{selected.label ?? selected.package}</strong>
-            <span>
-              {tzClock(selected.startAt, tz)}–{tzClock(selected.endAt, tz)} ·{' '}
-              {fmtDuration(Date.parse(selected.endAt) - Date.parse(selected.startAt))}
-            </span>
-          </div>
-        ) : (
-          <p className="paw-river__hint">点一枚爪印看看那段在玩啥 · 凌晨的爪印带小月亮 🌙</p>
-        )}
-      </section>
-
-      {/* ⑤ 这一周的脚步 + ⑥ 小指标 */}
+      {/* ④ 这一周的脚步 + 小指标 */}
       {trend && trend.data.length ? (
         <section className="paw-card">
           <h2 className="paw-h2">这一周的脚步</h2>
@@ -444,6 +342,9 @@ function PawTrailView({
   );
 }
 
+// 七根柱子各自一颗糖豆色（低饱和彩虹）
+const TREND_COLORS = ['#f4b8cf', '#ffd0b0', '#f1e0a0', '#b8e6c6', '#aed4f2', '#c3c4f2', '#d8b8e8'];
+
 function TrendBars({ points, todayDate }: { points: TrendPoint[]; todayDate: string }) {
   const max = Math.max(...points.map((p) => p.totalForegroundMs), 1);
   const n = points.length;
@@ -459,13 +360,15 @@ function TrendBars({ points, todayDate }: { points: TrendPoint[]; todayDate: str
           <circle key={i} className="paw-trend__starpt" cx={nd.x} cy={nd.y} r="1.1" />
         ))}
       </svg>
-      {points.map((p) => {
-        const day = new Date(`${p.date}T00:00:00+08:00`).getDay();
-        const weekend = day === 0 || day === 6;
+      {points.map((p, i) => {
+        const color = TREND_COLORS[i % TREND_COLORS.length];
         return (
           <div className={`paw-trend__col ${p.date === todayDate ? 'is-today' : ''}`} key={p.date}>
             <div className="paw-trend__barwrap">
-              <span className={`paw-trend__bar ${weekend ? 'is-weekend' : ''}`} style={{ height: `${heightPct(p)}%` }}>
+              <span
+                className="paw-trend__bar"
+                style={{ height: `${heightPct(p)}%`, ['--bar' as string]: color }}
+              >
                 <i className="paw-trend__paw" />
               </span>
             </div>

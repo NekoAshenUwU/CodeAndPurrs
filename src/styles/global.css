@@ -1839,17 +1839,17 @@ a {
   padding: calc(12px + env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom));
   /* 浅底默认：深字 + 浅玻璃卡 */
   --paw-ink: #5d4a7e;
-  --paw-sub: rgba(93, 74, 126, 0.78);
-  /* 卡片调成接近不透明的奶白，别让背后场景插画把文字/进度条吃掉（P0） */
-  --paw-card: rgba(255, 250, 252, 0.9);
-  --paw-card-border: rgba(255, 255, 255, 0.85);
+  --paw-sub: rgba(93, 74, 126, 0.8);
+  /* frosted glass：半透 + 强模糊，背景可爱图从卡片与缝隙透出，文字仍清 */
+  --paw-card: rgba(255, 250, 252, 0.66);
+  --paw-card-border: rgba(255, 255, 255, 0.75);
   color: var(--paw-ink);
 }
 .paw-page.is-night {
   --paw-ink: #efe7ff;
   --paw-sub: rgba(226, 220, 250, 0.82);
-  --paw-card: rgba(44, 36, 68, 0.74);
-  --paw-card-border: rgba(214, 200, 245, 0.3);
+  --paw-card: rgba(44, 36, 68, 0.52);
+  --paw-card-border: rgba(214, 200, 245, 0.28);
 }
 
 /* 类别色：莫兰迪低饱和柔色（爪印/方块/时长条/星河石头共用 --cc） */
@@ -1928,14 +1928,14 @@ a {
 .paw-chips,
 .paw-comment {
   width: min(100%, 560px);
-  margin: 0 auto 14px;
+  margin: 0 auto 18px;
   padding: 18px;
   border: 1px solid var(--paw-card-border);
   border-radius: 26px;
   background: var(--paw-card);
-  box-shadow: 0 18px 40px -22px rgba(93, 74, 126, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(16px) saturate(1.3);
-  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  box-shadow: 0 18px 40px -22px rgba(93, 74, 126, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(19px) saturate(1.35);
+  -webkit-backdrop-filter: blur(19px) saturate(1.35);
 }
 .paw-h2 {
   margin: 0 0 12px;
@@ -2467,4 +2467,39 @@ a {
 
 @media (prefers-reduced-motion: reduce) {
   .paw-river__bubble { animation: none !important; }
+}
+
+/* ===== 第三轮：周柱独立糖豆色 + 星座连线做细做透 ===== */
+.paw-trend__bar,
+.paw-trend__bar.is-weekend {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), var(--bar, #c9c3d8));
+}
+.paw-trend__col.is-today .paw-trend__bar {
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+/* 星座线细而透，只作点缀，不抢戏 */
+.paw-trend__line {
+  stroke: rgba(255, 255, 255, 0.38);
+  stroke-width: 0.8;
+  filter: none;
+}
+.paw-trend__starpt { fill: rgba(255, 255, 255, 0.55); }
+
+/* ===== 顶部圆环「总时长」流光渐变文字（慢、柔、始终可读）===== */
+.paw-ring__time {
+  background-image: linear-gradient(100deg, #9b7bc8 0%, #c79fd6 28%, #f2a9c4 52%, #7fd6cf 78%, #9b7bc8 100%);
+  background-size: 260% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 1px 2px rgba(93, 74, 126, 0.18);
+  animation: paw-time-flow 5.5s ease-in-out infinite;
+}
+@keyframes paw-time-flow {
+  to { background-position: 260% center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .paw-ring__time { animation: none; background-position: 0 center; }
 }
