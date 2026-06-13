@@ -1125,11 +1125,26 @@ a {
   color: #cdbdf2;
 }
 
+/* 深夜：卡片改深色烟熏玻璃，浅色字才跳得出来（白卡配浅字会糊） */
 .home-page.is-night .hero-card {
-  background: rgba(255, 255, 255, 0.42);
+  background: rgba(42, 33, 66, 0.46);
+  border-color: rgba(214, 200, 245, 0.34);
 }
 
-/* 深夜档：中文标语换成会发光的亮色字，暗底也读得清 */
+/* 深夜档：英文标题换亮色，暗底才清楚 */
+.home-page.is-night .hero-card h1 {
+  background-image: linear-gradient(
+    110deg,
+    #d6dfff 0%,
+    #ecd6f6 30%,
+    #f8d2e8 50%,
+    #ffe2f1 66%,
+    #dccdff 84%,
+    #d6dfff 100%
+  );
+}
+
+/* 深夜档：中文标语换亮色；只留 text-shadow 一层光（去掉重复的 filter 模糊光，否则糊成一片） */
 .home-page.is-night .vow {
   background-image: linear-gradient(
     110deg,
@@ -1140,9 +1155,7 @@ a {
     #dcc8ff 84%,
     #cdd8ff 100%
   );
-  filter:
-    drop-shadow(0 0 8px rgba(216, 180, 254, 0.7))
-    drop-shadow(0 0 18px rgba(242, 169, 196, 0.5));
+  filter: none;
 }
 
 /* 同样坐在暗玻璃上的英文副标语 / eyebrow 一起提亮 */
@@ -1183,35 +1196,35 @@ a {
     vow-glow-night 3.6s ease-in-out infinite;
 }
 
-/* 英文标题：暖白光多层叠加 */
+/* 英文标题：极细暗描边保边缘清晰 + 暖白光（收小半径，不糊） */
 @keyframes title-glow-night {
   0%,
   100% {
     text-shadow:
-      0 0 6px rgba(255, 246, 224, 0.45),
-      0 0 14px rgba(255, 236, 200, 0.3);
+      0 1px 1px rgba(26, 16, 46, 0.6),
+      0 0 7px rgba(255, 246, 224, 0.4);
   }
   50% {
     text-shadow:
-      0 0 12px rgba(255, 248, 230, 0.85),
-      0 0 26px rgba(255, 232, 190, 0.6),
-      0 0 44px rgba(255, 224, 180, 0.4);
+      0 1px 1px rgba(26, 16, 46, 0.6),
+      0 0 13px rgba(255, 248, 230, 0.7),
+      0 0 22px rgba(255, 232, 190, 0.45);
   }
 }
 
-/* 中文标语：粉紫光多层叠加 */
+/* 中文标语：极细暗描边 + 粉紫光（收小半径，不糊） */
 @keyframes vow-glow-night {
   0%,
   100% {
     text-shadow:
-      0 0 6px rgba(216, 180, 254, 0.45),
-      0 0 15px rgba(242, 169, 196, 0.32);
+      0 1px 1px rgba(38, 18, 52, 0.55),
+      0 0 7px rgba(216, 180, 254, 0.4);
   }
   50% {
     text-shadow:
-      0 0 12px rgba(216, 180, 254, 0.85),
-      0 0 26px rgba(242, 169, 196, 0.6),
-      0 0 44px rgba(190, 150, 245, 0.42);
+      0 1px 1px rgba(38, 18, 52, 0.55),
+      0 0 13px rgba(216, 180, 254, 0.7),
+      0 0 22px rgba(242, 169, 196, 0.45);
   }
 }
 
@@ -1301,15 +1314,15 @@ a {
   .home-page.is-night .hero-card h1,
   .home-page.is-dusk .hero-card h1 {
     text-shadow:
-      0 0 12px rgba(255, 248, 230, 0.72),
-      0 0 24px rgba(255, 232, 190, 0.5);
+      0 1px 1px rgba(26, 16, 46, 0.6),
+      0 0 12px rgba(255, 248, 230, 0.6);
   }
 
   .home-page.is-night .vow,
   .home-page.is-dusk .vow {
     text-shadow:
-      0 0 12px rgba(216, 180, 254, 0.75),
-      0 0 24px rgba(242, 169, 196, 0.5);
+      0 1px 1px rgba(38, 18, 52, 0.55),
+      0 0 12px rgba(216, 180, 254, 0.6);
   }
 
   .dust,
