@@ -12,7 +12,6 @@ import {
 } from '../services/usageBridge';
 
 const MASCOT = `${import.meta.env.BASE_URL}assets/mascot/neko.png`;
-const REFERENCE_MS = 6 * 3600000; // 活动环的柔性参考刻度：6 小时
 
 // ---------- 小工具 ----------
 function fmtDuration(ms: number): string {
@@ -81,10 +80,24 @@ function buildCommentary(env: UsageEnvelope): string {
   return `今天过得刚刚好~${top ? `${top.label}是你今天的最爱呢` : ''} 🐾`;
 }
 
-function mascotMood(ratio: number): { emoji: string; label: string } {
-  if (ratio < 0.6) return { emoji: '😺', label: '晒太阳' };
-  if (ratio < 1) return { emoji: '🙈', label: '捂眼睛' };
-  return { emoji: '🫠', label: '装死' };
+// App 颜色：已知包名用接近品牌色，其余按类别马卡龙色（真数据会带 iconBase64 显示真 logo）
+const APP_COLOR: Record<string, string> = {
+  'com.xingin.xhs': '#ff4d6d',
+  'com.tencent.mm': '#3fd06a',
+  'com.ss.android.ugc.aweme': '#7b6cf0',
+  'com.microsoft.vscode': '#4aa3f0',
+  'com.google.books': '#46c2a8',
+  'com.android.settings': '#9aa6c4',
+};
+const CAT_COLOR: Record<string, string> = {
+  social: '#f2a9c4',
+  work: '#b3a0ec',
+  entertainment: '#f6b863',
+  reading: '#8fd9c0',
+  tool: '#a9c4e8',
+};
+function appColor(pkg: string, category?: string | null): string {
+  return APP_COLOR[pkg] ?? (category ? CAT_COLOR[category] : undefined) ?? '#c9c3d8';
 }
 
 function bubbleText(category?: string | null): string {
@@ -239,9 +252,6 @@ function PawTrailView({
   const { data, meta, source } = env;
   const { summary, tz, apps, sessions } = data;
 
-  const ratio = summary.totalForegroundMs / REFERENCE_MS;
-  const mood = mascotMood(ratio);
-
   // 跟昨天比（trend 倒数第二天）
   const yesterday = trend && trend.data.length >= 2 ? trend.data[trend.data.length - 2] : null;
   const deltaMin = yesterday ? Math.round((summary.totalForegroundMs - yesterday.totalForegroundMs) / 60000) : null;
@@ -282,9 +292,6 @@ function PawTrailView({
         </div>
         <div className="paw-ring__center" role="img" aria-label="今日使用时长">
           <img src={MASCOT} alt="" className="paw-ring__cat" />
-          <span className="paw-ring__mood" title={mood.label}>
-            {mood.emoji}
-          </span>
           <span className="paw-ring__time">{fmtDuration(summary.totalForegroundMs)}</span>
           <span className="paw-ring__label">今日</span>
         </div>
@@ -310,18 +317,22 @@ function PawTrailView({
         </div>
         <ul className="paw-apps">
           {topApps.map((app, i) => (
-            <li className={`paw-app ${i === 0 ? 'is-top' : ''}`} key={app.package}>
-              <span className={`paw-tile ${catClass(app.category)}`}>
+            <li
+              className={`paw-app ${i === 0 ? 'is-top' : ''}`}
+              key={app.package}
+              style={{ ['--cc' as string]: appColor(app.package, app.category) }}
+            >
+              <span className="paw-tile">
                 {app.iconBase64 ? <img src={app.iconBase64} alt="" /> : app.label.slice(0, 1)}
               </span>
               <div className="paw-app__body">
                 <div className="paw-app__row">
                   <span className="paw-app__name">{app.label}</span>
-                  <span className={`paw-app__dur ${catClass(app.category)}`}>{fmtDuration(app.foregroundMs)}</span>
+                  <span className="paw-app__dur">{fmtDuration(app.foregroundMs)}</span>
                 </div>
                 <div className="paw-app__bar">
                   <span
-                    className={`paw-app__fill ${catClass(app.category)}`}
+                    className="paw-app__fill"
                     style={{ width: `${Math.max(8, (app.foregroundMs / maxApp) * 100)}%` }}
                   />
                 </div>

@@ -2323,3 +2323,32 @@ a {
   -webkit-backdrop-filter: none;
   justify-content: center;
 }
+
+/* ===== Paw Trail 果冻质感增强 + 品牌色 ===== */
+.paw-tile {
+  border-radius: 15px;
+  /* 左上强高光 + 实色底，糖果果冻感 */
+  background:
+    radial-gradient(120% 85% at 28% 16%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 48%),
+    var(--cc, #c9c3d8);
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.9),
+    inset 0 -7px 11px rgba(60, 30, 90, 0.2),
+    0 9px 16px -5px var(--cc, rgba(93, 74, 126, 0.5));
+}
+.paw-app__fill {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 55%),
+    var(--cc, #c9c3d8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 2px 6px -2px var(--cc, rgba(93, 74, 126, 0.4));
+}
+.paw-step {
+  height: 22px;
+  background:
+    radial-gradient(120% 90% at 30% 14%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 52%),
+    var(--cc, #c9c3d8);
+  box-shadow:
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.95),
+    inset 0 -4px 7px rgba(60, 30, 90, 0.18),
+    0 6px 13px -3px var(--cc, #c9c3d8);
+}
