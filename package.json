@@ -7,6 +7,10 @@
     "dev": "concurrently -n web,api -c magenta,cyan \"npm:dev:web\" \"npm:dev:server\"",
     "dev:web": "vite --host 0.0.0.0",
     "dev:server": "node --env-file-if-exists=.env server/proxy.mjs",
+    "bridge:start": "node --env-file-if-exists=.env server/usageBridge.mjs",
+    "bridge:test": "node --test test/usageBridgeServer.test.mjs",
+    "bridge:smoke": "node scripts/usageBridgeSmoke.mjs",
+    "bridge:verify": "node scripts/usageBridgeVerify.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 0.0.0.0"
   },

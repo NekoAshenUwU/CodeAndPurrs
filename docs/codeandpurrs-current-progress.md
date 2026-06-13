@@ -30,8 +30,12 @@
 - 已定架构：桥接 App **单向推送**使用数据到 VPS，网页从 VPS 读（不在手机上开本地服务，避开 MIUI 杀后台/混合内容/IP 变动）。
 - 主视觉 = 发光爪印活动环；含猫咪 AI 点评、爪印榜、24h 时间线、7 天趋势、小指标。
 - 界面已升级设计：会呼吸的时间背景（随真实时间变色、深夜接棠予酿深空风）、活动环星屑+猫咪按时长换表情、时间线做成"星河沙滩"（按类别染马卡龙色、深夜爪印带月亮）、App 榜单坐猫肉垫、呼噜吐槽气泡。为此契约新增可选 `sessions[]`（每段会话归属哪个 App）。
-- 分工：Codex 做红米桥接，Claude 做网页 + VPS 接收端。
+- 分工（已校准）：**Codex 做红米安卓 App**（真正取数据那端），**Claude 做网页 + VPS 接收端 + 整合**。
 - 完整规格与数据契约见 `docs/neko-usage-bridge-spec.md`（§4 契约为两边唯一真相）。
+- 时区口径修正：机主在亚庇，owner 时区 = `Asia/Kuching`（非上海，都是 UTC+8）。
+- ✅ **VPS 接收端已实现并整合**（基于 Codex PR #1，对齐 §4）：`server/usageBridgeServer.mjs` + 独立启动器 `server/usageBridge.mjs`（端口 8788，不动聊天后端 `proxy.mjs`）。endpoint：ingest/ping/latest/day/trend + health/prune/delete/owner-delete；读取走 `{ok,meta{owner,lastIngestAt,stale},data}` 外壳、服务端算 stale；校验 `device{}`、§4 字段名、`sessions[]`、`notifications`、app `category/iconBase64`；token 鉴权 + CORS + 保留天数。零依赖。`npm run bridge:test`（11/11 过）、`npm run bridge:verify`（端到端过）。部署样例 `deploy/nginx-api.nekopurrs.uk.conf.example`、`deploy/usage-bridge.service.example`。
+- ⏳ 待办：前端 `PawTrailPage` 跟首页合并 + 补猫味模块（星河沙滩/肉垫/气泡/时段背景）；Codex 的安卓 App。
+- 注：Codex PR #1 里那 11 张 `file_*.png`（~15MB）是垃圾,未采纳;其改写的 spec/字段名也未采纳,以 §4 为准。
 
 ## 首页改造（hero 升级）
 

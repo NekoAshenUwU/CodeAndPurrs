@@ -1,0 +1,25 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name api.nekopurrs.uk;
+
+    # 推荐：certbot --nginx -d api.nekopurrs.uk 自动签 TLS 并改成 listen 443。
+    # 下面把 /api/usage/ 反代到本地 Node bridge（默认端口 8788）。
+
+    client_max_body_size 512k;
+
+    location /api/usage/ {
+        proxy_pass http://127.0.0.1:8788;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 30s;
+    }
+
+    location = / {
+        return 200 'Neko Usage Bridge is alive.\n';
+        add_header Content-Type text/plain;
+    }
+}
