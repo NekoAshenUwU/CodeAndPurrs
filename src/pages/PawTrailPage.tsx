@@ -240,7 +240,6 @@ function PawTrailView({
   const { summary, tz, apps, sessions } = data;
 
   const ratio = summary.totalForegroundMs / REFERENCE_MS;
-  const ringPct = Math.min(ratio, 1);
   const mood = mascotMood(ratio);
 
   // 跟昨天比（trend 倒数第二天）
@@ -263,9 +262,6 @@ function PawTrailView({
 
   const commentary = buildCommentary(env);
 
-  const R = 86;
-  const C = 2 * Math.PI * R;
-
   return (
     <main className={`paw-page is-${tod}`}>
       <PawSky tod={tod} reduced={reduced} />
@@ -276,30 +272,15 @@ function PawTrailView({
         <div className="paw-note paw-note--stale">数据更新于 {relativeFromNow(meta.lastIngestAt)}</div>
       ) : null}
 
-      {/* ① 活动环 */}
+      {/* ① 活动环 · 彩虹玻璃环 */}
       <section className="paw-card paw-ring-card">
-        <svg className="paw-ring" viewBox="0 0 200 200" role="img" aria-label="今日使用时长">
-          <defs>
-            <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="var(--iris)" />
-              <stop offset="100%" stopColor="var(--sakura)" />
-            </linearGradient>
-          </defs>
-          <circle className="paw-ring__track" cx="100" cy="100" r={R} />
-          <circle
-            className="paw-ring__fill"
-            cx="100"
-            cy="100"
-            r={R}
-            style={{
-              strokeDasharray: C,
-              strokeDashoffset: reduced ? C * (1 - ringPct) : undefined,
-              ['--ring-c' as string]: C,
-              ['--ring-off' as string]: C * (1 - ringPct),
-            }}
-          />
-        </svg>
-        <div className="paw-ring__center">
+        <div className="paw-ring2" aria-hidden="true">
+          <span className="paw-ring2__charm">🌙</span>
+          <i className="paw-bubble paw-bubble--1" />
+          <i className="paw-bubble paw-bubble--2" />
+          <i className="paw-bubble paw-bubble--3" />
+        </div>
+        <div className="paw-ring__center" role="img" aria-label="今日使用时长">
           <img src={MASCOT} alt="" className="paw-ring__cat" />
           <span className="paw-ring__mood" title={mood.label}>
             {mood.emoji}
@@ -309,7 +290,8 @@ function PawTrailView({
         </div>
         {deltaMin !== null ? (
           <div className={`paw-delta ${deltaMin <= 0 ? 'is-less' : 'is-more'}`}>
-            {deltaMin === 0 ? '和昨天一样' : deltaMin < 0 ? `比昨天少 ${-deltaMin}m 🐾` : `比昨天多 ${deltaMin}m`}
+            <span className="paw-delta__paw">🐾</span>
+            {deltaMin === 0 ? '和昨天一样' : deltaMin < 0 ? `比昨天少 ${-deltaMin}m` : `比昨天多 ${deltaMin}m`}
           </div>
         ) : null}
       </section>
@@ -320,17 +302,22 @@ function PawTrailView({
         <p className="paw-comment__bubble">{commentary}</p>
       </section>
 
-      {/* ③ 爪印榜 · 坐肉垫 */}
+      {/* ③ 爪印榜 */}
       <section className="paw-card">
-        <h2 className="paw-h2">爪印榜</h2>
+        <div className="paw-h2wrap">
+          <h2 className="paw-h2">爪印榜</h2>
+          <p className="paw-sub">✦ 记着每一步，遇见更好的自己 ✦</p>
+        </div>
         <ul className="paw-apps">
           {topApps.map((app, i) => (
             <li className={`paw-app ${i === 0 ? 'is-top' : ''}`} key={app.package}>
-              <span className={`paw-pad ${catClass(app.category)}`}>{app.label.slice(0, 1)}</span>
+              <span className={`paw-tile ${catClass(app.category)}`}>
+                {app.iconBase64 ? <img src={app.iconBase64} alt="" /> : app.label.slice(0, 1)}
+              </span>
               <div className="paw-app__body">
                 <div className="paw-app__row">
                   <span className="paw-app__name">{app.label}</span>
-                  <span className="paw-app__dur">{fmtDuration(app.foregroundMs)}</span>
+                  <span className={`paw-app__dur ${catClass(app.category)}`}>{fmtDuration(app.foregroundMs)}</span>
                 </div>
                 <div className="paw-app__bar">
                   <span
@@ -348,9 +335,9 @@ function PawTrailView({
       <section className="paw-card">
         <h2 className="paw-h2">一天的爪印 · 星河沙滩</h2>
         <div className="paw-river">
-          {['夜', '晨', '午', '晚'].map((seg, i) => (
-            <span className="paw-river__seg" key={seg} style={{ left: `${(i / 4) * 100}%` }}>
-              {seg}
+          {([['夜', '🌙'], ['晨', '🌅'], ['午', '☀️'], ['晚', '🌆']] as const).map(([seg, icon], i) => (
+            <span className="paw-river__seg" key={seg} style={{ left: `${(i / 4) * 100 + 12}%` }}>
+              {seg} {icon}
             </span>
           ))}
           <div className="paw-river__track">
@@ -373,7 +360,6 @@ function PawTrailView({
                       onClick={() => onSelect(selected === s ? null : s)}
                       aria-label={`${s.label ?? s.package} ${tzClock(s.startAt, tz)}`}
                     >
-                      <span className="paw-step__paw">🐾</span>
                       {night ? <span className="paw-step__moon">🌙</span> : null}
                       {heaviest === s ? <span className="paw-step__bubble">{bubbleText(s.category)}</span> : null}
                     </button>
@@ -403,21 +389,19 @@ function PawTrailView({
         )}
       </section>
 
-      {/* ⑤ 这一周的脚步 */}
+      {/* ⑤ 这一周的脚步 + ⑥ 小指标 */}
       {trend && trend.data.length ? (
         <section className="paw-card">
           <h2 className="paw-h2">这一周的脚步</h2>
           <TrendBars points={trend.data} todayDate={data.date} />
+          <div className="paw-chips">
+            <span className="paw-chip">解锁 {summary.unlocks} 次 🔓</span>
+            <span className="paw-chip">第一次拿起 {tzClock(summary.firstUseAt, tz)} 🌅</span>
+            <span className="paw-chip">最后放下 {tzClock(summary.lastUseAt, tz)} 🌙</span>
+            {summary.notifications != null ? <span className="paw-chip">通知 {summary.notifications} 条 🔔</span> : null}
+          </div>
         </section>
       ) : null}
-
-      {/* ⑥ 小指标 */}
-      <section className="paw-chips">
-        <span className="paw-chip">解锁 {summary.unlocks} 次 🔓</span>
-        <span className="paw-chip">第一次拿起 {tzClock(summary.firstUseAt, tz)} 🌅</span>
-        <span className="paw-chip">最后放下 {tzClock(summary.lastUseAt, tz)} 🌙</span>
-        {summary.notifications != null ? <span className="paw-chip">通知 {summary.notifications} 条 🔔</span> : null}
-      </section>
 
       <p className="paw-foot">ta 自愿分享的一天 · 只看不扰</p>
     </main>
@@ -437,7 +421,9 @@ function TrendBars({ points, todayDate }: { points: TrendPoint[]; todayDate: str
               <span
                 className={`paw-trend__bar ${weekend ? 'is-weekend' : ''}`}
                 style={{ height: `${Math.max(6, (p.totalForegroundMs / max) * 100)}%` }}
-              />
+              >
+                <i className="paw-trend__stars" />
+              </span>
             </div>
             <span className="paw-trend__day">{p.date.slice(5)}</span>
           </div>
