@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "bridge:start": "node server/proxy.mjs",
+    "bridge:test": "node --test test/usageBridgeServer.test.mjs",
+    "bridge:smoke": "node scripts/usageBridgeSmoke.mjs",
+    "bridge:verify": "node scripts/usageBridgeVerify.mjs"
   },
   "dependencies": {
     "react": "latest",
