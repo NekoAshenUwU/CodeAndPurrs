@@ -287,13 +287,6 @@ function PawTrailView({
             r={RING_R}
             style={{ strokeDasharray: RING_C, strokeDashoffset: reduced ? ringOff : undefined, ...ringVars }}
           />
-          <circle
-            className="paw-ring__hi"
-            cx="100"
-            cy="100"
-            r={RING_R}
-            style={{ strokeDasharray: RING_C, strokeDashoffset: reduced ? ringOff : undefined, ...ringVars }}
-          />
         </svg>
         <div className="paw-ring__center" role="img" aria-label="今日使用时长">
           <img src={PAW_HERO} alt="" className="paw-ring__cat" />

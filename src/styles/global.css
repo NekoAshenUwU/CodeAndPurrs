@@ -2583,3 +2583,16 @@ a {
   .paw-ring__fill,
   .paw-ring__hi { animation: none !important; }
 }
+
+/* ===== 进度环放大 + mascot/数字缩小不遮挡 + 去白高光内圈 ===== */
+.paw-ring { width: min(82vw, 322px); height: min(82vw, 322px); }
+.paw-ring-card .paw-ring__center {
+  width: min(82vw, 322px);
+  height: min(82vw, 322px);
+}
+.paw-ring__cat { width: 48%; margin-bottom: 0; }
+.paw-ring__time { font-size: 2.1rem; }
+.paw-ring__hi { display: none; } /* 去掉彩虹里那条白线 */
+
+/* 修正:svg 与 circle 都各转了一次 -90°(共 -180°,从6点起)。取消 svg 旋转,只留 circle 的 → 从12点起 */
+.paw-ring { transform: none; }
