@@ -1874,11 +1874,11 @@ a {
   z-index: -1;
   overflow: hidden;
 }
-/* 100% 宽不裁左右边轨；repeat-y 竖向无缝平铺，页面再长都铺满、装饰一路陪滚动 */
+/* 两张只叠一次(云朵处羽化)铺满全页，不重复——图1顶部的猫只在最顶出现一次，不会被复制到下半页切到脸 */
 .paw-sky__photo {
   position: absolute;
   inset: 0;
-  background: url("/rooms/paw-trail-loop.webp") top center / 100% auto repeat-y;
+  background: url("/rooms/paw-trail-stack.webp") top center / 100% auto no-repeat;
   filter: saturate(1.05);
 }
 .paw-sky__tint {
