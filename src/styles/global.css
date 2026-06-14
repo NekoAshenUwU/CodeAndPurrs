@@ -2604,55 +2604,40 @@ a {
 .paw-ring { transform: none; }
 
 /* ============================================================
-   首页背景"压花"：把过于热闹的星空底图压成远景氛围，
-   让玻璃门牌图标 + 中英文名清晰浮出。(见棠棠 2026-06-14 需求)
+   首页背景"压花"：只压夜晚，白天完全不动。
+   夜晚把热闹星空压成远景氛围，让玻璃门牌 + 中英文名浮出。
+   (见棠棠 2026-06-14 需求：白天不压；夜晚模糊别太重，要看得清背景图)
    ============================================================ */
 
-/* ① 背景加重高斯模糊 → 猫咪/气泡/星星退成柔焦远景。
-   scale 略放大，避免 blur 把边缘采样成透明、露出底色。 */
-.timesky__photo {
-  filter: blur(7px);
-  transform: scale(1.08);
-}
-.timesky__layer--night {
-  filter: blur(7px);
-  transform: scale(1.08);
+/* ① 仅夜晚：背景轻度高斯模糊 → 退成柔焦远景但仍看得清画面。
+   只作用在夜图层，白天底图 .timesky__photo 保持原样清晰。
+   scale 略放大，避免 blur 边缘采样透明露底。 */
+.timesky.is-night .timesky__layer--night {
+  filter: blur(3px);
+  transform: scale(1.05);
 }
 
-/* ② 整张背景叠半透明深紫蒙层，进一步压暗压花（夜重日浅，护住白天的粉嫩）。
-   ::after 位于背景层最上、但在 .atmosphere 光尘/星点之下，星点仍作氛围浮于其上。 */
-.timesky::after {
+/* ② 仅夜晚：整张背景叠半透明深紫蒙层，压暗压花。
+   ::after 在背景层最上、光尘/星点之下，星点仍作氛围浮于其上。 */
+.timesky.is-night::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(60, 40, 90, 0.26);
+  background: rgba(60, 40, 90, 0.3);
   pointer-events: none;
 }
-.timesky.is-day::after {
-  background: rgba(70, 52, 104, 0.2);
-}
-.timesky.is-night::after {
-  background: rgba(60, 40, 90, 0.34);
-}
 
-/* ③ LITTLE ROOMS 图标区垫一层极淡磨砂面板，成独立板块，
-   backdrop-filter 二次柔化背后已模糊的底图，对比更干净。 */
-.rooms-section {
+/* ③ 仅夜晚：LITTLE ROOMS 图标区垫极淡磨砂面板，成独立板块。
+   白天不加面板（白天不压）。 */
+.home-page.is-night .rooms-section {
   position: relative;
   z-index: 1;
   padding: 20px 14px 24px;
   border-radius: 30px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(40, 30, 70, 0.26);
   backdrop-filter: blur(5px) saturate(1.05);
   -webkit-backdrop-filter: blur(5px) saturate(1.05);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  box-shadow:
-    0 10px 30px rgba(74, 59, 107, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-}
-.home-page.is-night .rooms-section {
-  background: rgba(40, 30, 70, 0.26);
-  border-color: rgba(214, 200, 245, 0.2);
+  border: 1px solid rgba(214, 200, 245, 0.2);
   box-shadow:
     0 12px 34px rgba(16, 10, 36, 0.34),
     inset 0 1px 0 rgba(255, 255, 255, 0.12);
