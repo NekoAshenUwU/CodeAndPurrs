@@ -578,17 +578,17 @@ a {
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: 0.03em;
-  /* 暖蜜桃粉渐变（日间偏深一档保可读；夜间见下方 is-night 覆盖成亮蜜桃） */
-  background-image: linear-gradient(180deg, #f7b9d3 0%, #f59ec0 38%, #ee8fb6 68%, #e87fb0 100%);
+  /* 紫 → 马卡龙淡紫粉渐变（不再纯粉，柔和不突兀） */
+  background-image: linear-gradient(135deg, #b491e8 0%, #c9a3ec 32%, #e3acdf 64%, #f0bcd8 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  -webkit-text-stroke: 0.5px rgba(170, 90, 130, 0.22);
+  -webkit-text-stroke: 0.5px rgba(130, 95, 175, 0.22);
   text-shadow:
-    0 0 8px rgba(255, 200, 225, 0.42),
-    0 0 18px rgba(255, 160, 200, 0.22),
-    0 2px 8px rgba(110, 40, 80, 0.2);
+    0 0 8px rgba(220, 200, 255, 0.42),
+    0 0 18px rgba(200, 165, 240, 0.24),
+    0 2px 8px rgba(80, 50, 120, 0.2);
   animation: sloganTwinkle 4.6s ease-in-out infinite;
 }
 
@@ -632,20 +632,62 @@ a {
 
 .hero-card__actions button,
 .hero-card__actions a {
-  min-height: 44px;
-  padding: 12px 20px;
-  color: var(--ink);
-  font-family: var(--round);
+  position: relative;
+  min-height: 46px;
+  padding: 13px 24px;
+  color: #5a4a7e;
+  font-family: var(--cute);
+  font-size: 1.1rem;
   font-weight: 500;
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(255, 255, 255, 0.9);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.5);
+  /* 液态玻璃药丸：磨砂底 + 左上高光 + 内倒角 */
+  background:
+    radial-gradient(75% 60% at 28% 12%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 62%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.2));
   box-shadow:
-    0 12px 28px rgba(118, 96, 132, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(8px);
+    0 8px 20px rgba(140, 128, 182, 0.22),
+    inset 0 1.6px 1.5px rgba(255, 255, 255, 1),
+    inset 0 -3px 6px rgba(150, 150, 205, 0.18),
+    inset 0 0 0 1.4px rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  backdrop-filter: blur(12px) saturate(1.5);
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+/* 顶部湿润高光 */
+.hero-card__actions button::before,
+.hero-card__actions a::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 46%);
+}
+/* 虹彩折射描边 */
+.hero-card__actions button::after,
+.hero-card__actions a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  pointer-events: none;
+  background: linear-gradient(
+    150deg,
+    rgba(214, 184, 255, 0.85),
+    rgba(172, 202, 255, 0.7) 40%,
+    rgba(184, 242, 255, 0.85) 66%,
+    rgba(214, 184, 255, 0.8)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.7;
 }
 
 .hero-card__actions button:hover,
@@ -653,9 +695,30 @@ a {
   transform: translateY(-2px);
 }
 
+/* 主按钮「进入呼噜频道」：马卡龙虹彩液态玻璃 */
 .hero-card__actions button:first-child {
-  color: #8e6472;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(243, 191, 208, 0.66));
+  color: #463a6b;
+  background:
+    radial-gradient(70% 55% at 26% 12%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0) 56%),
+    conic-gradient(
+      from 210deg at 58% 42%,
+      rgba(189, 166, 246, 0.6),
+      rgba(243, 182, 218, 0.55),
+      rgba(174, 230, 238, 0.6),
+      rgba(200, 244, 230, 0.55),
+      rgba(189, 166, 246, 0.6)
+    ),
+    linear-gradient(118deg, #bda6f6 0%, #e3a8ee 26%, #f6b6da 48%, #aee6ee 74%, #c0f4e6 100%);
+  box-shadow:
+    0 10px 26px rgba(168, 146, 222, 0.5),
+    0 0 18px rgba(196, 182, 248, 0.5),
+    inset 0 1.6px 2px rgba(255, 255, 255, 1),
+    inset 0 8px 12px rgba(255, 255, 255, 0.5),
+    inset 0 -6px 11px rgba(150, 162, 218, 0.34),
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.6);
+}
+.hero-card__actions button:first-child::after {
+  opacity: 1;
 }
 
 /* 首页 eyebrow 改用花体衬线 */
@@ -1112,16 +1175,16 @@ a {
     0 2px 10px rgba(40, 30, 90, 0.4);
 }
 
-/* 深夜/傍晚：中文暖蜜桃粉发光（指定渐变，明显区别于标题的冷紫粉） */
+/* 深夜/傍晚：中文标语亮版紫→淡紫粉发光（更亮但仍带紫，不纯粉） */
 .home-page.is-night .vow,
 .home-page.is-dusk .vow {
-  background-image: linear-gradient(180deg, #ffdff0 0%, #ffc7dd 35%, #ffb7cf 65%, #f39ac2 100%);
-  -webkit-text-stroke: 0.7px rgba(255, 245, 250, 0.32);
+  background-image: linear-gradient(135deg, #d6c2f8 0%, #e3b8f0 34%, #f3c4e2 66%, #ffcce2 100%);
+  -webkit-text-stroke: 0.7px rgba(250, 245, 255, 0.32);
   text-shadow:
-    0 0 8px rgba(255, 216, 236, 0.48),
-    0 0 20px rgba(255, 175, 210, 0.34),
-    0 0 34px rgba(230, 120, 180, 0.2),
-    0 2px 10px rgba(60, 30, 70, 0.32);
+    0 0 8px rgba(228, 214, 255, 0.5),
+    0 0 20px rgba(205, 170, 245, 0.36),
+    0 0 34px rgba(180, 130, 230, 0.22),
+    0 2px 10px rgba(50, 30, 80, 0.32);
 }
 
 /* 同样坐在暗玻璃上的英文副标语 / eyebrow 一起提亮 */
@@ -1134,17 +1197,28 @@ a {
   color: #d3c4f3;
 }
 
-/* 深夜按钮换浅色，别沉进夜里 */
+/* 深夜：玻璃药丸自带亮色，这里只保证文字可读 + 副按钮玻璃稍提白 */
 .home-page.is-night .hero-card__actions a,
 .home-page.is-night .hero-card__actions button {
-  color: #6b4d77;
-  background: rgba(255, 255, 255, 0.72);
-  border-color: rgba(255, 255, 255, 0.92);
+  color: #4a3b6e;
+  background:
+    radial-gradient(75% 60% at 28% 12%, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0) 62%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0.34));
 }
 
 .home-page.is-night .hero-card__actions button:first-child {
-  color: #8e4f63;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(243, 191, 208, 0.85));
+  color: #3f3463;
+  background:
+    radial-gradient(70% 55% at 26% 12%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 56%),
+    conic-gradient(
+      from 210deg at 58% 42%,
+      rgba(189, 166, 246, 0.7),
+      rgba(243, 182, 218, 0.62),
+      rgba(174, 230, 238, 0.7),
+      rgba(200, 244, 230, 0.62),
+      rgba(189, 166, 246, 0.7)
+    ),
+    linear-gradient(118deg, #c6b0f8 0%, #ecb6f0 26%, #f9c2dd 48%, #b8ecf2 74%, #caf6e8 100%);
 }
 
 /* 深夜/傍晚的脉冲·微闪·扫光沿用基础 .hero-card h1 / .vow 的 heroGlowPulse / sloganTwinkle / heroSweepLight，
