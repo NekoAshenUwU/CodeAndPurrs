@@ -1,5 +1,8 @@
 # CodeAndPurrs 当前进度
 
+> 🟢 **新窗口先读 `docs/SESSION-HANDOFF.md`** —— 那是最新、最全的交接(含 Paw Trail 反复打磨后的真实状态、待办、文件地图、踩过的坑)。本文件保留早期脉络,细节以 HANDOFF 为准。
+> 开发分支：`claude/codepurrs-progress-docs-lngqpl`。
+
 ## 已完成
 
 - 已建立 CodeAndPurrs GitHub 仓库。
@@ -34,8 +37,8 @@
 - 完整规格与数据契约见 `docs/neko-usage-bridge-spec.md`（§4 契约为两边唯一真相）。
 - 时区口径修正：机主在亚庇，owner 时区 = `Asia/Kuching`（非上海，都是 UTC+8）。
 - ✅ **VPS 接收端已实现并整合**（基于 Codex PR #1，对齐 §4）：`server/usageBridgeServer.mjs` + 独立启动器 `server/usageBridge.mjs`（端口 8788，不动聊天后端 `proxy.mjs`）。endpoint：ingest/ping/latest/day/trend + health/prune/delete/owner-delete；读取走 `{ok,meta{owner,lastIngestAt,stale},data}` 外壳、服务端算 stale；校验 `device{}`、§4 字段名、`sessions[]`、`notifications`、app `category/iconBase64`；token 鉴权 + CORS + 保留天数。零依赖。`npm run bridge:test`（11/11 过）、`npm run bridge:verify`（端到端过）。部署样例 `deploy/nginx-api.nekopurrs.uk.conf.example`、`deploy/usage-bridge.service.example`。
-- ✅ **前端猫爪足迹页已实现**（按 §6 重写，未沿用 Codex 的 689 行版）：`src/pages/PawTrailPage.tsx` + `src/services/usageBridge.ts`（吃 §4 `{meta,data}`，base `api.nekopurrs.uk`，bridge 未上线时回退 demo 示例数据）。模块：时段背景（paw-trail 场景图+色纱+夜间星点）、发光活动环+mascot 按时长换表情+比昨天、猫咪点评（本地启发式）、肉垫爪印榜（类别马卡龙色）、星河沙滩 sessions 时间线（点击看详情/深夜月亮/连刷气泡）、7 天趋势、解锁/首末/通知 chips、加载/空/stale 态。路由 `/paw-trail`，`rooms.ts` 标 ready，首页点门牌可进。`npm run build` 通过，日/夜截图验收。
-- ⏳ 待办：Codex 的安卓 App；bridge 部署到 VPS 后把 demo 换真数据。
+- ✅ **前端猫爪足迹页已实现并多轮打磨**（按 §6 重写）。**最新真实状态见 `docs/SESSION-HANDOFF.md` §3**（要点：进度环每日目标 12h/从12点顺时针填/果冻管状无白内圈；玻璃珠 App Icon + 按 App 双色渐变进度条 + 龙珠体字色；周柱莫兰迪马卡龙各色渐变+星座点+柱身爪印;两张 GPT 画框图拼成白天/夜晚两套无缝背景;**「星河沙滩」模块已删除**)。
+- ⏳ 待办（详见 HANDOFF §6）：首页白天/夜晚新背景图、ashen 版背景、Mascot 文案待棠棠、Codex 安卓 App、VPS 部署、关 PR #1、择期合并 main。
 - 注：Codex PR #1 里那 11 张 `file_*.png`（~15MB）是垃圾,未采纳;其改写的 spec/字段名也未采纳,以 §4 为准。
 
 ## 首页改造（hero 升级）
