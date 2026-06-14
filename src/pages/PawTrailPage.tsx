@@ -274,9 +274,9 @@ function PawTrailView({
         <svg className={`paw-ring ${ringFull ? 'is-full' : ''}`} viewBox="0 0 200 200" aria-hidden="true">
           <defs>
             <linearGradient id="pawRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#9b7bc8" />
-              <stop offset="50%" stopColor="#f2a9c4" />
-              <stop offset="100%" stopColor="#7fd6cf" />
+              <stop offset="0%" stopColor="#f3bcd4" />
+              <stop offset="50%" stopColor="#c9b8ef" />
+              <stop offset="100%" stopColor="#bcd4f6" />
             </linearGradient>
           </defs>
           <circle className="paw-ring__track" cx="100" cy="100" r={RING_R} />
