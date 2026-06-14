@@ -12,6 +12,7 @@ import {
 
 const MASCOT = `${import.meta.env.BASE_URL}assets/mascot/neko.png`;
 const PAW_HERO = `${import.meta.env.BASE_URL}assets/mascot/paw-hero.webp`;
+const DAILY_GOAL_MS = 12 * 3600000; // 每日目标：满圈 = 12h（可配置）
 
 // ---------- 小工具 ----------
 function fmtDuration(ms: number): string {
@@ -250,6 +251,14 @@ function PawTrailView({
 
   const commentary = buildCommentary(env);
 
+  // 进度环：弧长 = 今日时长 ÷ 每日目标(12h)，封顶满圈
+  const RING_R = 86;
+  const RING_C = 2 * Math.PI * RING_R;
+  const ringPct = Math.min(summary.totalForegroundMs / DAILY_GOAL_MS, 1);
+  const ringOff = RING_C * (1 - ringPct);
+  const ringFull = ringPct >= 1;
+  const ringVars = { ['--ring-c' as string]: RING_C, ['--ring-off' as string]: ringOff };
+
   return (
     <main className={`paw-page is-${tod}`}>
       <PawSky tod={tod} reduced={reduced} />
@@ -260,14 +269,32 @@ function PawTrailView({
         <div className="paw-note paw-note--stale">数据更新于 {relativeFromNow(meta.lastIngestAt)}</div>
       ) : null}
 
-      {/* ① 活动环 · 彩虹玻璃环 */}
+      {/* ① 活动环 · 真·进度环(目标12h,果冻管状) */}
       <section className="paw-card paw-ring-card">
-        <div className="paw-ring2" aria-hidden="true">
-          <span className="paw-ring2__charm">🌙</span>
-          <i className="paw-bubble paw-bubble--1" />
-          <i className="paw-bubble paw-bubble--2" />
-          <i className="paw-bubble paw-bubble--3" />
-        </div>
+        <svg className={`paw-ring ${ringFull ? 'is-full' : ''}`} viewBox="0 0 200 200" aria-hidden="true">
+          <defs>
+            <linearGradient id="pawRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#9b7bc8" />
+              <stop offset="50%" stopColor="#f2a9c4" />
+              <stop offset="100%" stopColor="#7fd6cf" />
+            </linearGradient>
+          </defs>
+          <circle className="paw-ring__track" cx="100" cy="100" r={RING_R} />
+          <circle
+            className="paw-ring__fill"
+            cx="100"
+            cy="100"
+            r={RING_R}
+            style={{ strokeDasharray: RING_C, strokeDashoffset: reduced ? ringOff : undefined, ...ringVars }}
+          />
+          <circle
+            className="paw-ring__hi"
+            cx="100"
+            cy="100"
+            r={RING_R}
+            style={{ strokeDasharray: RING_C, strokeDashoffset: reduced ? ringOff : undefined, ...ringVars }}
+          />
+        </svg>
         <div className="paw-ring__center" role="img" aria-label="今日使用时长">
           <img src={PAW_HERO} alt="" className="paw-ring__cat" />
           <span className="paw-ring__time">{fmtDuration(summary.totalForegroundMs)}</span>

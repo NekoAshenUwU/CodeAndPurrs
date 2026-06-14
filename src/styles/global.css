@@ -2532,3 +2532,54 @@ a {
   font-size: 0.9rem;
   letter-spacing: 0.02em;
 }
+
+/* ===== 第六轮：真·进度环(目标12h, 果冻管状) + 比昨天药丸日夜配色/龙珠体 ===== */
+.paw-ring { width: min(74vw, 286px); height: min(74vw, 286px); transform: rotate(-90deg); }
+.paw-ring__track { fill: none; stroke: rgba(255, 255, 255, 0.5); stroke-width: 16; }
+.paw-page.is-night .paw-ring__track { stroke: rgba(255, 255, 255, 0.16); }
+/* 主色管状填充：彩虹 stroke + 同色外发光 */
+.paw-ring__fill {
+  fill: none;
+  stroke: url(#pawRingGrad);
+  stroke-width: 16;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px rgba(216, 180, 254, 0.6)) drop-shadow(0 0 11px rgba(242, 169, 196, 0.4));
+  stroke-dashoffset: var(--ring-off);
+  animation: paw-ring-grow 1s ease forwards;
+}
+/* 顶部细白高光 stroke：模拟管壁反光，做出 Q 弹立体 */
+.paw-ring__hi {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dashoffset: var(--ring-off);
+  animation: paw-ring-grow 1s ease forwards;
+}
+.paw-ring.is-full .paw-ring__fill {
+  filter: drop-shadow(0 0 11px rgba(216, 180, 254, 0.9)) drop-shadow(0 0 18px rgba(242, 169, 196, 0.6));
+}
+@keyframes paw-ring-grow {
+  from { stroke-dashoffset: var(--ring-c); }
+  to { stroke-dashoffset: var(--ring-off); }
+}
+
+/* 比昨天药丸：龙珠体 + 墨紫字 + 日夜主题底色（取消红绿区分） */
+.paw-delta,
+.paw-delta.is-less,
+.paw-delta.is-more {
+  font-family: "LongZhuPaw", var(--round);
+  color: #4a3b6b;
+  background: #f8d8e3; /* 白天 樱花粉 */
+}
+.paw-page.is-night .paw-delta,
+.paw-page.is-night .paw-delta.is-less,
+.paw-page.is-night .paw-delta.is-more {
+  color: #4a3b6b;
+  background: #e8dcf2; /* 夜间 薰衣草紫 */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paw-ring__fill,
+  .paw-ring__hi { animation: none !important; }
+}
