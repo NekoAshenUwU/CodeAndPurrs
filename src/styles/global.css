@@ -2642,3 +2642,209 @@ a {
     0 12px 34px rgba(16, 10, 36, 0.34),
     inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
+
+/* ============================================================
+   呼噜频道 · 输入区玻璃珠按键（参考棠棠给的 4 枚 VisionOS 玻璃图标）
+   + 更多 / 麦克风⇄音波语音键 / ↑ 发送。逻辑沿用，仅换视觉 + 语音两态。
+   ============================================================ */
+.chat-input {
+  position: relative;
+}
+
+/* 玻璃珠按键基座：淡紫虹彩玻璃方角 + 柔光描边 + 白色字形 */
+.chat-glass-btn {
+  position: relative;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background:
+    radial-gradient(125% 120% at 30% 22%, rgba(255, 255, 255, 0.9), rgba(214, 210, 248, 0.6) 46%, rgba(189, 196, 242, 0.55) 100%);
+  box-shadow:
+    0 6px 16px rgba(120, 98, 168, 0.24),
+    0 0 12px rgba(184, 174, 252, 0.4),
+    inset 0 1px 2px rgba(255, 255, 255, 0.95),
+    inset 0 -3px 7px rgba(150, 140, 205, 0.2);
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(5px) saturate(1.3);
+  backdrop-filter: blur(5px) saturate(1.3);
+  transition: transform 0.16s ease, box-shadow 0.2s ease;
+}
+.chat-glass-btn:active {
+  transform: scale(0.92);
+}
+.chat-glass-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.chat-glass-btn svg {
+  position: relative;
+  z-index: 1;
+  width: 23px;
+  height: 23px;
+}
+
+/* 内紫圆盘：发送 / 录音中音波 坐在上面（呼应参考图） */
+.cg-send::before,
+.cg-voice.is-rec::before {
+  content: "";
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 30%, #c0aef6, #7e62da 64%, #6a4fca);
+  box-shadow:
+    0 2px 9px rgba(108, 78, 200, 0.5),
+    inset 0 1px 2px rgba(255, 255, 255, 0.55);
+  z-index: 0;
+}
+.cg-plus.is-open {
+  box-shadow:
+    0 6px 16px rgba(120, 98, 168, 0.24),
+    0 0 16px rgba(184, 174, 252, 0.7),
+    inset 0 1px 2px rgba(255, 255, 255, 0.95);
+}
+
+/* 发送禁用时收起紫盘，淡一点 */
+.cg-send:disabled::before {
+  opacity: 0.55;
+}
+
+/* 录音中：玻璃座微微发热发亮 */
+.cg-voice.is-rec {
+  box-shadow:
+    0 6px 18px rgba(120, 98, 168, 0.3),
+    0 0 18px rgba(170, 140, 240, 0.65),
+    inset 0 1px 2px rgba(255, 255, 255, 0.95);
+}
+
+/* 跳动音波：5 根白柱错峰弹跳 */
+.cg-wave {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 2.5px;
+  height: 23px;
+}
+.cg-wave i {
+  width: 3px;
+  height: 28%;
+  border-radius: 2px;
+  background: #fff;
+  animation: cgWave 0.9s ease-in-out infinite;
+}
+.cg-wave i:nth-child(2) {
+  animation-delay: 0.14s;
+}
+.cg-wave i:nth-child(3) {
+  animation-delay: 0.28s;
+}
+.cg-wave i:nth-child(4) {
+  animation-delay: 0.42s;
+}
+.cg-wave i:nth-child(5) {
+  animation-delay: 0.56s;
+}
+@keyframes cgWave {
+  0%,
+  100% {
+    height: 24%;
+  }
+  50% {
+    height: 86%;
+  }
+}
+
+/* + 更多 弹出菜单 */
+.chat-more-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.chat-more__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+.chat-more {
+  position: absolute;
+  bottom: 56px;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 132px;
+  padding: 7px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 14px 32px rgba(118, 96, 160, 0.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  animation: chatMorePop 0.16s ease;
+}
+@keyframes chatMorePop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.chat-more button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 11px;
+  background: none;
+  color: #5d4a7e;
+  font-family: var(--round);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+.chat-more button:hover {
+  background: rgba(201, 184, 241, 0.2);
+}
+.chat-more__emoji {
+  font-size: 1.2rem;
+}
+
+/* 小提示药丸 */
+.chat-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 62px;
+  z-index: 30;
+  padding: 8px 15px;
+  border-radius: 999px;
+  background: rgba(74, 59, 107, 0.92);
+  color: #fff;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  box-shadow: 0 8px 22px rgba(40, 28, 70, 0.3);
+  animation: chatMorePop 0.18s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cg-wave i {
+    animation: none;
+    height: 56%;
+  }
+  .chat-more,
+  .chat-toast {
+    animation: none;
+  }
+}

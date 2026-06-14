@@ -157,6 +157,55 @@ function SpeakButton({ text }: { text: string }) {
   );
 }
 
+// ===== 输入区玻璃珠图标（VisionOS 玻璃风，白色线性字形）=====
+function IconPlus() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 5.5v13M5.5 12h13" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+function IconArrowUp() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 18.5V6M6.5 11l5.5-5.2 5.5 5.2" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function IconMic() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="9" y="3" width="6" height="11" rx="3" fill="#fff" />
+      <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" stroke="#fff" strokeWidth="2.1" strokeLinecap="round" />
+    </svg>
+  );
+}
+// 跳动音波：5 根白柱，错峰弹跳（语音录制中状态）
+function IconWave() {
+  return (
+    <span className="cg-wave" aria-hidden="true">
+      <i />
+      <i />
+      <i />
+      <i />
+      <i />
+    </span>
+  );
+}
+function IconStop() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="7" y="7" width="10" height="10" rx="2.5" fill="#fff" />
+    </svg>
+  );
+}
+
+const MORE_ITEMS = [
+  { key: 'image', emoji: '🖼️', label: '图片' },
+  { key: 'redpacket', emoji: '🧧', label: '红包' },
+  { key: 'meme', emoji: '😺', label: '表情包' },
+];
+
 export function PurrChannelPage() {
   // 从小暗格读出上次的聊天记录；半截没说完的归位，语音 blob 刷新后失效就丢掉播放地址。
   const [turns, setTurns] = useState<Turn[]>(() =>
@@ -170,8 +219,9 @@ export function PurrChannelPage() {
   const [input, setInput] = useState('');
   const [provider, setProvider] = useState<Provider>(() => loadLocal<Provider>(PROVIDER_KEY, 'deepseek'));
   const [sending, setSending] = useState(false);
-  const [voiceMode, setVoiceMode] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [notice, setNotice] = useState('');
   const abortRef = useRef<AbortController | null>(null);
   const recorderRef = useRef<VoiceRecorder | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -187,6 +237,19 @@ export function PurrChannelPage() {
   useEffect(() => {
     saveLocal(PROVIDER_KEY, provider);
   }, [provider]);
+
+  // 小提示自动消失
+  useEffect(() => {
+    if (!notice) return;
+    const t = window.setTimeout(() => setNotice(''), 2200);
+    return () => window.clearTimeout(t);
+  }, [notice]);
+
+  // 「+」菜单：图片 / 红包 / 表情包（后端待接，先给温柔占位）
+  const pickMore = (label: string) => {
+    setMoreOpen(false);
+    setNotice(`「${label}」马上就来啦，先占个位～`);
+  };
 
   const clearHistory = () => {
     if (sending) return;
@@ -378,47 +441,81 @@ export function PurrChannelPage() {
       </div>
 
       <footer className="chat-input">
-        <button
-          type="button"
-          className="chat-input__mode"
-          onClick={() => setVoiceMode((v) => !v)}
-          disabled={sending || recording}
-          aria-label={voiceMode ? '切换到键盘' : '切换到语音'}
-          title={voiceMode ? '切换到键盘' : '切换到语音'}
-        >
-          {voiceMode ? '⌨️' : '🎙️'}
-        </button>
-
-        {voiceMode ? (
+        {/* + 更多：点开图片 / 红包 / 表情包菜单 */}
+        <div className="chat-more-wrap">
           <button
             type="button"
-            className={`chat-input__hold${recording ? ' is-recording' : ''}`}
-            disabled={sending}
-            onPointerDown={() => void startRec()}
-            onPointerUp={() => void stopRec(true)}
-            onPointerLeave={() => recording && void stopRec(false)}
+            className={`chat-glass-btn cg-plus${moreOpen ? ' is-open' : ''}`}
+            onClick={() => setMoreOpen((v) => !v)}
+            disabled={sending || recording}
+            aria-label="更多"
+            aria-expanded={moreOpen}
+            title="更多"
           >
-            {recording ? '松开 发送 · 移开 取消' : '按住 说话'}
+            <IconPlus />
+          </button>
+          {moreOpen ? (
+            <>
+              <button
+                type="button"
+                className="chat-more__scrim"
+                aria-label="关闭菜单"
+                onClick={() => setMoreOpen(false)}
+              />
+              <div className="chat-more" role="menu">
+                {MORE_ITEMS.map((it) => (
+                  <button key={it.key} type="button" role="menuitem" onClick={() => pickMore(it.label)}>
+                    <span className="chat-more__emoji" aria-hidden="true">
+                      {it.emoji}
+                    </span>
+                    {it.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : null}
+        </div>
+
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder="发消息…（Enter 发送 / Shift+Enter 换行）"
+          rows={1}
+        />
+
+        {/* 语音键：平时麦克风，按住变跳动音波（松开发送 · 移开取消）*/}
+        <button
+          type="button"
+          className={`chat-glass-btn cg-voice${recording ? ' is-rec' : ''}`}
+          disabled={sending}
+          onPointerDown={() => void startRec()}
+          onPointerUp={() => void stopRec(true)}
+          onPointerLeave={() => recording && void stopRec(false)}
+          aria-label={recording ? '松开发送，移开取消' : '按住说话'}
+          title={recording ? '松开发送 · 移开取消' : '按住说话'}
+        >
+          {recording ? <IconWave /> : <IconMic />}
+        </button>
+
+        {/* 发送 / 停止 */}
+        {sending ? (
+          <button type="button" className="chat-glass-btn cg-send is-stop" onClick={stop} aria-label="停止">
+            <IconStop />
           </button>
         ) : (
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={onKeyDown}
-            placeholder="发消息…（Enter 发送 / Shift+Enter 换行）"
-            rows={1}
-          />
+          <button
+            type="button"
+            className="chat-glass-btn cg-send"
+            onClick={() => void send()}
+            disabled={!input.trim()}
+            aria-label="发送"
+          >
+            <IconArrowUp />
+          </button>
         )}
 
-        {sending ? (
-          <button type="button" className="chat-input__btn is-stop" onClick={stop}>
-            停
-          </button>
-        ) : voiceMode ? null : (
-          <button type="button" className="chat-input__btn" onClick={() => void send()} disabled={!input.trim()}>
-            发送
-          </button>
-        )}
+        {notice ? <div className="chat-toast">{notice}</div> : null}
       </footer>
     </main>
   );
