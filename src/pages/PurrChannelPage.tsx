@@ -301,8 +301,8 @@ function ChatRoom({
     setTurns((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
 
   const toMessages = (ts: Turn[]): ChatMessage[] => [
-    // 每次发送都现拼，确保读到「调频」里最新的人设/资料
-    { role: 'system', content: buildSystemPrompt() },
+    // 每次发送都现拼：用当前模型的专属人设 + 最新「关于我」
+    { role: 'system', content: buildSystemPrompt(provider) },
     ...ts.filter((t) => t.content.trim()).map((t) => ({ role: t.role, content: t.content })),
   ];
 

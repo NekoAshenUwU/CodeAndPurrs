@@ -1,20 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MODEL_GROUPS } from '../data/models';
+import { getModel, MODEL_GROUPS, MODELS } from '../data/models';
 import {
   loadDefaultModel,
   loadInstructions,
+  loadPersonas,
   loadProfile,
   saveDefaultModel,
   saveInstructions,
+  savePersonas,
   saveProfile,
+  type Persona,
 } from '../services/purrConfig';
 
-// 调频 SwitchCore：设默认模型 + 写「关于我 / 猫咪人设」，新窗口聊天前自动读取。
+// 调频 SwitchCore：设默认模型 + 关于我 + 默认人设 + 每个模型各自的名字/人设。
 export function SwitchCorePage() {
   const [provider, setProvider] = useState<string>(loadDefaultModel);
   const [profile, setProfile] = useState<string>(loadProfile);
   const [instructions, setInstructions] = useState<string>(loadInstructions);
+  const [personas, setPersonas] = useState<Record<string, Persona>>(loadPersonas);
+  const [editId, setEditId] = useState<string>(() => loadDefaultModel() || MODELS[0].id);
   const [savedFlash, setSavedFlash] = useState(false);
 
   // 自动存：改动后静悄悄写进暗格，并闪一下「已记住」
@@ -26,16 +31,21 @@ export function SwitchCorePage() {
     const t = window.setTimeout(() => {
       saveProfile(profile);
       saveInstructions(instructions);
+      savePersonas(personas);
       setSavedFlash(true);
     }, 500);
     return () => window.clearTimeout(t);
-  }, [profile, instructions]);
+  }, [profile, instructions, personas]);
 
   useEffect(() => {
     if (!savedFlash) return;
     const t = window.setTimeout(() => setSavedFlash(false), 1600);
     return () => window.clearTimeout(t);
   }, [savedFlash]);
+
+  const editPersona: Persona = personas[editId] ?? { name: '', persona: '' };
+  const patchPersona = (patch: Partial<Persona>) =>
+    setPersonas((prev) => ({ ...prev, [editId]: { ...{ name: '', persona: '' }, ...prev[editId], ...patch } }));
 
   return (
     <main className="switch-page">
@@ -77,7 +87,7 @@ export function SwitchCorePage() {
 
         <section className="switch-card">
           <h2 className="switch-card__title">关于我</h2>
-          <p className="switch-card__hint">告诉猫咪你是谁、喜欢什么、怎么称呼你——它聊天时会记着。</p>
+          <p className="switch-card__hint">告诉猫咪你是谁、喜欢什么、怎么称呼你——所有模型聊天时都记着。</p>
           <textarea
             className="switch-textarea"
             value={profile}
@@ -90,8 +100,55 @@ export function SwitchCorePage() {
         </section>
 
         <section className="switch-card">
-          <h2 className="switch-card__title">猫咪人设 · 给它的话</h2>
-          <p className="switch-card__hint">希望它怎么陪你？语气、性格、要不要主动撒娇，都写在这。</p>
+          <h2 className="switch-card__title">每个模型的人设</h2>
+          <p className="switch-card__hint">
+            给每个模型起名字、定性格——切到哪个模型，猫咪就用哪份人设。没单独设的，用下面的「默认人设」。
+          </p>
+          <div className="switch-models switch-models--edit">
+            {MODELS.map((m) => {
+              const has = !!(personas[m.id]?.name?.trim() || personas[m.id]?.persona?.trim());
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={`model-pill switch-edit-pill${m.id === editId ? ' is-on' : ''}`}
+                  onClick={() => setEditId(m.id)}
+                >
+                  {m.label}
+                  {has ? <span className="switch-edit-pill__dot" aria-label="已设人设" /> : null}
+                </button>
+              );
+            })}
+          </div>
+
+          <label className="switch-field">
+            <span className="switch-field__label">「{getModel(editId).label}」的名字</span>
+            <input
+              className="switch-input"
+              value={editPersona.name}
+              onChange={(e) => patchPersona({ name: e.target.value })}
+              placeholder="例：豆豆 / 喵酱 / 阿七…"
+              maxLength={20}
+            />
+          </label>
+
+          <label className="switch-field">
+            <span className="switch-field__label">「{getModel(editId).label}」的性格人设</span>
+            <textarea
+              className="switch-textarea"
+              value={editPersona.persona}
+              onChange={(e) => patchPersona({ persona: e.target.value })}
+              placeholder="例：高冷毒舌但暗暗关心；说话简短带点傲娇；偶尔蹦英文…（留空就用默认人设）"
+              rows={5}
+              maxLength={1000}
+            />
+          </label>
+          <span className="switch-count">{editPersona.persona.length}/1000</span>
+        </section>
+
+        <section className="switch-card">
+          <h2 className="switch-card__title">默认人设（兜底）</h2>
+          <p className="switch-card__hint">没单独设人设的模型，统一用这份。</p>
           <textarea
             className="switch-textarea"
             value={instructions}

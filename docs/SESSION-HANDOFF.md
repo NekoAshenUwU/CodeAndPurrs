@@ -82,8 +82,9 @@
 - **模型（已定）**：**每个窗口各记模型**（存 `WindowMeta.provider`）；聊天页顶栏快速切换只改当前窗口。新窗口继承**全局默认** `purr-channel:provider`。
 - **调频页 ✅ 已建**（`src/pages/SwitchCorePage.tsx`，路由 `/switchcore`，房间 `switchcore` 已转 `ready`）：设**默认模型** + 写**「关于我」(profile)** 和 **「猫咪人设」(instructions)**，自动存。
   - 共享配置：`src/services/purrConfig.ts`（keys `purr-channel:provider/profile/instructions` + `BASE_PERSONA` + `buildSystemPrompt()`）。
-  - 注入方式：聊天 `toMessages()` 每次发送都 `buildSystemPrompt()` 现拼 → **底色人设 + 关于我 + 人设**，全局实时生效（新窗、老窗都读最新）。
-  - 后续可加：每模型不同性格、profile/instructions 是否要支持每窗覆盖。
+  - 注入方式：聊天 `toMessages()` 每次发送都 `buildSystemPrompt(modelId)` 现拼，实时生效。
+  - **每个模型各自人设 ✅**：`purr-channel:personas` = `{ [modelId]: {name, persona} }`。`buildSystemPrompt(modelId)` 优先用该模型专属人设（带名字），没设则回退「默认人设」(`instructions`) 再回退 `BASE_PERSONA`；末尾附「关于我」(`profile`，全局)。调频页有「每个模型的人设」编辑器（选模型→改名字/性格，已设的胶囊带紫点）。
+  - 后续可加：profile/人设 是否要支持每窗覆盖；导入/导出人设。
 - **模型花名册**（`src/data/models.ts`：`MODELS`/`MODEL_GROUPS`/`getModel`）：DeepSeek、Gemini、GPT(GPT-4/o3/GPT-5.5T)、Claude(Sonnet 4.6/Opus 4.6/Opus 4.8)。
   - 存的是 model **id**（老值 `deepseek`/`gemini` 仍有效）；`getModel(id)` → 后端 `provider`+`model`。
   - **liquid glass 胶囊**（`.model-pill.is-on` 星云幻境渐变，名字 ShunFeng 字体）：调频页按品牌分组、聊天顶栏 `.model-chip` 点开 `.model-pop` 分组列表。

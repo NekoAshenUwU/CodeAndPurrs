@@ -3322,3 +3322,47 @@ a {
   padding: 9px 17px;
   font-size: 0.98rem;
 }
+
+/* 调频页：每个模型人设的编辑器 */
+.switch-models--edit {
+  margin-bottom: 14px;
+}
+.switch-edit-pill {
+  position: relative;
+}
+.switch-edit-pill__dot {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #7c5fd6;
+  box-shadow: 0 0 5px rgba(124, 95, 214, 0.8);
+}
+.switch-field {
+  display: block;
+  margin-top: 12px;
+}
+.switch-field__label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-family: var(--round);
+  font-size: 0.86rem;
+}
+.switch-input {
+  width: 100%;
+  padding: 11px 14px;
+  color: var(--ink);
+  font-family: var(--chat);
+  font-size: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  outline: none;
+}
+.switch-input:focus {
+  border-color: rgba(201, 184, 241, 0.85);
+  box-shadow: 0 0 0 3px rgba(201, 184, 241, 0.24);
+}
