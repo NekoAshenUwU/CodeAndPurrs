@@ -26,6 +26,16 @@ const PROVIDERS = {
     // url 按 model 拼，见下方 callGemini
     defaultModel: 'gemini-2.5-flash',
   },
+  openai: {
+    key: () => process.env.OPENAI_API_KEY,
+    url: 'https://api.openai.com/v1/chat/completions',
+    defaultModel: 'gpt-4o',
+  },
+  anthropic: {
+    key: () => process.env.ANTHROPIC_API_KEY,
+    url: 'https://api.anthropic.com/v1/messages',
+    defaultModel: 'claude-sonnet-4-6',
+  },
 };
 
 // ElevenLabs：AI 给你发语音用的好音色
@@ -93,16 +103,16 @@ async function pumpSSE(upstreamBody, onData) {
   }
 }
 
-// ---------- DeepSeek（OpenAI 兼容）----------
-async function callDeepSeek({ res, key, model, messages }) {
-  const upstream = await fetch(PROVIDERS.deepseek.url, {
+// ---------- OpenAI 兼容（DeepSeek / OpenAI 共用）----------
+async function callOpenAICompatible({ res, url, key, model, defaultModel, messages, label }) {
+  const upstream = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${key}`,
     },
     body: JSON.stringify({
-      model: model || PROVIDERS.deepseek.defaultModel,
+      model: model || defaultModel,
       messages,
       stream: true,
     }),
@@ -110,16 +120,56 @@ async function callDeepSeek({ res, key, model, messages }) {
 
   if (!upstream.ok || !upstream.body) {
     const text = await upstream.text().catch(() => '');
-    send(res, { type: 'error', message: `DeepSeek 出错 (${upstream.status})：${text.slice(0, 300)}` });
+    send(res, { type: 'error', message: `${label} 出错 (${upstream.status})：${text.slice(0, 300)}` });
     return;
   }
 
   await pumpSSE(upstream.body, (chunk) => {
     const delta = chunk?.choices?.[0]?.delta;
     if (!delta) return;
-    // deepseek-reasoner 会给思考链
+    // deepseek-reasoner / o 系列可能给思考链
     if (delta.reasoning_content) send(res, { type: 'reasoning', text: delta.reasoning_content });
     if (delta.content) send(res, { type: 'content', text: delta.content });
+  });
+}
+
+// ---------- Anthropic（Claude · messages API）----------
+async function callAnthropic({ res, key, model, messages }) {
+  // system 单独拎出来；其余按 user/assistant 传
+  const system = messages
+    .filter((m) => m.role === 'system')
+    .map((m) => m.content)
+    .join('\n');
+  const msgs = messages
+    .filter((m) => m.role !== 'system')
+    .map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }));
+
+  const upstream = await fetch(PROVIDERS.anthropic.url, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: model || PROVIDERS.anthropic.defaultModel,
+      max_tokens: 4096,
+      system: system || undefined,
+      messages: msgs,
+      stream: true,
+    }),
+  });
+
+  if (!upstream.ok || !upstream.body) {
+    const text = await upstream.text().catch(() => '');
+    send(res, { type: 'error', message: `Claude 出错 (${upstream.status})：${text.slice(0, 300)}` });
+    return;
+  }
+
+  await pumpSSE(upstream.body, (chunk) => {
+    if (chunk?.type === 'content_block_delta' && chunk.delta?.text) {
+      send(res, { type: 'content', text: chunk.delta.text });
+    }
   });
 }
 
@@ -332,7 +382,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ----- 聊天 -----
-  const provider = body.provider === 'gemini' ? 'gemini' : 'deepseek';
+  const provider = PROVIDERS[body.provider] ? body.provider : 'deepseek';
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const model = typeof body.model === 'string' ? body.model : undefined;
   const key = PROVIDERS[provider].key();
@@ -343,8 +393,20 @@ const server = http.createServer(async (req, res) => {
       await callMock({ res, provider, messages });
     } else if (provider === 'gemini') {
       await callGemini({ res, key, model, messages });
+    } else if (provider === 'anthropic') {
+      await callAnthropic({ res, key, model, messages });
     } else {
-      await callDeepSeek({ res, key, model, messages });
+      // deepseek / openai 都是 OpenAI 兼容格式
+      const conf = PROVIDERS[provider];
+      await callOpenAICompatible({
+        res,
+        url: conf.url,
+        key,
+        model,
+        defaultModel: conf.defaultModel,
+        messages,
+        label: provider === 'openai' ? 'OpenAI' : 'DeepSeek',
+      });
     }
     send(res, { type: 'done' });
   } catch (err) {

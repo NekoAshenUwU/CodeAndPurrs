@@ -88,7 +88,9 @@
 - **模型花名册**（`src/data/models.ts`：`MODELS`/`MODEL_GROUPS`/`getModel`）：DeepSeek、Gemini、GPT(GPT-4/o3/GPT-5.5T)、Claude(Sonnet 4.6/Opus 4.6/Opus 4.8)。
   - 存的是 model **id**（老值 `deepseek`/`gemini` 仍有效）；`getModel(id)` → 后端 `provider`+`model`。
   - **liquid glass 胶囊**（`.model-pill.is-on` 星云幻境渐变，名字 ShunFeng 字体）：调频页按品牌分组、聊天顶栏 `.model-chip` 点开 `.model-pop` 分组列表。
-  - **⚠️ 后端待接**：`provider: 'openai' | 'anthropic'` 后端（`server/proxy.mjs`）尚未实现，选 GPT/Claude 现在会报错；DeepSeek/Gemini 正常。
+  - **后端 ✅ 已接 4 家**（`server/proxy.mjs`）：deepseek/openai 走 OpenAI 兼容 `callOpenAICompatible`；gemini、anthropic(Claude messages API) 各自实现。路由按 `PROVIDERS[body.provider]` 派发。
+  - **VPS 要配的 key**（`.env`，见 `.env.example`）：`OPENAI_API_KEY`(GPT-4/o3)、`ANTHROPIC_API_KEY`(Claude)。没配对应 key 的会走 mock。
+  - **⚠️ 模型名**：`GPT-5.5T`(`gpt-5.5t`) 是占位，OpenAI 没这个模型，用前要在 `src/data/models.ts` 换成账号真实可用的名字（如 `gpt-4o`/`gpt-4.1`）。
 - **输入区玻璃珠**（VisionOS 风，CSS+SVG，`.chat-glass-btn` 系列）：`+`更多菜单（图片/红包/表情，字体 **ShunFeng 顺风顺水** 子集 `shunfeng-menu.woff2`，仅占位待接后端）｜语音键两态（麦克风⇄按住跳动音波，松开发送·移开取消）｜`↑`发送（深紫内盘）。
 
 ## 10. 房间产品设定（建功能时按这个来）
