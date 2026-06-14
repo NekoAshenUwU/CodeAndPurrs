@@ -1881,6 +1881,10 @@ a {
   background: url("/rooms/paw-trail-stack.webp") top center / 100% auto no-repeat;
   filter: saturate(1.05);
 }
+/* 深夜档换成专门画的夜版长图（深空紫+月亮+猫），不再靠暗纱压暗白图 */
+.paw-page.is-night .paw-sky__photo {
+  background-image: url("/rooms/paw-trail-stack-night.webp");
+}
 .paw-sky__tint {
   position: absolute;
   inset: 0;
@@ -1894,7 +1898,8 @@ a {
   background: linear-gradient(165deg, rgba(245, 180, 210, 0.42), rgba(150, 120, 200, 0.42));
 }
 .paw-page.is-night .paw-sky__tint {
-  background: linear-gradient(165deg, rgba(28, 24, 52, 0.74), rgba(44, 36, 72, 0.7));
+  /* 夜版图本身已是深空，仅极薄一层保字，不再压暗整张图 */
+  background: rgba(20, 16, 40, 0.12);
 }
 .paw-star {
   position: absolute;
