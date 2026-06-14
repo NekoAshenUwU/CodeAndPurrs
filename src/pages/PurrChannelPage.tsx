@@ -10,7 +10,14 @@ const PROVIDER_KEY = 'purr-channel:provider';
 const turnsKey = (id: string) => `purr-channel:turns:${id}`;
 
 // 一个聊天窗口的元信息（聊天记录另存在 turnsKey(id) 下）
-type WindowMeta = { id: string; name: string; createdAt: number; updatedAt: number; preview?: string };
+type WindowMeta = {
+  id: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+  preview?: string;
+  provider?: Provider; // 这个窗口用哪个模型；缺省时跟全局默认
+};
 
 type Voice = { url?: string; duration: number };
 
@@ -230,10 +237,12 @@ function ChatRoom({
   win,
   onBack,
   onTouch,
+  onSetProvider,
 }: {
   win: WindowMeta;
   onBack: () => void;
   onTouch: (id: string, preview: string) => void;
+  onSetProvider: (id: string, provider: Provider) => void;
 }) {
   // 从小暗格读出这个窗口的聊天记录；半截没说完的归位，语音 blob 刷新后失效就丢掉播放地址。
   const [turns, setTurns] = useState<Turn[]>(() =>
@@ -245,7 +254,12 @@ function ChatRoom({
     })),
   );
   const [input, setInput] = useState('');
-  const [provider, setProvider] = useState<Provider>(() => loadLocal<Provider>(PROVIDER_KEY, 'deepseek'));
+  // 模型每个窗口各记一份（存在窗口元信息里）；切换只影响当前窗口
+  const [provider, setProvider] = useState<Provider>(win.provider ?? 'deepseek');
+  const pickProvider = (p: Provider) => {
+    setProvider(p);
+    onSetProvider(win.id, p);
+  };
   const [sending, setSending] = useState(false);
   const [recording, setRecording] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -267,10 +281,6 @@ function ChatRoom({
     // onTouch 每次渲染都是新引用，故意不进依赖，避免回环
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turns, sending, win.id]);
-
-  useEffect(() => {
-    saveLocal(PROVIDER_KEY, provider);
-  }, [provider]);
 
   // 小提示自动消失
   useEffect(() => {
@@ -423,7 +433,7 @@ function ChatRoom({
               key={p.id}
               type="button"
               className={p.id === provider ? 'is-on' : ''}
-              onClick={() => setProvider(p.id)}
+              onClick={() => pickProvider(p.id)}
               disabled={sending}
             >
               {p.label}
@@ -681,6 +691,7 @@ function initWindows(): WindowMeta[] {
         createdAt: Date.now(),
         updatedAt: Date.now(),
         preview: last ? last.content.slice(0, 24) : '',
+        provider: loadLocal<Provider>(PROVIDER_KEY, 'deepseek'),
       },
     ];
   }
@@ -697,7 +708,9 @@ export function PurrChannelPage() {
 
   const newWindow = () => {
     const id = uid();
-    setWindows((prev) => [{ id, name: '新对话', createdAt: Date.now(), updatedAt: Date.now() }, ...prev]);
+    // 新窗口继承全局默认模型（将来由「调频」设定）
+    const provider = loadLocal<Provider>(PROVIDER_KEY, 'deepseek');
+    setWindows((prev) => [{ id, name: '新对话', createdAt: Date.now(), updatedAt: Date.now(), provider }, ...prev]);
     setActiveId(id);
   };
   const renameWindow = (id: string, name: string) =>
@@ -709,11 +722,21 @@ export function PurrChannelPage() {
   };
   const touchWindow = (id: string, preview: string) =>
     setWindows((prev) => prev.map((w) => (w.id === id ? { ...w, updatedAt: Date.now(), preview } : w)));
+  const setWindowProvider = (id: string, provider: Provider) =>
+    setWindows((prev) => prev.map((w) => (w.id === id ? { ...w, provider } : w)));
 
   const active = windows.find((w) => w.id === activeId) ?? null;
 
   if (active) {
-    return <ChatRoom key={active.id} win={active} onBack={() => setActiveId(null)} onTouch={touchWindow} />;
+    return (
+      <ChatRoom
+        key={active.id}
+        win={active}
+        onBack={() => setActiveId(null)}
+        onTouch={touchWindow}
+        onSetProvider={setWindowProvider}
+      />
+    );
   }
   return (
     <WindowList
