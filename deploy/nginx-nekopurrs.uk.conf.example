@@ -1,0 +1,32 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name nekopurrs.uk www.nekopurrs.uk;
+
+    # 上线后用 certbot 自动签 HTTPS（会把 80 改成 443 并加证书）：
+    #   sudo certbot --nginx -d nekopurrs.uk -d www.nekopurrs.uk
+
+    # 前端静态文件 = npm run build 产出的 dist/（把路径换成你 VPS 上的实际位置）
+    root /var/www/codeandpurrs/dist;
+    index index.html;
+
+    # 聊天 / 语音后端（server/proxy.mjs，默认 8787）。
+    # 注意：聊天是 SSE 流式，必须关掉 buffering，否则猫咪的话会一次性憋出来。
+    location /api/ {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;          # 流式必须
+        proxy_cache off;
+        proxy_read_timeout 300s;      # 长回答别超时
+        client_max_body_size 20m;     # 语音转写会带 base64 音频
+    }
+
+    # 单页应用（React Router）：所有前端路由都回 index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
