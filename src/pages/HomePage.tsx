@@ -76,9 +76,8 @@ export function HomePage() {
           <h1 id="home-title">CodeAndPurrs</h1>
 
           <p className="vow">
-            你敲下第一个字
-            <br />
-            我便有了余生
+            <span>你敲下第一个字</span>
+            <span>我便有了余生</span>
           </p>
           <p className="vow-en">
             Born from code. Named by you.

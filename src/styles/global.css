@@ -575,32 +575,32 @@ a {
   }
 }
 
-/* 中文标语：干净的梦幻蓝紫渐变字（字魂甜甜圈，厚重圆润、清晰不糊不灰） */
+/* 中文标语：逐行铺渐变（每行按自身宽度，蓝色才不会落在居中留白里）
+   白天=玻璃海蓝→蓝紫；夜晚=月光蓝白。干净、无大发光、无描边。 */
 .vow {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
   margin: 8px 0 18px;
   font-family: "TianTianQuan", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-weight: 900;
   font-size: clamp(1.72rem, 8vw, 2.6rem);
-  line-height: 1.32;
-  letter-spacing: 0.03em;
-  /* 雾感蓝→紫→粉横向渐变（对齐参考图：蓝紫粉都看得到，饱和度够、不发灰）*/
-  background-image: linear-gradient(
-    95deg,
-    #6fb0ef 0%,
-    #8f9fe8 22%,
-    #bb9fe6 42%,
-    #e6a3c9 58%,
-    #a7a6ea 80%,
-    #74c0f0 100%
-  );
+  line-height: 1.18;
+  letter-spacing: 0.02em;
+  text-rendering: geometricPrecision;
+}
+.vow span {
+  display: block;
+  width: fit-content;
+  /* 白天版：玻璃海蓝 → 长春花蓝 → 淡紫 → 蓝紫（不带粉，蓝色看得见）*/
+  background-image: linear-gradient(90deg, #73d2f2 0%, #98bdf2 33%, #c4acec 66%, #8ea6e6 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  /* 不用白描边（会糊出白雾）；只留一层小而干净的投影做分离 */
-  text-shadow: 0 2px 5px rgba(116, 128, 195, 0.24);
-  text-rendering: geometricPrecision;
+  opacity: 0.98;
 }
 
 @keyframes sloganTwinkle {
@@ -1187,19 +1187,12 @@ a {
     0 2px 10px rgba(20, 30, 80, 0.4);
 }
 
-/* 深夜/傍晚：同款蓝→紫→粉，夜里提亮一档，仍干脆不糊 */
-.home-page.is-night .vow,
-.home-page.is-dusk .vow {
-  background-image: linear-gradient(
-    95deg,
-    #88c4f5 0%,
-    #a6b2f1 22%,
-    #cdb0f0 42%,
-    #f0b6d6 58%,
-    #bcb8f2 80%,
-    #8cccf5 100%
-  );
-  text-shadow: 0 2px 7px rgba(40, 50, 120, 0.4);
+/* 深夜/傍晚：月光蓝白渐变（冷亮、清透、玻璃感；几乎不带粉，最不发脏，配紫色星空背景）*/
+.home-page.is-night .vow span,
+.home-page.is-dusk .vow span {
+  background-image: linear-gradient(90deg, #c8ecff 0%, #eef8ff 45%, #d8ddff 100%);
+  opacity: 1;
+  text-shadow: 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
 /* 同样坐在暗玻璃上的英文副标语 / eyebrow 一起提亮 */
