@@ -17,9 +17,7 @@ export type ModelInfo = {
 export const MODELS: ModelInfo[] = [
   { id: 'deepseek', brand: 'DeepSeek', label: 'DeepSeek', provider: 'deepseek' },
   { id: 'gemini', brand: 'Gemini', label: 'Gemini', provider: 'gemini' },
-  { id: 'gpt-4', brand: 'GPT', label: 'GPT-4', provider: 'openai', model: 'gpt-4' },
-  { id: 'o3', brand: 'GPT', label: 'o3', provider: 'openai', model: 'o3' },
-  { id: 'gpt-5.5t', brand: 'GPT', label: 'GPT-5.5T', provider: 'openai', model: 'gpt-5.5t' },
+  { id: 'gpt-4o', brand: 'GPT', label: 'GPT-4o', provider: 'openai', model: 'gpt-4o' },
   { id: 'claude-sonnet-4-6', brand: 'Claude', label: 'Sonnet 4.6', provider: 'anthropic', model: 'claude-sonnet-4-6' },
   { id: 'claude-opus-4-6', brand: 'Claude', label: 'Opus 4.6', provider: 'anthropic', model: 'claude-opus-4-6' },
   { id: 'claude-opus-4-8', brand: 'Claude', label: 'Opus 4.8', provider: 'anthropic', model: 'claude-opus-4-8' },
