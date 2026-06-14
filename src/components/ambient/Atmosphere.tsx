@@ -15,11 +15,17 @@ const PAW_SVG =
 const rand = (min: number, max: number) => min + Math.random() * (max - min);
 
 // 10 颗光尘，每颗随机起点、周期、延迟（粒子总预算见首页规格 §7，故压到 10 颗）。
-const DUST = Array.from({ length: 10 }, () => ({
+// 萤火虫光斑：大小不一、带柔焦(bokeh)、慢慢上浮 + 微微明灭，粉/紫/蓝/暖白。
+const FIREFLY_RGB = ['255, 255, 255', '242, 169, 196', '170, 140, 235', '123, 143, 232', '255, 226, 170'];
+const DUST = Array.from({ length: 16 }, () => ({
   left: rand(2, 98),
-  duration: rand(14, 30),
-  delay: rand(-30, 0),
-  drift: rand(-30, 30),
+  size: rand(3, 13),
+  duration: rand(16, 34),
+  delay: rand(-34, 0),
+  drift: rand(-45, 45),
+  blur: rand(0, 2.4),
+  peak: rand(0.55, 0.95),
+  rgb: FIREFLY_RGB[Math.floor(Math.random() * FIREFLY_RGB.length)],
 }));
 
 // 深夜星点：仅 night 档出现，缓慢闪烁。
@@ -131,6 +137,10 @@ export function Atmosphere({ tod }: { tod: TimeOfDay }) {
                 animationDuration: `${d.duration}s`,
                 animationDelay: `${d.delay}s`,
                 ['--drift' as string]: `${d.drift}px`,
+                ['--size' as string]: `${d.size}px`,
+                ['--blur' as string]: `${d.blur}px`,
+                ['--peak' as string]: d.peak,
+                ['--c' as string]: d.rgb,
               }}
             />
           ))}

@@ -265,32 +265,47 @@ a {
   }
 }
 
-/* 光尘：从底部缓缓上浮 */
+/* 萤火虫光斑：从底部缓缓上浮，大小不一 + 柔焦 + 微微明灭 */
 .dust {
   position: absolute;
   bottom: -6vh;
-  width: 5px;
-  height: 5px;
+  width: var(--size, 6px);
+  height: var(--size, 6px);
   border-radius: 50%;
-  background: radial-gradient(circle, #fff, rgba(216, 180, 254, 0.7) 60%, transparent);
-  box-shadow: 0 0 8px 2px var(--glow);
+  background: radial-gradient(
+    circle at 38% 34%,
+    rgba(255, 255, 255, 0.96),
+    rgba(var(--c, 216, 180, 254), 0.85) 42%,
+    transparent 72%
+  );
+  box-shadow: 0 0 calc(var(--size, 6px) * 1.7) calc(var(--size, 6px) * 0.35) rgba(var(--c, 216, 180, 254), 0.5);
+  filter: blur(var(--blur, 0px));
   opacity: 0;
   animation: dustrise linear infinite;
 }
 
 @keyframes dustrise {
   0% {
-    transform: translateY(0) scale(0.6);
+    transform: translateY(0) scale(0.55);
     opacity: 0;
   }
-  12% {
-    opacity: 0.9;
+  10% {
+    opacity: var(--peak, 0.85);
   }
-  85% {
-    opacity: 0.6;
+  28% {
+    opacity: calc(var(--peak, 0.85) * 0.4);
+  }
+  46% {
+    opacity: var(--peak, 0.85);
+  }
+  68% {
+    opacity: calc(var(--peak, 0.85) * 0.5);
+  }
+  86% {
+    opacity: calc(var(--peak, 0.85) * 0.72);
   }
   100% {
-    transform: translate(var(--drift, 0), -112vh) scale(1);
+    transform: translate(var(--drift, 0), -112vh) scale(1.05);
     opacity: 0;
   }
 }
@@ -483,11 +498,11 @@ a {
 
 .hero-spark {
   position: absolute;
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: radial-gradient(circle, #fff, rgba(242, 169, 196, 0.7) 60%, transparent);
-  box-shadow: 0 0 6px 1px var(--glow);
+  background: radial-gradient(circle at 38% 34%, #fff, rgba(var(--c, 242, 169, 196), 0.8) 48%, transparent 74%);
+  box-shadow: 0 0 8px 1px rgba(var(--c, 242, 169, 196), 0.6);
   opacity: 0;
   animation: spark-breathe ease-in-out infinite;
 }
@@ -496,45 +511,11 @@ a {
   0%,
   100% {
     opacity: 0;
-    transform: translateY(0) scale(calc(var(--spark-scale, 1) * 0.6));
+    transform: translate(0, 0) scale(calc(var(--spark-scale, 1) * 0.55));
   }
   50% {
-    opacity: 0.85;
-    transform: translateY(-6px) scale(var(--spark-scale, 1));
-  }
-}
-
-/* 缓慢漂移的斜高光，模拟玻璃反光 */
-.hero-card::before {
-  position: absolute;
-  top: -60%;
-  left: -40%;
-  z-index: 0;
-  width: 55%;
-  height: 220%;
-  content: "";
-  background: linear-gradient(
-    115deg,
-    transparent,
-    rgba(255, 255, 255, 0.55) 50%,
-    transparent
-  );
-  transform: rotate(8deg);
-  pointer-events: none;
-  animation: sheen 9s ease-in-out infinite;
-}
-
-@keyframes sheen {
-  0% {
-    left: -45%;
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 0.7;
-  }
-  100% {
-    left: 125%;
-    opacity: 0.3;
+    opacity: 0.9;
+    transform: translate(var(--dx, 0), -7px) scale(var(--spark-scale, 1));
   }
 }
 
@@ -578,23 +559,6 @@ a {
   animation: heroGlowPulse 3.8s ease-in-out infinite;
 }
 
-/* 扫光 shimmer：一束柔光斜斜扫过标题，像系统被点亮，字边缘忽闪 */
-.hero-card h1::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    110deg,
-    transparent 30%,
-    rgba(255, 255, 255, 0.55) 50%,
-    transparent 70%
-  );
-  transform: translateX(-120%);
-  mix-blend-mode: screen;
-  animation: heroSweepLight 5.2s ease-in-out infinite;
-}
-
 @keyframes heroGlowPulse {
   0%,
   100% {
@@ -602,22 +566,6 @@ a {
   }
   50% {
     filter: brightness(1.12);
-  }
-}
-
-@keyframes heroSweepLight {
-  0%,
-  72%,
-  100% {
-    transform: translateX(-120%);
-    opacity: 0;
-  }
-  36% {
-    opacity: 1;
-  }
-  52% {
-    transform: translateX(120%);
-    opacity: 1;
   }
 }
 
@@ -888,33 +836,6 @@ a {
     rgba(255, 255, 255, 0) 50%
   );
   pointer-events: none;
-}
-
-/* 光跟着手走：高光焦点随指针流动，像光在玻璃表面滑过（位置由 RoomCard 写入 --mx/--my） */
-.room-tile__glow {
-  position: absolute;
-  z-index: 2;
-  inset: 0;
-  content: "";
-  border-radius: inherit;
-  background: radial-gradient(
-    58% 58% at var(--mx, 50%) var(--my, 26%),
-    rgba(255, 255, 255, 0.82),
-    rgba(255, 255, 255, 0.2) 34%,
-    transparent 62%
-  );
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease;
-}
-
-.room-tile:hover .room-tile__glow,
-.room-tile:focus-visible .room-tile__glow {
-  opacity: 0.85;
-}
-
-.room-tile:active .room-tile__glow {
-  opacity: 1;
 }
 
 /* 点击光环（默认隐藏，点一下扩散一圈） */

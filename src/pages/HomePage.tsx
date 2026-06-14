@@ -9,13 +9,16 @@ import { PawCursor } from '../components/ambient/PawCursor';
 import { useTimeOfDay } from '../components/ambient/timeOfDay';
 import { rooms, type Room } from '../data/rooms';
 
-// hero 卡内的星屑：16 颗，缓慢漂浮 + 透明度呼吸（粒子总预算见规格 §7）
-const HERO_SPARKS = Array.from({ length: 16 }, () => ({
-  left: 4 + Math.random() * 92,
-  top: 6 + Math.random() * 88,
+// hero 标题旁的光粒：往中上方（标题区）聚拢，慢慢漂浮 + 明灭，像被名字吸引的萤火。
+const SPARK_RGB = ['255, 255, 255', '242, 169, 196', '170, 140, 235', '123, 143, 232', '255, 226, 170'];
+const HERO_SPARKS = Array.from({ length: 18 }, () => ({
+  left: 14 + Math.random() * 72, // 往中间收
+  top: 8 + Math.random() * 58, // 偏上，围着 CodeAndPurrs 标题
   duration: 5 + Math.random() * 6,
   delay: -Math.random() * 8,
-  scale: 0.6 + Math.random() * 0.8,
+  scale: 0.6 + Math.random() * 0.9,
+  rgb: SPARK_RGB[Math.floor(Math.random() * SPARK_RGB.length)],
+  dx: (Math.random() * 2 - 1) * 9,
 }));
 
 export function HomePage() {
@@ -62,6 +65,8 @@ export function HomePage() {
                   animationDuration: `${s.duration}s`,
                   animationDelay: `${s.delay}s`,
                   ['--spark-scale' as string]: s.scale,
+                  ['--c' as string]: s.rgb,
+                  ['--dx' as string]: `${s.dx}px`,
                 }}
               />
             ))}
