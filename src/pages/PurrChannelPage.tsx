@@ -4,8 +4,13 @@ import { streamChat, type ChatMessage, type Provider } from '../services/chat';
 import { clearLocal, loadLocal, saveLocal } from '../services/storage';
 import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
 
-const HISTORY_KEY = 'purr-channel:turns';
+const WINDOWS_KEY = 'purr-channel:windows';
+const LEGACY_TURNS_KEY = 'purr-channel:turns'; // 旧版单一对话，首次进入迁移成一个窗口
 const PROVIDER_KEY = 'purr-channel:provider';
+const turnsKey = (id: string) => `purr-channel:turns:${id}`;
+
+// 一个聊天窗口的元信息（聊天记录另存在 turnsKey(id) 下）
+type WindowMeta = { id: string; name: string; createdAt: number; updatedAt: number; preview?: string };
 
 type Voice = { url?: string; duration: number };
 
@@ -199,6 +204,20 @@ function IconStop() {
     </svg>
   );
 }
+function IconPencil() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M14.5 5.5l4 4M4 20l1-4L16 5a2 2 0 0 1 3 3L8 19l-4 1z" stroke="#7a5fce" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function IconTrash() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 7h14M10 7V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2M7 7l1 12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-12M10 11v6M14 11v6" stroke="#b06a8a" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 const MORE_ITEMS = [
   { key: 'image', label: '图片' },
@@ -206,10 +225,19 @@ const MORE_ITEMS = [
   { key: 'meme', label: '表情包' },
 ];
 
-export function PurrChannelPage() {
-  // 从小暗格读出上次的聊天记录；半截没说完的归位，语音 blob 刷新后失效就丢掉播放地址。
+// ===== 单个聊天窗口的聊天室（沿用原有全部聊天逻辑，记录按 win.id 分开存）=====
+function ChatRoom({
+  win,
+  onBack,
+  onTouch,
+}: {
+  win: WindowMeta;
+  onBack: () => void;
+  onTouch: (id: string, preview: string) => void;
+}) {
+  // 从小暗格读出这个窗口的聊天记录；半截没说完的归位，语音 blob 刷新后失效就丢掉播放地址。
   const [turns, setTurns] = useState<Turn[]>(() =>
-    loadLocal<Turn[]>(HISTORY_KEY, []).map((t) => ({
+    loadLocal<Turn[]>(turnsKey(win.id), []).map((t) => ({
       ...t,
       status: t.status === 'streaming' ? 'done' : t.status,
       transcribing: false,
@@ -231,8 +259,14 @@ export function PurrChannelPage() {
   }, [turns]);
 
   useEffect(() => {
-    if (!sending) saveLocal(HISTORY_KEY, turns);
-  }, [turns, sending]);
+    if (sending) return;
+    saveLocal(turnsKey(win.id), turns);
+    // 顺便回写窗口预览/更新时间，给列表用
+    const last = [...turns].reverse().find((t) => t.content.trim());
+    onTouch(win.id, last ? last.content.slice(0, 24) : '');
+    // onTouch 每次渲染都是新引用，故意不进依赖，避免回环
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turns, sending, win.id]);
 
   useEffect(() => {
     saveLocal(PROVIDER_KEY, provider);
@@ -253,9 +287,9 @@ export function PurrChannelPage() {
 
   const clearHistory = () => {
     if (sending) return;
-    if (turns.length && !window.confirm('清空这间房的聊天记录？暗格里也会一起删掉哦。')) return;
+    if (turns.length && !window.confirm('清空这个窗口的聊天记录？暗格里也会一起删掉哦。')) return;
     setTurns([]);
-    clearLocal(HISTORY_KEY);
+    clearLocal(turnsKey(win.id));
   };
 
   const patchTurn = (id: string, patch: Partial<Turn>) =>
@@ -376,11 +410,11 @@ export function PurrChannelPage() {
   return (
     <main className="chat-page">
       <header className="chat-head">
-        <Link to="/" className="chat-head__back" aria-label="回首页">
+        <button type="button" onClick={onBack} className="chat-head__back" aria-label="回窗口列表">
           ‹
-        </Link>
+        </button>
         <div className="chat-head__title">
-          <span className="chat-head__name">呼噜频道</span>
+          <span className="chat-head__name">{win.name}</span>
           <span className="chat-head__sub">Purr Channel</span>
         </div>
         <div className="chat-head__provider" role="group" aria-label="选择模型">
@@ -515,5 +549,179 @@ export function PurrChannelPage() {
         {notice ? <div className="chat-toast">{notice}</div> : null}
       </footer>
     </main>
+  );
+}
+
+// 相对时间：刚刚 / x分钟前 / x小时前 / x天前
+function fmtWhen(ts: number): string {
+  const d = Date.now() - ts;
+  const m = Math.floor(d / 60000);
+  if (m < 1) return '刚刚';
+  if (m < 60) return `${m}分钟前`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}小时前`;
+  return `${Math.floor(h / 24)}天前`;
+}
+
+// ===== 窗口列表：进入呼噜频道先看到这一屏，可开新窗口 / 重命名 / 删除 =====
+function WindowList({
+  windows,
+  onOpen,
+  onNew,
+  onRename,
+  onDelete,
+}: {
+  windows: WindowMeta[];
+  onOpen: (id: string) => void;
+  onNew: () => void;
+  onRename: (id: string, name: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState('');
+
+  const startEdit = (w: WindowMeta) => {
+    setEditingId(w.id);
+    setDraft(w.name);
+  };
+  const commitEdit = () => {
+    if (editingId) onRename(editingId, draft.trim() || '新对话');
+    setEditingId(null);
+  };
+
+  return (
+    <main className="chat-page win-page">
+      <header className="chat-head">
+        <Link to="/" className="chat-head__back" aria-label="回首页">
+          ‹
+        </Link>
+        <div className="chat-head__title">
+          <span className="chat-head__name">呼噜频道</span>
+          <span className="chat-head__sub">Purr Channel · 聊天窗</span>
+        </div>
+        <button
+          type="button"
+          className="chat-glass-btn cg-newwin"
+          onClick={onNew}
+          aria-label="开新窗口"
+          title="开新窗口"
+        >
+          <IconPlus />
+        </button>
+      </header>
+
+      <div className="win-list">
+        {windows.length === 0 ? (
+          <div className="chat-empty">
+            <div className="chat-empty__paw">🐾</div>
+            <p>还没有窗口呢</p>
+            <span>点右上角 ＋ 开一个新窗口，开始跟猫咪聊天吧～</span>
+          </div>
+        ) : (
+          windows.map((w) => (
+            <div key={w.id} className="win-card">
+              {editingId === w.id ? (
+                <input
+                  className="win-card__rename"
+                  value={draft}
+                  autoFocus
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitEdit();
+                    if (e.key === 'Escape') setEditingId(null);
+                  }}
+                  onBlur={commitEdit}
+                  maxLength={24}
+                />
+              ) : (
+                <button type="button" className="win-card__open" onClick={() => onOpen(w.id)}>
+                  <span className="win-card__name">{w.name}</span>
+                  <span className="win-card__preview">{w.preview || '还没说话…'}</span>
+                  <span className="win-card__when">{fmtWhen(w.updatedAt)}</span>
+                </button>
+              )}
+              <div className="win-card__actions">
+                <button type="button" className="win-act" onClick={() => startEdit(w)} aria-label="重命名" title="重命名">
+                  <IconPencil />
+                </button>
+                <button
+                  type="button"
+                  className="win-act"
+                  onClick={() => {
+                    if (window.confirm(`删除「${w.name}」？这个窗口的聊天记录也会一起删掉哦。`)) onDelete(w.id);
+                  }}
+                  aria-label="删除"
+                  title="删除"
+                >
+                  <IconTrash />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </main>
+  );
+}
+
+// 首次进入：迁移旧版单一对话成一个窗口
+function initWindows(): WindowMeta[] {
+  const wins = loadLocal<WindowMeta[]>(WINDOWS_KEY, []);
+  if (wins.length) return wins;
+  const legacy = loadLocal<Turn[]>(LEGACY_TURNS_KEY, []);
+  if (legacy.length) {
+    const id = uid();
+    saveLocal(turnsKey(id), legacy);
+    clearLocal(LEGACY_TURNS_KEY);
+    const last = [...legacy].reverse().find((t) => t.content.trim());
+    return [
+      {
+        id,
+        name: '之前的对话',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        preview: last ? last.content.slice(0, 24) : '',
+      },
+    ];
+  }
+  return [];
+}
+
+export function PurrChannelPage() {
+  const [windows, setWindows] = useState<WindowMeta[]>(initWindows);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  useEffect(() => {
+    saveLocal(WINDOWS_KEY, windows);
+  }, [windows]);
+
+  const newWindow = () => {
+    const id = uid();
+    setWindows((prev) => [{ id, name: '新对话', createdAt: Date.now(), updatedAt: Date.now() }, ...prev]);
+    setActiveId(id);
+  };
+  const renameWindow = (id: string, name: string) =>
+    setWindows((prev) => prev.map((w) => (w.id === id ? { ...w, name } : w)));
+  const deleteWindow = (id: string) => {
+    clearLocal(turnsKey(id));
+    setWindows((prev) => prev.filter((w) => w.id !== id));
+    setActiveId((cur) => (cur === id ? null : cur));
+  };
+  const touchWindow = (id: string, preview: string) =>
+    setWindows((prev) => prev.map((w) => (w.id === id ? { ...w, updatedAt: Date.now(), preview } : w)));
+
+  const active = windows.find((w) => w.id === activeId) ?? null;
+
+  if (active) {
+    return <ChatRoom key={active.id} win={active} onBack={() => setActiveId(null)} onTouch={touchWindow} />;
+  }
+  return (
+    <WindowList
+      windows={windows}
+      onOpen={(id) => setActiveId(id)}
+      onNew={newWindow}
+      onRename={renameWindow}
+      onDelete={deleteWindow}
+    />
   );
 }
