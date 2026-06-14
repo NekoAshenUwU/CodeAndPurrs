@@ -134,8 +134,14 @@ a {
   inset: 0;
 }
 
+/* 背景天空层贯穿整页（相对 .home-page），随滚动露出长图下半段 */
+.timesky {
+  z-index: 0;
+  overflow: hidden;
+}
+
 .timesky__photo {
-  background: url("/rooms/home-dream.webp") center / cover no-repeat;
+  background: url("/rooms/home-dream.webp") top center / cover no-repeat;
 }
 
 .timesky__layer {
@@ -162,7 +168,7 @@ a {
 .timesky__layer--night {
   background:
     linear-gradient(165deg, rgba(26, 22, 50, 0.22), rgba(40, 32, 66, 0.16)),
-    url("/rooms/home-dream-night.webp") center / cover no-repeat;
+    url("/rooms/home-dream-night.webp") top center / cover no-repeat;
 }
 
 .timesky.is-dawn .timesky__layer--dawn,

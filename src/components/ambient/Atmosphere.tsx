@@ -109,16 +109,18 @@ export function Atmosphere({ tod }: { tod: TimeOfDay }) {
   const isNight = tod === 'night';
 
   return (
-    <div className="atmosphere" aria-hidden="true">
-      {/* 会呼吸的时间背景：GPT 梦境底图 + 随时段叠的薄色纱 crossfade */}
-      <div className={`timesky is-${tod}`}>
+    <>
+      {/* 会呼吸的时间背景：GPT 梦境长图 + 随时段叠的薄色纱 crossfade。
+          独立成满页滚动层（绝对定位贯穿整页），随页面滚动露出长图下半段。 */}
+      <div className={`timesky is-${tod}`} aria-hidden="true">
         <div className="timesky__photo" />
         {TODS.map((t) => (
           <div key={t} className={`timesky__layer timesky__layer--${t}`} />
         ))}
       </div>
 
-      <div className="atmosphere__drift" ref={driftRef}>
+      <div className="atmosphere" aria-hidden="true">
+        <div className="atmosphere__drift" ref={driftRef}>
         {!reduced &&
           DUST.map((d, i) => (
             <span
@@ -148,8 +150,9 @@ export function Atmosphere({ tod }: { tod: TimeOfDay }) {
               }}
             />
           ))}
+        </div>
+        <div ref={pawHostRef} />
       </div>
-      <div ref={pawHostRef} />
-    </div>
+    </>
   );
 }
