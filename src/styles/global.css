@@ -41,6 +41,18 @@
   font-weight: 400;
   font-display: swap;
 }
+@font-face {
+  font-family: "ShunFeng"; /* Aa顺风顺水顺财神 子集 · 备选(候选对比中) */
+  src: url("/fonts/shunfeng-menu.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "NiZui"; /* 与我耳言你最可爱 子集 · 备选(候选对比中) */
+  src: url("/fonts/nizui-menu.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
 
 :root {
   color: #5f5877;
