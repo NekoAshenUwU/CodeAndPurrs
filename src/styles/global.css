@@ -48,9 +48,15 @@
   font-display: swap;
 }
 @font-face {
-  font-family: "TianTianQuan"; /* 字魂甜甜圈 子集 · 首页中文标语 */
+  font-family: "TianTianQuan"; /* 字魂甜甜圈 子集 · 备选 */
   src: url("/fonts/tiantianquan-vow.woff2") format("woff2");
   font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "ShanHai"; /* 山海潮玩星球 子集 · 首页中文标语 */
+  src: url("/fonts/shanhai-vow.woff2") format("woff2");
+  font-weight: 900;
   font-display: swap;
 }
 
@@ -584,7 +590,7 @@ a {
   align-items: center;
   gap: 6px;
   margin: 8px 0 18px;
-  font-family: "TianTianQuan", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: "ShanHai", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-weight: 900;
   font-size: clamp(1.72rem, 8vw, 2.6rem);
   line-height: 1.18;
