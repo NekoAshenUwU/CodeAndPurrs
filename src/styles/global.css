@@ -2803,22 +2803,20 @@ a {
 .chat-more button {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  justify-content: center;
+  padding: 9px 12px;
   border: 0;
   border-radius: 11px;
   background: none;
   color: #5d4a7e;
-  font-family: var(--round);
-  font-size: 1rem;
+  font-family: "ManHuai", var(--round); /* 装个满怀 */
+  font-size: 1.2rem;
+  letter-spacing: 0.04em;
   cursor: pointer;
   transition: background 0.14s ease;
 }
 .chat-more button:hover {
   background: rgba(201, 184, 241, 0.2);
-}
-.chat-more__emoji {
-  font-size: 1.2rem;
 }
 
 /* 小提示药丸 */

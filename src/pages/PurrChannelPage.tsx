@@ -201,9 +201,9 @@ function IconStop() {
 }
 
 const MORE_ITEMS = [
-  { key: 'image', emoji: '🖼️', label: '图片' },
-  { key: 'redpacket', emoji: '🧧', label: '红包' },
-  { key: 'meme', emoji: '😺', label: '表情包' },
+  { key: 'image', label: '图片' },
+  { key: 'redpacket', label: '红包' },
+  { key: 'meme', label: '表情包' },
 ];
 
 export function PurrChannelPage() {
@@ -465,9 +465,6 @@ export function PurrChannelPage() {
               <div className="chat-more" role="menu">
                 {MORE_ITEMS.map((it) => (
                   <button key={it.key} type="button" role="menuitem" onClick={() => pickMore(it.label)}>
-                    <span className="chat-more__emoji" aria-hidden="true">
-                      {it.emoji}
-                    </span>
                     {it.label}
                   </button>
                 ))}
