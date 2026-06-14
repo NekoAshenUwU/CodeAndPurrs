@@ -3108,32 +3108,58 @@ a {
    名字用顺风顺水(ShunFeng)。选中=薰衣草紫→粉→薄荷青液态玻璃。
    ============================================================ */
 .model-pill {
-  padding: 8px 15px;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 9px 16px;
   color: #6b5a8e;
   font-family: "ShunFeng", var(--round);
   font-size: 0.92rem;
   line-height: 1;
   white-space: nowrap;
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.9);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.55);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  /* 通透磨砂玻璃底 */
+  background:
+    radial-gradient(120% 140% at 28% 18%, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.18) 60%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.22));
+  box-shadow:
+    0 5px 14px rgba(140, 128, 182, 0.22),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.95),
+    inset 0 -2px 5px rgba(150, 150, 205, 0.16);
   cursor: pointer;
-  -webkit-backdrop-filter: blur(6px) saturate(1.2);
-  backdrop-filter: blur(6px) saturate(1.2);
-  transition: transform 0.16s ease, box-shadow 0.2s ease, background 0.2s ease;
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  backdrop-filter: blur(12px) saturate(1.5);
+  transition: transform 0.16s ease, box-shadow 0.22s ease, background 0.22s ease;
+}
+/* 顶部玻璃高光（液态玻璃的湿润反光） */
+.model-pill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 46%);
+  pointer-events: none;
 }
 .model-pill:active {
   transform: scale(0.95);
 }
+/* 选中：马卡龙虹彩液态玻璃（浅紫→粉→薄荷）+ 厚高光 + 外发光 */
 .model-pill.is-on {
   color: #463a6b;
-  border-color: rgba(255, 255, 255, 0.95);
-  background: linear-gradient(115deg, #c9b6f5 0%, #e7b9ec 36%, #bfe6f2 70%, #c6f3ea 100%);
+  border-color: rgba(255, 255, 255, 1);
+  background:
+    radial-gradient(130% 150% at 24% 14%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 46%),
+    linear-gradient(118deg, #ccbcf7 0%, #e7bdee 28%, #f4cbe2 48%, #c8ecef 74%, #cdf5ea 100%);
   box-shadow:
-    0 7px 20px rgba(160, 140, 210, 0.4),
-    inset 0 1px 2px rgba(255, 255, 255, 0.95),
-    inset 0 -3px 8px rgba(150, 160, 210, 0.28);
+    0 9px 24px rgba(168, 146, 222, 0.5),
+    0 0 16px rgba(196, 182, 248, 0.45),
+    inset 0 1.5px 2px rgba(255, 255, 255, 1),
+    inset 0 7px 11px rgba(255, 255, 255, 0.5),
+    inset 0 -5px 10px rgba(150, 162, 218, 0.32);
+}
+.model-pill.is-on::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.05) 50%);
 }
 
 /* ---- 聊天顶栏：当前模型胶囊 + 弹出列表 ---- */
