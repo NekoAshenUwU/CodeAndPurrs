@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { streamChat, type ChatMessage, type Provider } from '../services/chat';
-import { buildSystemPrompt, loadDefaultProvider } from '../services/purrConfig';
+import { streamChat, type ChatMessage } from '../services/chat';
+import { getModel, MODEL_GROUPS } from '../data/models';
+import { buildSystemPrompt, loadDefaultModel } from '../services/purrConfig';
 import { clearLocal, loadLocal, saveLocal } from '../services/storage';
 import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
 
@@ -16,7 +17,7 @@ type WindowMeta = {
   createdAt: number;
   updatedAt: number;
   preview?: string;
-  provider?: Provider; // 这个窗口用哪个模型；缺省时跟全局默认
+  provider?: string; // 这个窗口用哪个模型 id；缺省时跟全局默认
 };
 
 type Voice = { url?: string; duration: number };
@@ -30,11 +31,6 @@ type Turn = {
   voice?: Voice; // 用户语音消息才有；content 存转写出来的文字
   transcribing?: boolean;
 };
-
-const PROVIDERS: { id: Provider; label: string }[] = [
-  { id: 'deepseek', label: 'DeepSeek' },
-  { id: 'gemini', label: 'Gemini' },
-];
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -239,7 +235,7 @@ function ChatRoom({
   win: WindowMeta;
   onBack: () => void;
   onTouch: (id: string, preview: string) => void;
-  onSetProvider: (id: string, provider: Provider) => void;
+  onSetProvider: (id: string, modelId: string) => void;
 }) {
   // 从小暗格读出这个窗口的聊天记录；半截没说完的归位，语音 blob 刷新后失效就丢掉播放地址。
   const [turns, setTurns] = useState<Turn[]>(() =>
@@ -252,10 +248,12 @@ function ChatRoom({
   );
   const [input, setInput] = useState('');
   // 模型每个窗口各记一份（存在窗口元信息里）；切换只影响当前窗口
-  const [provider, setProvider] = useState<Provider>(win.provider ?? 'deepseek');
-  const pickProvider = (p: Provider) => {
-    setProvider(p);
-    onSetProvider(win.id, p);
+  const [provider, setProvider] = useState<string>(win.provider ?? 'deepseek');
+  const [modelOpen, setModelOpen] = useState(false);
+  const pickProvider = (id: string) => {
+    setProvider(id);
+    onSetProvider(win.id, id);
+    setModelOpen(false);
   };
   const [sending, setSending] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -316,8 +314,9 @@ function ChatRoom({
     const controller = new AbortController();
     abortRef.current = controller;
 
+    const m = getModel(provider); // 模型 id → 后端服务商 + 具体模型名
     await streamChat(
-      { provider, messages: history, signal: controller.signal },
+      { provider: m.provider, model: m.model, messages: history, signal: controller.signal },
       {
         onReasoning: (chunk) =>
           setTurns((prev) => prev.map((t) => (t.id === botId ? { ...t, reasoning: t.reasoning + chunk } : t))),
@@ -425,18 +424,52 @@ function ChatRoom({
           <span className="chat-head__name">{win.name}</span>
           <span className="chat-head__sub">Purr Channel</span>
         </div>
-        <div className="chat-head__provider" role="group" aria-label="选择模型">
-          {PROVIDERS.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className={p.id === provider ? 'is-on' : ''}
-              onClick={() => pickProvider(p.id)}
-              disabled={sending}
-            >
-              {p.label}
-            </button>
-          ))}
+        <div className="chat-head__model">
+          <button
+            type="button"
+            className="model-chip"
+            onClick={() => setModelOpen((v) => !v)}
+            disabled={sending}
+            aria-haspopup="menu"
+            aria-expanded={modelOpen}
+            title="切换模型"
+          >
+            {getModel(provider).label}
+            <span className="model-chip__caret" aria-hidden="true">
+              ▾
+            </span>
+          </button>
+          {modelOpen ? (
+            <>
+              <button
+                type="button"
+                className="chat-more__scrim"
+                aria-label="关闭模型菜单"
+                onClick={() => setModelOpen(false)}
+              />
+              <div className="model-pop" role="menu">
+                {MODEL_GROUPS.map((g) => (
+                  <div key={g.brand} className="model-pop__group">
+                    <span className="model-pop__brand">{g.brand}</span>
+                    <div className="model-pop__pills">
+                      {g.models.map((mm) => (
+                        <button
+                          key={mm.id}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={mm.id === provider}
+                          className={`model-pill${mm.id === provider ? ' is-on' : ''}`}
+                          onClick={() => pickProvider(mm.id)}
+                        >
+                          {mm.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : null}
         </div>
         <button
           type="button"
@@ -689,7 +722,7 @@ function initWindows(): WindowMeta[] {
         createdAt: Date.now(),
         updatedAt: Date.now(),
         preview: last ? last.content.slice(0, 24) : '',
-        provider: loadDefaultProvider(),
+        provider: loadDefaultModel(),
       },
     ];
   }
@@ -707,7 +740,7 @@ export function PurrChannelPage() {
   const newWindow = () => {
     const id = uid();
     // 新窗口继承「调频」里设的全局默认模型
-    const provider = loadDefaultProvider();
+    const provider = loadDefaultModel();
     setWindows((prev) => [{ id, name: '新对话', createdAt: Date.now(), updatedAt: Date.now(), provider }, ...prev]);
     setActiveId(id);
   };
@@ -720,7 +753,7 @@ export function PurrChannelPage() {
   };
   const touchWindow = (id: string, preview: string) =>
     setWindows((prev) => prev.map((w) => (w.id === id ? { ...w, updatedAt: Date.now(), preview } : w)));
-  const setWindowProvider = (id: string, provider: Provider) =>
+  const setWindowProvider = (id: string, provider: string) =>
     setWindows((prev) => prev.map((w) => (w.id === id ? { ...w, provider } : w)));
 
   const active = windows.find((w) => w.id === activeId) ?? null;

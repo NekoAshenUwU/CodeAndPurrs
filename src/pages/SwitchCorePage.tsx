@@ -1,30 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { Provider } from '../services/chat';
+import { MODEL_GROUPS } from '../data/models';
 import {
-  loadDefaultProvider,
+  loadDefaultModel,
   loadInstructions,
   loadProfile,
-  saveDefaultProvider,
+  saveDefaultModel,
   saveInstructions,
   saveProfile,
 } from '../services/purrConfig';
 
-const PROVIDERS: { id: Provider; label: string; note: string }[] = [
-  { id: 'deepseek', label: 'DeepSeek', note: '会思考、爱碎碎念' },
-  { id: 'gemini', label: 'Gemini', note: '反应快、知识新' },
-];
-
 // 调频 SwitchCore：设默认模型 + 写「关于我 / 猫咪人设」，新窗口聊天前自动读取。
 export function SwitchCorePage() {
-  const [provider, setProvider] = useState<Provider>(loadDefaultProvider);
+  const [provider, setProvider] = useState<string>(loadDefaultModel);
   const [profile, setProfile] = useState<string>(loadProfile);
   const [instructions, setInstructions] = useState<string>(loadInstructions);
   const [savedFlash, setSavedFlash] = useState(false);
 
   // 自动存：改动后静悄悄写进暗格，并闪一下「已记住」
   useEffect(() => {
-    saveDefaultProvider(provider);
+    saveDefaultModel(provider);
   }, [provider]);
 
   useEffect(() => {
@@ -61,19 +56,23 @@ export function SwitchCorePage() {
         <section className="switch-card">
           <h2 className="switch-card__title">默认模型</h2>
           <p className="switch-card__hint">新开的聊天窗会用这个模型；进了窗口还能在顶栏单独换。</p>
-          <div className="switch-models">
-            {PROVIDERS.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                className={`switch-model${p.id === provider ? ' is-on' : ''}`}
-                onClick={() => setProvider(p.id)}
-              >
-                <span className="switch-model__name">{p.label}</span>
-                <span className="switch-model__note">{p.note}</span>
-              </button>
-            ))}
-          </div>
+          {MODEL_GROUPS.map((g) => (
+            <div key={g.brand} className="switch-brand">
+              <span className="switch-brand__name">{g.brand}</span>
+              <div className="switch-models">
+                {g.models.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className={`model-pill switch-model-pill${m.id === provider ? ' is-on' : ''}`}
+                    onClick={() => setProvider(m.id)}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
         </section>
 
         <section className="switch-card">

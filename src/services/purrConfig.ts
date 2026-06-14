@@ -1,10 +1,9 @@
 // 呼噜频道的「调频」配置：默认模型 + 关于我(profile) + 猫咪人设(instructions)。
 // 全局存一份；聊天时每条消息实时拼进 system prompt（新窗、老窗都读最新）。
 
-import type { Provider } from './chat';
 import { loadLocal, saveLocal } from './storage';
 
-export const PROVIDER_KEY = 'purr-channel:provider'; // 全局默认模型（新窗口继承）
+export const PROVIDER_KEY = 'purr-channel:provider'; // 全局默认模型 id（新窗口继承）
 export const PROFILE_KEY = 'purr-channel:profile'; // 关于我
 export const INSTRUCTIONS_KEY = 'purr-channel:instructions'; // 给猫咪的人设/期待
 
@@ -12,8 +11,8 @@ export const INSTRUCTIONS_KEY = 'purr-channel:instructions'; // 给猫咪的人�
 export const BASE_PERSONA =
   '你是「呼噜频道」里的猫咪伙伴，说话温柔、俏皮、带一点猫感，偶尔用「喵」。回答简洁自然，像在跟最亲近的人聊天。';
 
-export const loadDefaultProvider = (): Provider => loadLocal<Provider>(PROVIDER_KEY, 'deepseek');
-export const saveDefaultProvider = (p: Provider): void => saveLocal(PROVIDER_KEY, p);
+export const loadDefaultModel = (): string => loadLocal<string>(PROVIDER_KEY, 'deepseek');
+export const saveDefaultModel = (id: string): void => saveLocal(PROVIDER_KEY, id);
 
 export const loadProfile = (): string => loadLocal<string>(PROFILE_KEY, '');
 export const saveProfile = (v: string): void => saveLocal(PROFILE_KEY, v);

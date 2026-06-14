@@ -83,7 +83,11 @@
 - **调频页 ✅ 已建**（`src/pages/SwitchCorePage.tsx`，路由 `/switchcore`，房间 `switchcore` 已转 `ready`）：设**默认模型** + 写**「关于我」(profile)** 和 **「猫咪人设」(instructions)**，自动存。
   - 共享配置：`src/services/purrConfig.ts`（keys `purr-channel:provider/profile/instructions` + `BASE_PERSONA` + `buildSystemPrompt()`）。
   - 注入方式：聊天 `toMessages()` 每次发送都 `buildSystemPrompt()` 现拼 → **底色人设 + 关于我 + 人设**，全局实时生效（新窗、老窗都读最新）。
-  - 后续可加：模型花名册扩充、每模型不同性格、profile/instructions 是否要支持每窗覆盖。
+  - 后续可加：每模型不同性格、profile/instructions 是否要支持每窗覆盖。
+- **模型花名册**（`src/data/models.ts`：`MODELS`/`MODEL_GROUPS`/`getModel`）：DeepSeek、Gemini、GPT(GPT-4/o3/GPT-5.5T)、Claude(Sonnet 4.6/Opus 4.6/Opus 4.8)。
+  - 存的是 model **id**（老值 `deepseek`/`gemini` 仍有效）；`getModel(id)` → 后端 `provider`+`model`。
+  - **liquid glass 胶囊**（`.model-pill.is-on` 星云幻境渐变，名字 ShunFeng 字体）：调频页按品牌分组、聊天顶栏 `.model-chip` 点开 `.model-pop` 分组列表。
+  - **⚠️ 后端待接**：`provider: 'openai' | 'anthropic'` 后端（`server/proxy.mjs`）尚未实现，选 GPT/Claude 现在会报错；DeepSeek/Gemini 正常。
 - **输入区玻璃珠**（VisionOS 风，CSS+SVG，`.chat-glass-btn` 系列）：`+`更多菜单（图片/红包/表情，字体 **ShunFeng 顺风顺水** 子集 `shunfeng-menu.woff2`，仅占位待接后端）｜语音键两态（麦克风⇄按住跳动音波，松开发送·移开取消）｜`↑`发送（深紫内盘）。
 
 ## 10. 房间产品设定（建功能时按这个来）

@@ -7,7 +7,8 @@ export type ChatMessage = {
   content: string;
 };
 
-export type Provider = 'deepseek' | 'gemini';
+// 后端实际对接的服务商（openai/anthropic 待后端接入，前端先可选）
+export type Provider = 'deepseek' | 'gemini' | 'openai' | 'anthropic';
 
 export type StreamHandlers = {
   onReasoning?: (text: string) => void;
