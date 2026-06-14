@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { streamChat, type ChatMessage, type Provider } from '../services/chat';
+import { buildSystemPrompt, loadDefaultProvider } from '../services/purrConfig';
 import { clearLocal, loadLocal, saveLocal } from '../services/storage';
 import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
 
 const WINDOWS_KEY = 'purr-channel:windows';
 const LEGACY_TURNS_KEY = 'purr-channel:turns'; // 旧版单一对话，首次进入迁移成一个窗口
-const PROVIDER_KEY = 'purr-channel:provider';
 const turnsKey = (id: string) => `purr-channel:turns:${id}`;
 
 // 一个聊天窗口的元信息（聊天记录另存在 turnsKey(id) 下）
@@ -30,9 +30,6 @@ type Turn = {
   voice?: Voice; // 用户语音消息才有；content 存转写出来的文字
   transcribing?: boolean;
 };
-
-const SYSTEM_PROMPT =
-  '你是「呼噜频道」里的猫咪伙伴，说话温柔、俏皮、带一点猫感，偶尔用「喵」。回答简洁自然，像在跟最亲近的人聊天。';
 
 const PROVIDERS: { id: Provider; label: string }[] = [
   { id: 'deepseek', label: 'DeepSeek' },
@@ -306,7 +303,8 @@ function ChatRoom({
     setTurns((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
 
   const toMessages = (ts: Turn[]): ChatMessage[] => [
-    { role: 'system', content: SYSTEM_PROMPT },
+    // 每次发送都现拼，确保读到「调频」里最新的人设/资料
+    { role: 'system', content: buildSystemPrompt() },
     ...ts.filter((t) => t.content.trim()).map((t) => ({ role: t.role, content: t.content })),
   ];
 
@@ -691,7 +689,7 @@ function initWindows(): WindowMeta[] {
         createdAt: Date.now(),
         updatedAt: Date.now(),
         preview: last ? last.content.slice(0, 24) : '',
-        provider: loadLocal<Provider>(PROVIDER_KEY, 'deepseek'),
+        provider: loadDefaultProvider(),
       },
     ];
   }
@@ -708,8 +706,8 @@ export function PurrChannelPage() {
 
   const newWindow = () => {
     const id = uid();
-    // 新窗口继承全局默认模型（将来由「调频」设定）
-    const provider = loadLocal<Provider>(PROVIDER_KEY, 'deepseek');
+    // 新窗口继承「调频」里设的全局默认模型
+    const provider = loadDefaultProvider();
     setWindows((prev) => [{ id, name: '新对话', createdAt: Date.now(), updatedAt: Date.now(), provider }, ...prev]);
     setActiveId(id);
   };

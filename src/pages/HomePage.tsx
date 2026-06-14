@@ -35,6 +35,10 @@ export function HomePage() {
       navigate('/paw-trail');
       return;
     }
+    if (room.id === 'switchcore') {
+      navigate('/switchcore');
+      return;
+    }
     setSelectedRoom(room);
   };
 

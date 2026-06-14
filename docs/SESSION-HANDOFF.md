@@ -52,7 +52,7 @@
 - hero 文字：英文标题**冷紫粉玻璃发光** + shimmer 扫光；中文标语**暖蜜桃粉发光**；深夜各自有亮色 + 描边 + 柔光（深夜卡片是深烟熏玻璃防糊）。
 
 ## 6. 待办 TODO（新窗从这里继续）
-1. **首页 CodeAndPurrs 白天/夜晚新背景图**：用户说会让 GPT 画两张（同构图换光照、中间留干净、装饰四周、~1080 宽竖图）。来了就转 webp 接到 `home-dream.webp`/`home-dream-night.webp`，按 `is-day/is-night` 切。
+1. ~~**首页 CodeAndPurrs 白天/夜晚新背景图**~~ ✅ 已完成：`home-dream.webp` + `home-dream-night.webp` 已接，CSS 按 `is-day/is-night` 切。
 2. **ashen 版 Paw Trail 背景**：用户给的第二组图（Grab/KFC/Gemini 那套）可做 ashen 专属；目前页面 owner 固定 `neko`。要做 owner 切换 + 各自 stack 图。
 3. **Mascot 点评文案**：等棠棠定措辞再改；可选升级成调 `/api/chat` 现生成（现在是本地映射）。
 4. **Codex 安卓 App handoff**：把这几条补进给 Codex 的安卓交接（`docs/neko-usage-bridge-spec.md` §2 已有大部分）：采集要带 **`iconBase64`**（Top N 应用图标转小 PNG base64）、**`sessions[]`**、`tz="Asia/Kuching"`、POST 到 `https://api.nekopurrs.uk/api/usage/ingest`、别往仓库根目录丢图。
@@ -80,7 +80,10 @@
 - **聊天窗列表**：进频道先看到窗口列表（`WindowList`），右上玻璃按键 `cg-newwin` 开新窗口；每窗可**行内重命名**、**删除**（连记录一起删），卡片显示 名称/预览/相对时间。
 - **存储**：窗口元信息 `codeandpurrs:purr-channel:windows`（`WindowMeta[]`，含 `provider`）；每窗记录 `purr-channel:turns:<id>`。旧版单一对话 `purr-channel:turns` 首次进入自动迁成「之前的对话」窗口。
 - **模型（已定）**：**每个窗口各记模型**（存 `WindowMeta.provider`）；聊天页顶栏快速切换只改当前窗口。新窗口继承**全局默认** `purr-channel:provider`。
-  - **待办**：「调频」房间（`switchcore`，现 `status:'soon'` 未建页）将来负责**设全局默认模型 + 模型花名册/性格口味**，写 `purr-channel:provider`，新窗口据此继承。即「调频设默认 + 聊天页快切」。
+- **调频页 ✅ 已建**（`src/pages/SwitchCorePage.tsx`，路由 `/switchcore`，房间 `switchcore` 已转 `ready`）：设**默认模型** + 写**「关于我」(profile)** 和 **「猫咪人设」(instructions)**，自动存。
+  - 共享配置：`src/services/purrConfig.ts`（keys `purr-channel:provider/profile/instructions` + `BASE_PERSONA` + `buildSystemPrompt()`）。
+  - 注入方式：聊天 `toMessages()` 每次发送都 `buildSystemPrompt()` 现拼 → **底色人设 + 关于我 + 人设**，全局实时生效（新窗、老窗都读最新）。
+  - 后续可加：模型花名册扩充、每模型不同性格、profile/instructions 是否要支持每窗覆盖。
 - **输入区玻璃珠**（VisionOS 风，CSS+SVG，`.chat-glass-btn` 系列）：`+`更多菜单（图片/红包/表情，字体 **ShunFeng 顺风顺水** 子集 `shunfeng-menu.woff2`，仅占位待接后端）｜语音键两态（麦克风⇄按住跳动音波，松开发送·移开取消）｜`↑`发送（深紫内盘）。
 
 ## 10. 房间产品设定（建功能时按这个来）
