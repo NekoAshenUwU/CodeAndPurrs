@@ -584,19 +584,22 @@ a {
   font-size: clamp(1.72rem, 8vw, 2.6rem);
   line-height: 1.32;
   letter-spacing: 0.03em;
-  /* 干净雾蓝 → 淡紫横向渐变，不透明 */
-  background-image: linear-gradient(90deg, #74cff0 0%, #9dbaf2 45%, #c4a7ef 100%);
+  /* 雾感蓝→紫→粉横向渐变（对齐参考图：蓝紫粉都看得到，饱和度够、不发灰）*/
+  background-image: linear-gradient(
+    95deg,
+    #6fb0ef 0%,
+    #8f9fe8 22%,
+    #bb9fe6 42%,
+    #e6a3c9 58%,
+    #a7a6ea 80%,
+    #74c0f0 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  /* 轻白描边，浅底上更干净清楚 */
-  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.55);
-  /* 小而干净的立体阴影，不用大糊光 */
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.7),
-    0 3px 6px rgba(117, 132, 200, 0.18),
-    0 8px 14px rgba(158, 180, 230, 0.12);
+  /* 不用白描边（会糊出白雾）；只留一层小而干净的投影做分离 */
+  text-shadow: 0 2px 5px rgba(116, 128, 195, 0.24);
   text-rendering: geometricPrecision;
 }
 
@@ -1184,15 +1187,19 @@ a {
     0 2px 10px rgba(20, 30, 80, 0.4);
 }
 
-/* 深夜/傍晚：同样干净的蓝紫渐变，夜里提亮一档，仍不糊不发大光 */
+/* 深夜/傍晚：同款蓝→紫→粉，夜里提亮一档，仍干脆不糊 */
 .home-page.is-night .vow,
 .home-page.is-dusk .vow {
-  background-image: linear-gradient(90deg, #8fdaf5 0%, #aec6f7 45%, #d2bbf5 100%);
-  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.6);
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.5),
-    0 3px 8px rgba(50, 60, 130, 0.34),
-    0 8px 16px rgba(90, 110, 190, 0.2);
+  background-image: linear-gradient(
+    95deg,
+    #88c4f5 0%,
+    #a6b2f1 22%,
+    #cdb0f0 42%,
+    #f0b6d6 58%,
+    #bcb8f2 80%,
+    #8cccf5 100%
+  );
+  text-shadow: 0 2px 7px rgba(40, 50, 120, 0.4);
 }
 
 /* 同样坐在暗玻璃上的英文副标语 / eyebrow 一起提亮 */
