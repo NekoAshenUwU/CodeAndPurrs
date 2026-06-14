@@ -273,10 +273,15 @@ function PawTrailView({
       <section className="paw-card paw-ring-card">
         <svg className={`paw-ring ${ringFull ? 'is-full' : ''}`} viewBox="0 0 200 200" aria-hidden="true">
           <defs>
+            {/* 落日色卡多段渐变：暖→冷。可见弧约落在渐变 25%~80%，把落日色压进这段 */}
             <linearGradient id="pawRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#f3bcd4" />
-              <stop offset="50%" stopColor="#c9b8ef" />
-              <stop offset="100%" stopColor="#bcd4f6" />
+              <stop offset="0%" stopColor="#c8a8d6" />
+              <stop offset="25%" stopColor="#eaa7b8" />
+              <stop offset="40%" stopColor="#fbbdb2" />
+              <stop offset="55%" stopColor="#fbe3b0" />
+              <stop offset="68%" stopColor="#f8d7c4" />
+              <stop offset="82%" stopColor="#bce4ea" />
+              <stop offset="100%" stopColor="#86cdd4" />
             </linearGradient>
           </defs>
           <circle className="paw-ring__track" cx="100" cy="100" r={RING_R} />
