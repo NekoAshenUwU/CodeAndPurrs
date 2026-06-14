@@ -2602,3 +2602,58 @@ a {
 
 /* 修正:svg 与 circle 都各转了一次 -90°(共 -180°,从6点起)。取消 svg 旋转,只留 circle 的 → 从12点起 */
 .paw-ring { transform: none; }
+
+/* ============================================================
+   首页背景"压花"：把过于热闹的星空底图压成远景氛围，
+   让玻璃门牌图标 + 中英文名清晰浮出。(见棠棠 2026-06-14 需求)
+   ============================================================ */
+
+/* ① 背景加重高斯模糊 → 猫咪/气泡/星星退成柔焦远景。
+   scale 略放大，避免 blur 把边缘采样成透明、露出底色。 */
+.timesky__photo {
+  filter: blur(7px);
+  transform: scale(1.08);
+}
+.timesky__layer--night {
+  filter: blur(7px);
+  transform: scale(1.08);
+}
+
+/* ② 整张背景叠半透明深紫蒙层，进一步压暗压花（夜重日浅，护住白天的粉嫩）。
+   ::after 位于背景层最上、但在 .atmosphere 光尘/星点之下，星点仍作氛围浮于其上。 */
+.timesky::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(60, 40, 90, 0.26);
+  pointer-events: none;
+}
+.timesky.is-day::after {
+  background: rgba(70, 52, 104, 0.2);
+}
+.timesky.is-night::after {
+  background: rgba(60, 40, 90, 0.34);
+}
+
+/* ③ LITTLE ROOMS 图标区垫一层极淡磨砂面板，成独立板块，
+   backdrop-filter 二次柔化背后已模糊的底图，对比更干净。 */
+.rooms-section {
+  position: relative;
+  z-index: 1;
+  padding: 20px 14px 24px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(5px) saturate(1.05);
+  -webkit-backdrop-filter: blur(5px) saturate(1.05);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 10px 30px rgba(74, 59, 107, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.home-page.is-night .rooms-section {
+  background: rgba(40, 30, 70, 0.26);
+  border-color: rgba(214, 200, 245, 0.2);
+  box-shadow:
+    0 12px 34px rgba(16, 10, 36, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
