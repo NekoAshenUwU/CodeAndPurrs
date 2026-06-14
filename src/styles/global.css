@@ -545,17 +545,17 @@ a {
   white-space: nowrap;
   font-weight: 700;
   line-height: 1.02;
-  /* 冷紫粉玻璃发光字（日间偏深一档，浅底也读得清；夜间见下方 is-night 覆盖成亮粉） */
-  background-image: linear-gradient(180deg, #d9a8f2 0%, #c3a3ef 38%, #9f9ff0 72%, #8fa0ec 100%);
+  /* Aurora Mist 极光薄雾：靛蓝 → 浅青（夜间见下方 is-night 提亮版） */
+  background-image: linear-gradient(168deg, #5b6cff 0%, #7fa8ff 50%, #b1f0ff 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  -webkit-text-stroke: 0.5px rgba(120, 90, 160, 0.28);
+  -webkit-text-stroke: 0.5px rgba(70, 95, 200, 0.26);
   text-shadow:
-    0 0 8px rgba(216, 180, 254, 0.4),
-    0 0 18px rgba(170, 160, 255, 0.22),
-    0 2px 8px rgba(80, 50, 120, 0.22);
+    0 0 8px rgba(150, 200, 255, 0.4),
+    0 0 18px rgba(120, 150, 255, 0.22),
+    0 2px 8px rgba(40, 60, 140, 0.22);
   animation: heroGlowPulse 3.8s ease-in-out infinite;
 }
 
@@ -578,17 +578,17 @@ a {
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: 0.03em;
-  /* 紫 → 马卡龙淡紫粉渐变（不再纯粉，柔和不突兀） */
-  background-image: linear-gradient(135deg, #b491e8 0%, #c9a3ec 32%, #e3acdf 64%, #f0bcd8 100%);
+  /* Lunar Whisper 微光夜语：粉紫 → 长春花蓝 → 青（夜间见下方提亮版） */
+  background-image: linear-gradient(135deg, #eed0f2 0%, #9ebaeb 52%, #96dff5 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  -webkit-text-stroke: 0.5px rgba(130, 95, 175, 0.22);
+  -webkit-text-stroke: 0.6px rgba(110, 120, 185, 0.3);
   text-shadow:
-    0 0 8px rgba(220, 200, 255, 0.42),
-    0 0 18px rgba(200, 165, 240, 0.24),
-    0 2px 8px rgba(80, 50, 120, 0.2);
+    0 0 8px rgba(215, 220, 250, 0.42),
+    0 0 18px rgba(165, 200, 240, 0.24),
+    0 1px 6px rgba(70, 80, 140, 0.26);
   animation: sloganTwinkle 4.6s ease-in-out infinite;
 }
 
@@ -1166,19 +1166,20 @@ a {
 /* 深夜/傍晚：英文冷紫粉玻璃发光（指定渐变 + 白描边 + 多层柔光，配深烟熏卡清晰不糊） */
 .home-page.is-night .hero-card h1,
 .home-page.is-dusk .hero-card h1 {
-  background-image: linear-gradient(180deg, #f8d8ff 0%, #ead2ff 25%, #d8b8ff 55%, #b9b8ff 100%);
-  -webkit-text-stroke: 0.6px rgba(255, 255, 255, 0.36);
+  /* Aurora Mist 提亮版（夜里更亮） */
+  background-image: linear-gradient(168deg, #8ea0ff 0%, #a9d4ff 50%, #c9f6ff 100%);
+  -webkit-text-stroke: 0.6px rgba(255, 255, 255, 0.34);
   text-shadow:
-    0 0 8px rgba(255, 225, 255, 0.42),
-    0 0 18px rgba(210, 180, 255, 0.34),
-    0 0 36px rgba(170, 160, 255, 0.22),
-    0 2px 10px rgba(40, 30, 90, 0.4);
+    0 0 8px rgba(190, 215, 255, 0.46),
+    0 0 18px rgba(140, 175, 255, 0.34),
+    0 0 36px rgba(120, 150, 255, 0.22),
+    0 2px 10px rgba(20, 30, 80, 0.4);
 }
 
-/* 深夜/傍晚：中文标语亮版紫→淡紫粉发光（更亮但仍带紫，不纯粉） */
+/* 深夜/傍晚：Lunar Whisper 提亮版（粉紫→长春花蓝→青，夜里更亮） */
 .home-page.is-night .vow,
 .home-page.is-dusk .vow {
-  background-image: linear-gradient(135deg, #d6c2f8 0%, #e3b8f0 34%, #f3c4e2 66%, #ffcce2 100%);
+  background-image: linear-gradient(135deg, #f5dcf8 0%, #bcd2f4 52%, #b6ecfb 100%);
   -webkit-text-stroke: 0.7px rgba(250, 245, 255, 0.32);
   text-shadow:
     0 0 8px rgba(228, 214, 255, 0.5),
