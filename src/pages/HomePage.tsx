@@ -26,7 +26,7 @@ export function HomePage() {
   const tod = useTimeOfDay();
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const readyRoom = useMemo(() => rooms.find((room) => room.status === 'ready') ?? rooms[0], []);
-  const mascotSrc = `${import.meta.env.BASE_URL}assets/mascot/neko.png`;
+  const mascotSrc = `${import.meta.env.BASE_URL}assets/mascot/home-couple.webp`;
 
   // 已开放的房间直接进页面；还在装修的就弹预览浮层。
   const openRoom = (room: Room) => {

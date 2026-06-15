@@ -445,12 +445,12 @@ a {
 .hero-mascot {
   position: absolute;
   z-index: 2;
-  top: -56px;
-  right: 16px;
-  width: clamp(92px, 26vw, 124px);
+  top: -48px;
+  right: 10px;
+  width: clamp(116px, 32vw, 156px);
   height: auto;
   transform-origin: 60% 100%;
-  filter: drop-shadow(0 10px 16px rgba(118, 96, 132, 0.32));
+  filter: drop-shadow(0 10px 18px rgba(118, 96, 132, 0.3));
   pointer-events: none;
   animation: hero-breathe 3.6s ease-in-out infinite;
 }
