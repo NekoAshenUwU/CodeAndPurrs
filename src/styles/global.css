@@ -725,19 +725,18 @@ a {
   transform: translateY(-2px);
 }
 
-/* 主按钮「进入呼噜频道」：马卡龙液态玻璃，相邻色平滑过渡(不再一半粉一半蓝) */
+/* 主按钮「进入呼噜频道」：液态玻璃球配色(上紫粉→中粉→下青蓝)+ 顶部玻璃高光 */
 .hero-card__actions button:first-child {
-  color: #463a6b;
+  color: #4a3a6a;
   background:
-    radial-gradient(70% 55% at 26% 12%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 58%),
+    radial-gradient(58% 42% at 30% 10%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0) 56%),
     linear-gradient(
-      100deg,
-      #b6a6f0 0%,
-      #c5a8ea 22%,
-      #d2abe2 40%,
-      #bfb6e8 56%,
-      #a8caec 74%,
-      #9ee2dd 100%
+      165deg,
+      #caa0e8 0%,
+      #ecaade 28%,
+      #f3bcdb 50%,
+      #aadfe9 78%,
+      #86d6df 100%
     );
   box-shadow:
     0 10px 26px rgba(168, 146, 222, 0.5),
