@@ -634,8 +634,8 @@ a {
 .vow span {
   display: block;
   width: fit-content;
-  /* 白天版：玻璃海蓝 → 长春花蓝 → 淡紫 → 蓝紫（不带粉，蓝色看得见）*/
-  background-image: linear-gradient(90deg, #73d2f2 0%, #98bdf2 33%, #c4acec 66%, #8ea6e6 100%);
+  /* 白天版：玻璃海蓝 → 长春花蓝 → 紫罗兰 → 蓝紫（蓝紫都看得见，紫色更明显）*/
+  background-image: linear-gradient(90deg, #6fc9ee 0%, #8aa6e6 28%, #a07fd8 60%, #7d5fc6 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -659,7 +659,7 @@ a {
 
 .vow-en {
   margin: 0;
-  color: var(--iris-deep);
+  color: #3c2b60; /* 墨紫色 Born from code */
   font-family: var(--serif-tagline);
   font-style: normal;
   font-size: clamp(0.98rem, 3.9vw, 1.22rem);
