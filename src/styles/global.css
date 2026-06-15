@@ -564,24 +564,22 @@ a {
   font-weight: 400;
   line-height: 1.08;
   letter-spacing: 0;
-  /* 梦幻横向渐变：左蓝紫 → 粉紫 → 中过渡 → 右青蓝(青蓝/粉紫占比更多)，柔和不断层 */
+  /* stronger dreamy：浅底要够显色，整体加深一档——蓝紫→紫→藕紫→蓝→青薄荷，柔和不断层 */
   background-image: linear-gradient(
     100deg,
-    #7e7fea 0%,
-    #a98ce8 20%,
-    #c79ae0 40%,
-    #aea6e6 55%,
-    #82bfee 76%,
-    #6ad7ec 100%
+    #5d68d6 0%,
+    #8466cb 24%,
+    #a66ec0 44%,
+    #7d79cc 58%,
+    #4f9ed4 78%,
+    #3ec6c2 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  /* 只一点点柔光，不要大发光/描边/blur */
-  text-shadow:
-    0 1px 1px rgba(255, 255, 255, 0.35),
-    0 0 6px rgba(150, 165, 235, 0.16);
+  /* 不要白柔光(会把深色洗淡)；只留一层很淡的深色投影做立体 */
+  text-shadow: 0 2px 4px rgba(78, 70, 150, 0.2);
   text-rendering: geometricPrecision;
   animation: heroGlowPulse 3.8s ease-in-out infinite;
 }
@@ -1198,15 +1196,15 @@ a {
 /* 深夜/傍晚：英文冷紫粉玻璃发光（指定渐变 + 白描边 + 多层柔光，配深烟熏卡清晰不糊） */
 .home-page.is-night .hero-card h1,
 .home-page.is-dusk .hero-card h1 {
-  /* 夜色玻璃感：提亮版，蓝紫→粉紫→青蓝(青蓝/粉紫更多)，柔和不发脏 */
+  /* 夜色玻璃感：同 stronger dreamy 配色，夜里提亮一档 */
   background-image: linear-gradient(
     100deg,
-    #9ca0f3 0%,
-    #bca6f0 20%,
-    #d3aeea 40%,
-    #bdb6ee 55%,
-    #9fd0f4 76%,
-    #8fe2f5 100%
+    #8f9cee 0%,
+    #ab8fe0 24%,
+    #c599d8 44%,
+    #a7a2e4 58%,
+    #84cae8 78%,
+    #74e0d8 100%
   );
   text-shadow:
     0 1px 1px rgba(255, 255, 255, 0.22),
