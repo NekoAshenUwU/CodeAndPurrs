@@ -649,7 +649,7 @@ a {
   font-family: var(--script);
   font-style: normal;
   font-size: 1.55em;
-  color: var(--sakura);
+  color: #c46e9c; /* 加深的玫瑰粉，浅底上看得清，不再发飘 */
 }
 
 .hero-card__actions {
@@ -725,20 +725,20 @@ a {
   transform: translateY(-2px);
 }
 
-/* 主按钮「进入呼噜频道」：马卡龙虹彩液态玻璃 */
+/* 主按钮「进入呼噜频道」：马卡龙液态玻璃，相邻色平滑过渡(不再一半粉一半蓝) */
 .hero-card__actions button:first-child {
   color: #463a6b;
   background:
-    radial-gradient(70% 55% at 26% 12%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0) 56%),
-    conic-gradient(
-      from 210deg at 58% 42%,
-      rgba(189, 166, 246, 0.6),
-      rgba(243, 182, 218, 0.55),
-      rgba(174, 230, 238, 0.6),
-      rgba(200, 244, 230, 0.55),
-      rgba(189, 166, 246, 0.6)
-    ),
-    linear-gradient(118deg, #bda6f6 0%, #e3a8ee 26%, #f6b6da 48%, #aee6ee 74%, #c0f4e6 100%);
+    radial-gradient(70% 55% at 26% 12%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 58%),
+    linear-gradient(
+      100deg,
+      #b6a6f0 0%,
+      #c5a8ea 22%,
+      #d2abe2 40%,
+      #bfb6e8 56%,
+      #a8caec 74%,
+      #9ee2dd 100%
+    );
   box-shadow:
     0 10px 26px rgba(168, 146, 222, 0.5),
     0 0 18px rgba(196, 182, 248, 0.5),
@@ -1223,6 +1223,9 @@ a {
 .home-page.is-night .vow-en {
   color: #e9e2fb;
   opacity: 0.94;
+}
+.home-page.is-night .vow-en .forever {
+  color: #ef9ec8; /* 深色背景上用更亮的玫瑰粉 */
 }
 
 .home-page.is-night .hero-card__eyebrow {
