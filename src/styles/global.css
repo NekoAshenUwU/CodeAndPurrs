@@ -473,7 +473,7 @@ a {
   overflow: hidden;
   width: 100%;
   margin: 0;
-  padding: 48px 26px 38px;
+  padding: 46px 12px 36px;
   text-align: center;
   background: rgba(255, 255, 255, 0.34);
   border: 1px solid rgba(255, 255, 255, 0.6);
@@ -559,19 +559,20 @@ a {
   margin: 8px 0 18px;
   font-family: "HFSoda", "Tangerine", cursive;
   /* HFSoda 偏宽，按卡片宽度缩放，留边不溢出 */
-  font-size: min(14cqi, 4.6rem);
+  font-size: min(14.6cqi, 5rem);
   white-space: nowrap;
   font-weight: 400;
   line-height: 1.08;
   letter-spacing: 0;
-  /* 梦幻横向渐变：左蓝紫 → 中柔紫 → 右青蓝，柔和过渡不断层 */
+  /* 梦幻横向渐变：左蓝紫 → 粉紫 → 中过渡 → 右青蓝(青蓝/粉紫占比更多)，柔和不断层 */
   background-image: linear-gradient(
     100deg,
-    #7b80e8 0%,
-    #9a8ce6 30%,
-    #b39ce0 50%,
-    #8fb6e6 74%,
-    #74cdec 100%
+    #7e7fea 0%,
+    #a98ce8 20%,
+    #c79ae0 40%,
+    #aea6e6 55%,
+    #82bfee 76%,
+    #6ad7ec 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
@@ -1197,14 +1198,15 @@ a {
 /* 深夜/傍晚：英文冷紫粉玻璃发光（指定渐变 + 白描边 + 多层柔光，配深烟熏卡清晰不糊） */
 .home-page.is-night .hero-card h1,
 .home-page.is-dusk .hero-card h1 {
-  /* 夜色玻璃感：提亮一档的蓝紫→青蓝，仍柔和不发脏 */
+  /* 夜色玻璃感：提亮版，蓝紫→粉紫→青蓝(青蓝/粉紫更多)，柔和不发脏 */
   background-image: linear-gradient(
     100deg,
-    #9aa0f2 0%,
-    #b6a8f0 30%,
-    #c6b6ee 50%,
-    #a9c8f2 74%,
-    #8fdcf5 100%
+    #9ca0f3 0%,
+    #bca6f0 20%,
+    #d3aeea 40%,
+    #bdb6ee 55%,
+    #9fd0f4 76%,
+    #8fe2f5 100%
   );
   text-shadow:
     0 1px 1px rgba(255, 255, 255, 0.22),
