@@ -729,15 +729,16 @@ a {
 .hero-card__actions button:first-child {
   color: #43306a;
   background:
-    radial-gradient(40% 32% at 28% 15%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0) 70%),
-    radial-gradient(22% 28% at 78% 85%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 72%),
+    radial-gradient(40% 32% at 28% 15%, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0) 72%),
+    radial-gradient(22% 28% at 78% 85%, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 74%),
     linear-gradient(
       164deg,
-      #be6bda 0%,
-      #e87ec8 24%,
-      #f48cc2 44%,
-      #67c8df 74%,
-      #3fbcce 100%
+      #c79bdf 0%,
+      #e6a8d6 22%,
+      #f0b8d6 40%,
+      #cebceb 56%,
+      #a6dae6 76%,
+      #88d2dc 100%
     );
   box-shadow:
     0 10px 26px rgba(168, 146, 222, 0.5),
@@ -1244,15 +1245,16 @@ a {
 .home-page.is-night .hero-card__actions button:first-child {
   color: #43306a;
   background:
-    radial-gradient(40% 32% at 28% 15%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0) 70%),
-    radial-gradient(22% 28% at 78% 85%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 72%),
+    radial-gradient(40% 32% at 28% 15%, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0) 72%),
+    radial-gradient(22% 28% at 78% 85%, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 74%),
     linear-gradient(
       164deg,
-      #be6bda 0%,
-      #e87ec8 24%,
-      #f48cc2 44%,
-      #67c8df 74%,
-      #3fbcce 100%
+      #c79bdf 0%,
+      #e6a8d6 22%,
+      #f0b8d6 40%,
+      #cebceb 56%,
+      #a6dae6 76%,
+      #88d2dc 100%
     );
 }
 
