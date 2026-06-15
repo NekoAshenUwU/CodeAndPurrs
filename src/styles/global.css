@@ -445,9 +445,9 @@ a {
 .hero-mascot {
   position: absolute;
   z-index: 2;
-  top: -52px;
-  right: 6px;
-  width: clamp(96px, 26vw, 126px);
+  top: -58px;
+  right: 4px;
+  width: clamp(106px, 29vw, 140px);
   height: auto;
   transform-origin: 70% 100%;
   filter: drop-shadow(0 8px 14px rgba(118, 96, 132, 0.28));
@@ -559,7 +559,7 @@ a {
   margin: 8px 0 18px;
   font-family: "HFSoda", "Tangerine", cursive;
   /* HFSoda 偏宽，按卡片宽度缩放，留边不溢出 */
-  font-size: min(14.6cqi, 5rem);
+  font-size: min(12.8cqi, 4.4rem);
   white-space: nowrap;
   font-weight: 400;
   line-height: 1.08;
@@ -605,8 +605,8 @@ a {
   margin: 8px 0 18px;
   font-family: "ShanHai", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-weight: 900;
-  font-size: clamp(1.72rem, 8vw, 2.6rem);
-  line-height: 1.18;
+  font-size: clamp(1.42rem, 6.6vw, 2.1rem);
+  line-height: 1.2;
   letter-spacing: 0.02em;
   text-rendering: geometricPrecision;
 }
