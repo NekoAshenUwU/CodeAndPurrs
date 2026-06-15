@@ -285,6 +285,22 @@ API key 不放前端。
 DeepSeek / Gemini / ElevenLabs key 都放 VPS 后端 .env。
 ```
 
+## 9.5 部署与桥接域名
+
+当前基础设施：
+
+- 用户所在地：马来西亚亚庇（Kota Kinabalu, Malaysia），不是中国大陆。
+- 主域名：`nekopurrs.uk`。
+- VPS：DigitalOcean 新加坡 VPS。
+- DNS / CDN / TLS：Cloudflare。
+- 已使用子域：
+  - `tang.nekopurrs.uk`：棠予酿前端。
+  - `mcp.nekopurrs.uk`：MCP 服务。
+- CodeAndPurrs 正式前端子域后续单独确认。
+- 红米桥接专用推送域名：`bridge.codeandpurrs.com`。
+
+红米桥接和 Paw Trail 的接口契约以 `docs/neko-usage-bridge-spec.md` 为准。
+
 ## 10. 后面再做的房间
 
 第一版先放入口，后面再做：

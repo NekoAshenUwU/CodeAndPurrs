@@ -79,8 +79,8 @@ export const rooms: Room[] = [
     name: '猫爪足迹',
     englishName: 'Paw Trail',
     emoji: '🐾',
-    status: 'soon',
-    summary: '以后接手机使用记录，先预留足迹入口。',
+    status: 'ready',
+    summary: '读取红米桥接上传到 VPS 的手机使用足迹。',
     actionLabel: '看足迹',
   },
   {

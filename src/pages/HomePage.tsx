@@ -1,11 +1,16 @@
 import { useMemo, useState } from 'react';
 import { RoomCard } from '../components/RoomCard';
 import { RoomPreview } from '../components/RoomPreview';
+import { PawTrailPage } from './PawTrailPage';
 import { rooms, type Room } from '../data/rooms';
 
 export function HomePage() {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const readyRoom = useMemo(() => rooms.find((room) => room.status === 'ready') ?? rooms[0], []);
+
+  if (selectedRoom?.id === 'paw-trail') {
+    return <PawTrailPage onBack={() => setSelectedRoom(null)} />;
+  }
 
   return (
     <main className="home-page">
