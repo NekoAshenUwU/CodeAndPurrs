@@ -10,11 +10,21 @@
 }
 
 .vow {
-  /* The ShanHai line was stealing focus from the logo; shrink it and tighten the pair. */
+  /* The ShanHai line was stealing focus from the logo; shrink it and keep it crisp. */
   gap: 4px;
   margin: 6px 0 16px;
   font-size: clamp(1.45rem, 6.85vw, 2.18rem);
   line-height: 1.15;
+  filter: none !important;
+  opacity: 1;
+}
+
+.vow span {
+  filter: none !important;
+  text-shadow: none !important;
+  opacity: 1;
+  transform: translateZ(0);
+  -webkit-font-smoothing: antialiased;
 }
 
 .vow-en {
@@ -35,12 +45,15 @@
    No white stroke / white text-shadow here, or the gradient washes out and gets fuzzy. */
 .home-page.is-night .hero-card h1,
 .home-page.is-dusk .hero-card h1 {
-  text-shadow: 0 2px 5px rgba(18, 16, 44, 0.42);
+  text-shadow: 0 2px 5px rgba(18, 16, 44, 0.32);
 }
 
 .home-page.is-night .vow span,
-.home-page.is-dusk .vow span {
-  text-shadow: 0 2px 6px rgba(18, 16, 44, 0.34);
+.home-page.is-dusk .vow span,
+.home-page.is-dawn .vow span,
+.home-page.is-day .vow span {
+  filter: none !important;
+  text-shadow: none !important;
 }
 
 @media (max-width: 420px) {
