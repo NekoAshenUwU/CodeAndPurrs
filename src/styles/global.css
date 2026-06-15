@@ -1194,9 +1194,8 @@ a {
 
 /* 深夜档：英文标题换亮色，暗底才清楚 */
 /* 深夜/傍晚：英文冷紫粉玻璃发光（指定渐变 + 白描边 + 多层柔光，配深烟熏卡清晰不糊） */
-.home-page.is-night .hero-card h1,
-.home-page.is-dusk .hero-card h1 {
-  /* 夜色玻璃感：同 stronger dreamy 配色，夜里提亮一档 */
+.home-page.is-night .hero-card h1 {
+  /* 仅深夜：夜色玻璃感提亮版。傍晚dusk用白天深色版(背景浅) */
   background-image: linear-gradient(
     100deg,
     #8f9cee 0%,
@@ -1211,9 +1210,8 @@ a {
     0 0 6px rgba(150, 175, 245, 0.2);
 }
 
-/* 深夜/傍晚：月光蓝紫玻璃（保持亮，但加冷色层次：冰蓝→长春花→淡丁香→柔紫，不发灰不发脏）*/
-.home-page.is-night .vow span,
-.home-page.is-dusk .vow span {
+/* 仅深夜(深色背景)：月光蓝紫玻璃浅色字。傍晚dusk背景是浅的，不归这组(用白天深色字才看得清) */
+.home-page.is-night .vow span {
   background-image: linear-gradient(90deg, #a6dcff 0%, #cfe0ff 35%, #e8ddff 62%, #c2bcf6 100%);
   opacity: 1;
   text-shadow:
