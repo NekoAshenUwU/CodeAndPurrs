@@ -725,19 +725,19 @@ a {
   transform: translateY(-2px);
 }
 
-/* 主按钮「进入呼噜频道」：液态玻璃球——饱和紫粉→粉→青蓝 + 左上主反光 + 右下次反光 */
+/* 主按钮「进入呼噜频道」：鲜明液态玻璃球——深玫红→粉→青蓝 + 强左上主反光 + 右下次反光 */
 .hero-card__actions button:first-child {
-  color: #4a3a6a;
+  color: #43306a;
   background:
-    radial-gradient(46% 36% at 30% 12%, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0) 62%),
-    radial-gradient(24% 30% at 76% 86%, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 64%),
+    radial-gradient(40% 32% at 28% 15%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0) 70%),
+    radial-gradient(22% 28% at 78% 85%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 72%),
     linear-gradient(
-      168deg,
-      #c98fe6 0%,
-      #ef9fd8 26%,
-      #f6a8d0 46%,
-      #8fdce6 76%,
-      #5fccd6 100%
+      164deg,
+      #be6bda 0%,
+      #e87ec8 24%,
+      #f48cc2 44%,
+      #67c8df 74%,
+      #3fbcce 100%
     );
   box-shadow:
     0 10px 26px rgba(168, 146, 222, 0.5),
@@ -1242,18 +1242,18 @@ a {
 }
 
 .home-page.is-night .hero-card__actions button:first-child {
-  color: #3f3463;
+  color: #43306a;
   background:
-    radial-gradient(70% 55% at 26% 12%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 56%),
-    conic-gradient(
-      from 210deg at 58% 42%,
-      rgba(189, 166, 246, 0.7),
-      rgba(243, 182, 218, 0.62),
-      rgba(174, 230, 238, 0.7),
-      rgba(200, 244, 230, 0.62),
-      rgba(189, 166, 246, 0.7)
-    ),
-    linear-gradient(118deg, #c6b0f8 0%, #ecb6f0 26%, #f9c2dd 48%, #b8ecf2 74%, #caf6e8 100%);
+    radial-gradient(40% 32% at 28% 15%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0) 70%),
+    radial-gradient(22% 28% at 78% 85%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 72%),
+    linear-gradient(
+      164deg,
+      #be6bda 0%,
+      #e87ec8 24%,
+      #f48cc2 44%,
+      #67c8df 74%,
+      #3fbcce 100%
+    );
 }
 
 /* 深夜/傍晚的脉冲·微闪·扫光沿用基础 .hero-card h1 / .vow 的 heroGlowPulse / sloganTwinkle / heroSweepLight，
