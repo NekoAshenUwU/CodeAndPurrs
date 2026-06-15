@@ -725,18 +725,19 @@ a {
   transform: translateY(-2px);
 }
 
-/* 主按钮「进入呼噜频道」：液态玻璃球配色(上紫粉→中粉→下青蓝)+ 顶部玻璃高光 */
+/* 主按钮「进入呼噜频道」：液态玻璃球——饱和紫粉→粉→青蓝 + 左上主反光 + 右下次反光 */
 .hero-card__actions button:first-child {
   color: #4a3a6a;
   background:
-    radial-gradient(58% 42% at 30% 10%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0) 56%),
+    radial-gradient(46% 36% at 30% 12%, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0) 62%),
+    radial-gradient(24% 30% at 76% 86%, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 64%),
     linear-gradient(
-      165deg,
-      #caa0e8 0%,
-      #ecaade 28%,
-      #f3bcdb 50%,
-      #aadfe9 78%,
-      #86d6df 100%
+      168deg,
+      #c98fe6 0%,
+      #ef9fd8 26%,
+      #f6a8d0 46%,
+      #8fdce6 76%,
+      #5fccd6 100%
     );
   box-shadow:
     0 10px 26px rgba(168, 146, 222, 0.5),
