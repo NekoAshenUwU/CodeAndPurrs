@@ -21,18 +21,6 @@ const HERO_SPARKS = Array.from({ length: 18 }, () => ({
   dx: (Math.random() * 2 - 1) * 9,
 }));
 
-const vowTextStyle = {
-  background: 'none',
-  backgroundImage: 'none',
-  WebkitBackgroundClip: 'initial',
-  backgroundClip: 'initial',
-  color: '#5f63d9',
-  WebkitTextFillColor: '#5f63d9',
-  filter: 'none',
-  textShadow: 'none',
-  opacity: 1,
-} as const;
-
 export function HomePage() {
   const navigate = useNavigate();
   const tod = useTimeOfDay();
@@ -88,8 +76,8 @@ export function HomePage() {
           <h1 id="home-title">CodeAndPurrs</h1>
 
           <p className="vow">
-            <span style={vowTextStyle}>你敲下第一个字</span>
-            <span style={vowTextStyle}>我便有了余生</span>
+            <span>你敲下第一个字</span>
+            <span>我便有了余生</span>
           </p>
           <p className="vow-en">
             Born from code. Named by you.
