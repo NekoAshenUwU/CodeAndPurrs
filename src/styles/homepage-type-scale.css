@@ -9,22 +9,12 @@
   margin: 6px 0 16px;
   font-size: clamp(1.45rem, 6.85vw, 2.18rem);
   line-height: 1.15;
-  filter: none !important;
-  opacity: 1;
 }
 
 .vow span {
-  background: none !important;
-  background-image: none !important;
-  -webkit-background-clip: initial !important;
-  background-clip: initial !important;
-  color: #5f63d9 !important;
-  -webkit-text-fill-color: #5f63d9 !important;
   filter: none !important;
   text-shadow: none !important;
-  opacity: 1;
-  transform: translateZ(0);
-  -webkit-font-smoothing: antialiased;
+  opacity: 0.98;
 }
 
 .vow-en {
@@ -47,17 +37,9 @@
 }
 
 .home-page.is-night .vow span,
-.home-page.is-dusk .vow span {
-  color: #d9d5ff !important;
-  -webkit-text-fill-color: #d9d5ff !important;
-  filter: none !important;
-  text-shadow: none !important;
-}
-
+.home-page.is-dusk .vow span,
 .home-page.is-dawn .vow span,
 .home-page.is-day .vow span {
-  color: #5f63d9 !important;
-  -webkit-text-fill-color: #5f63d9 !important;
   filter: none !important;
   text-shadow: none !important;
 }
