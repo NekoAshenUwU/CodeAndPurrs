@@ -1,15 +1,31 @@
 # CodeAndPurrs · 会话交接（SESSION HANDOFF）
 
-> 给**新会话/新窗口**的第一份必读。读完这份就能无缝接着干，不用翻聊天记录。
-> 最后更新：2026-06-14。开发分支：**`claude/codepurrs-progress-docs-lngqpl`**（所有改动都在这条分支，未合并到 `main`）。
+> 给**新会话/新窗口（含 GPT 接手）**的第一份必读。读完这份就能无缝接着干，不用翻聊天记录。
+> 最后更新：2026-06-15。开发分支：**`claude/codepurrs-progress-docs-lngqpl`**（所有改动都在这条分支，未合并到 `main`；`main` 很旧，别基于它）。
 
-## 0. 一句话现状
-猫爪足迹（Paw Trail）页前端 + VPS 接收端**已基本完成并反复打磨**；首页 hero 已升级。剩下：首页白天/夜晚新背景图、Codex 安卓 App、VPS 部署、收尾合并。
+## ⭐ 0. 一句话现状（2026-06-15）
+**网站已正式上线 `https://nekopurrs.uk`**（DigitalOcean VPS + nginx + certbot HTTPS + pm2）。
+今天完成：呼噜频道聊天窗/调频/多模型花名册、后端接入 OpenAI+Anthropic、首页主视觉大改版（HFSoda 主 Logo、山海标语、萤火虫氛围、液态玻璃按键、去扫光/手电筒）。
+**待办**：① 业主在 VPS `.env` 填 API key（现在聊天是 mock）② GPT/Claude 模型实测 ③ 红包/表情包/定位等房间功能 ④ Codex 安卓 App ⑤ 合并回 main。
+
+## ⭐ 0.5 线上部署 & 更新（最重要）
+- **VPS**：DigitalOcean `178.128.127.91`（主机名 `nekopurrs-mcp`，新加坡）。这台还跑着 mcp/vault/tang/neko-jinku 等站，**别动它们的 nginx/pm2**。
+- **项目路径**：`/var/www/codeandpurrs`，分支 `claude/codepurrs-progress-docs-lngqpl`。
+- **前端**：nginx 直接 serve `dist/`（站点配置 `/etc/nginx/sites-available/nekopurrs.uk`，见 `deploy/nginx-nekopurrs.uk.conf.example`）。`/api/` 反代到 `127.0.0.1:8787`。
+- **聊天后端**：pm2 进程 **`purr-chat`**（`npm run proxy:start` → `server/proxy.mjs`，端口 8787）。
+- **🔁 改完代码线上更新（每次必跑）**：
+  ```bash
+  cd /var/www/codeandpurrs && git pull && npm run build
+  # 只改前端：到此即可（nginx 读 dist，无需重启）
+  # 改了后端/.env：再 pm2 restart purr-chat
+  ```
+- **DNS**：Cloudflare，`@`/`www`/`api` 三条 A 记录 → `178.128.127.91`，**Proxy 必须灰云 DNS only**（橙云会挡 certbot + 影响 SSE 流式）。
+- **完整首次部署步骤**：`deploy/DEPLOY.md`（小白版，DNS→环境→拉码→key→pm2→nginx→certbot）。
 
 ## 1. 怎么跑 / 验收
 - 前端：`npm run build`（tsc + vite，必须通过）；`npm run dev`（web+聊天后端）；`npm run preview`(4173)。
-- 截图验收用 Playwright：`npx playwright install chromium` 后写个小脚本访问 `http://localhost:4173/paw-trail`，可 `document.querySelector('.paw-page').className='paw-page is-day'`（或 `is-night`）强制时段。
-- Usage Bridge：`npm run bridge:test`（单测）、`npm run bridge:verify`（端到端）、`npm run bridge:start`（起 8788 端口，独立于聊天后端 8787）。
+- 截图验收用 Playwright（已装）：脚本访问 `http://localhost:4173/`；**夜晚版**用 `await context.clock.install({ time: new Date('2026-06-14T23:10:00') })` 再 goto（首页按本地时间自动切 dawn/day/dusk/night）。聊天页 `/purr-channel`、调频页 `/switchcore`、足迹页 `/paw-trail`。
+- Usage Bridge：`npm run bridge:test`、`npm run bridge:verify`、`npm run bridge:start`（8788，独立于聊天 8787）。
 - 图片处理：环境有 `python3 + PIL + numpy + fonttools/pyftsubset`（抠图、转 webp、拼接、字体子集都用它）。
 
 ## 2. 关键约定（务必遵守）
@@ -98,3 +114,49 @@
 - **甜甜口袋**（Sweetie Pocket）= **记录每一笔**用户与 AI 互发的虚拟红包（流水账）。
 - **小金库**（Furever Fund）= **累计**虚拟红包，**双方分开计算**（用户一份、AI 一份）。
 - 关联：呼噜频道 `+` 菜单的**红包**接 甜甜口袋(流水)+小金库(累计)；**表情包**接 脑洞贴纸盒/Meme 房间收藏。
+
+---
+
+## 11. 🐙 给 GPT / 下一棒 —— 今天(2026-06-15)做了什么 + 接着干什么
+
+### 11.1 今天完成（都在分支 `claude/codepurrs-progress-docs-lngqpl`，已 push）
+1. **首次上线**：DNS(Cloudflare)→VPS nginx 站点→certbot HTTPS→pm2 起聊天后端。站点 `https://nekopurrs.uk` 已可访问。部署文件：`deploy/DEPLOY.md`、`deploy/nginx-nekopurrs.uk.conf.example`。
+2. **呼噜频道（`src/pages/PurrChannelPage.tsx`）**：
+   - 聊天窗列表（开新窗口/行内重命名/删除，记录按窗口分存）。详见 §9。
+   - 输入区液态玻璃按键（`+`菜单 / 语音两态 / `↑`发送），见 §9 + §11.3 坑。
+   - 模型每窗各记 + 顶栏胶囊弹层切换。
+3. **调频页（`src/pages/SwitchCorePage.tsx`，路由 `/switchcore`）**：默认模型 + 关于我 + 每模型名字/人设。配置在 `src/services/purrConfig.ts`，模型表 `src/data/models.ts`。
+4. **后端多模型（`server/proxy.mjs`）**：deepseek/gemini/**openai/anthropic** 四家，按 `PROVIDERS[body.provider]` 派发。
+5. **首页主视觉大改版（`src/pages/HomePage.tsx` + `src/styles/global.css` + `src/components/`）**：
+   - 去掉标题扫光、hero 卡 sheen 反光、房间图标跟手"手电筒"光（`room-tile__glow` 连 RoomCard 跟手 JS 一起删）。
+   - 背景 **萤火虫光斑**（`Atmosphere.tsx` 的 `DUST`/`.dust`：大小不一+柔焦+多色+明灭）；hero 标题旁 **光粒聚拢**（`HERO_SPARKS`/`.hero-spark`）。
+   - **主 Logo CodeAndPurrs** 换 **HFSoda** 字体 + stronger-dreamy 渐变（蓝紫→藕紫→青薄荷，白天加深一档显色、夜晚提亮版）。`.hero-card h1`。
+   - **中文标语** 换 **山海潮玩星球(ShanHai)** 字体 + 逐行渐变（白天玻璃海蓝→蓝紫；夜晚月光蓝白+冷色层次）。`.vow` / `.vow span`。
+   - CTA 按钮「进入呼噜频道/看看房间」换草棵体 + 液态玻璃药丸（主按钮马卡龙虹彩）。
+
+### 11.2 ⚠️ 立刻要业主/你做的（否则功能是 mock）
+- 业主需在 **VPS `/var/www/codeandpurrs/.env`** 填 key（见 `.env.example`）：`OPENAI_API_KEY`(GPT-4o)、`ANTHROPIC_API_KEY`(Claude)、`DEEPSEEK_API_KEY`、`GEMINI_API_KEY`、`ELEVENLABS_API_KEY`+`ELEVENLABS_VOICE_ID`(猫咪语音)。填完 `pm2 restart purr-chat`。**没填 key 的模型会走 mock 假回复。**
+- `gpt-5.5t` 已收起，当前 GPT 选项=`gpt-4o`。要加别的模型在 `src/data/models.ts` 改（id=后端真实模型名）。
+
+### 11.3 ⚠️ 踩过的坑（改字/配色/玻璃时别重犯）
+- **白色描边/白色 text-shadow 会把字"洗白发糊"**：在浅底或花背景上，`-webkit-text-stroke:...rgba(255,255,255)` 或 `text-shadow:0 1px 1px white` 会镶一圈白雾，深色被洗淡。要显色就**去白柔光**，用很淡的深色投影做立体。
+- **居中多行文字用整块渐变 → 只显中间一种色**：渐变铺在元素框上，居中行左右留白吃掉了渐变两端的颜色。**解法：每行包 `<span>` + `width:fit-content`**，让渐变贴每行宽度（标语就是这么修好"海蓝不见了"的）。
+- **浅底 vs 深底颜色观感**：同一组中等饱和色，深底上显、浅底上发淡。浅底（白天）要比深底（夜晚）**整体加深一档**才有同样的饱满感。
+- **HFSoda 偏宽**：`.hero-card h1` 用 `font-size: min(14.6cqi, 5rem)` + 缩了 hero 卡左右 padding 到 12px 才放得下且够大；`white-space:nowrap` + 卡 `overflow:hidden`，字号过大会被裁。改字号后务必量 `scrollWidth<=clientWidth`。
+- **liquid glass 玻璃质感**做法：磨砂底 + 顶部高光(`::before`) + 虹彩折射描边(`::after` 用 mask 只留边框) + 选中态马卡龙/conic 流光。参考 `.model-pill`、`.chat-glass-btn`。
+- 子集字体放 `public/fonts/`，用 `pyftsubset 源.ttf --text="用到的字" --flavor=woff2`（中文务必子集化，整包 MB 级）。已装 fonttools。
+
+### 11.4 待办 TODO（建议优先级）
+1. **业主填 key + 实测 GPT/Claude**（最快见效）。
+2. **红包**功能：呼噜频道 `+` 菜单 → 接 **甜甜口袋**(流水)+**小金库**(累计，双方分开)。见 §10。
+3. **表情包**：`+` 菜单 → 接 **脑洞贴纸盒/Meme 房间**收藏。
+4. **浪哪了**(定位追踪) 等其余房间（现状多为 `status:'soon'`，见 `src/data/rooms.ts`）。
+5. **猫爪足迹 bridge 上线**：起 `pm2 start npm --name purr-bridge -- run bridge:start`(8788) + 配 `api.nekopurrs.uk` nginx(`deploy/nginx-api.nekopurrs.uk.conf.example`) + certbot；红米采集 App 上报（契约见 `docs/neko-usage-bridge-spec.md`）。没上线时足迹页回退 demo 数据。
+6. **Codex 安卓 App**（采集端，见 spec）。
+7. 择期合并回 `main`（注意 main 很旧）。
+
+### 11.5 给 GPT 的工作约定
+- 所有改动提交到分支 `claude/codepurrs-progress-docs-lngqpl`（或新分支），**别推 main**。
+- 每次改完 `npm run build` 必须过；视觉改动用 Playwright 截图自检（日/夜两版）。
+- 视觉风格基调：仙气、梦幻、柔和、玻璃感、蓝紫青马卡龙；**不要**大面积发光/blur、不要灰雾脏边、不要把字洗白。
+- 改完告诉业主在 VPS 跑 `cd /var/www/codeandpurrs && git pull && npm run build`（改后端再 `pm2 restart purr-chat`）。
