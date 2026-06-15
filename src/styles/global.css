@@ -581,7 +581,28 @@ a {
   /* 不要白柔光(会把深色洗淡)；只留一层很淡的深色投影做立体 */
   text-shadow: 0 2px 4px rgba(78, 70, 150, 0.2);
   text-rendering: geometricPrecision;
-  animation: heroGlowPulse 3.8s ease-in-out infinite;
+  background-size: 200% 100%;
+  animation: gradSweep 4.6s ease-in-out infinite alternate, textBreathe 2.6s ease-in-out infinite;
+}
+
+@keyframes gradSweep {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+@keyframes textBreathe {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.025);
+    filter: brightness(1.06);
+  }
 }
 
 @keyframes heroGlowPulse {
@@ -620,6 +641,8 @@ a {
   color: transparent;
   -webkit-text-fill-color: transparent;
   opacity: 0.98;
+  background-size: 200% 100%;
+  animation: gradSweep 4.6s ease-in-out infinite alternate, textBreathe 2.6s ease-in-out infinite;
 }
 
 @keyframes sloganTwinkle {
@@ -1335,9 +1358,11 @@ a {
   .hero::before,
   .hero-mascot,
   .hero-spark,
+  .hero-card h1,
   .room-tile__icon,
   .timesky__layer,
   .vow,
+  .vow span,
   .purr-ripple,
   .love-cursor__caret {
     animation: none !important;
