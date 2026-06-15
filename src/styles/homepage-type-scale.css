@@ -1,16 +1,10 @@
-/* Homepage type scale tuning
-   2026-06-15 GPT handoff pass
-   Keep this loaded after global.css so it overrides hero-only typography safely. */
-
 .hero-card h1 {
-  /* HFSoda is wide; this is ~16% smaller than 14.6cqi/5rem and visibly less cramped. */
   font-size: min(12.2cqi, 4.25rem);
   margin: 6px 0 16px;
   line-height: 1.08;
 }
 
 .vow {
-  /* The ShanHai line was stealing focus from the logo; shrink it and keep it crisp. */
   gap: 4px;
   margin: 6px 0 16px;
   font-size: clamp(1.45rem, 6.85vw, 2.18rem);
@@ -20,6 +14,11 @@
 }
 
 .vow span {
+  background-image: linear-gradient(90deg, #21a9d6 0%, #5e9be8 34%, #9182e4 64%, #6f74d8 100%) !important;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
   filter: none !important;
   text-shadow: none !important;
   opacity: 1;
@@ -41,17 +40,21 @@
   line-height: 1.16;
 }
 
-/* Important pitfall from SESSION-HANDOFF §11.3:
-   No white stroke / white text-shadow here, or the gradient washes out and gets fuzzy. */
 .home-page.is-night .hero-card h1,
 .home-page.is-dusk .hero-card h1 {
   text-shadow: 0 2px 5px rgba(18, 16, 44, 0.32);
 }
 
 .home-page.is-night .vow span,
-.home-page.is-dusk .vow span,
+.home-page.is-dusk .vow span {
+  background-image: linear-gradient(90deg, #a6dcff 0%, #cfe0ff 35%, #e8ddff 62%, #c2bcf6 100%) !important;
+  filter: none !important;
+  text-shadow: none !important;
+}
+
 .home-page.is-dawn .vow span,
 .home-page.is-day .vow span {
+  background-image: linear-gradient(90deg, #21a9d6 0%, #5e9be8 34%, #9182e4 64%, #6f74d8 100%) !important;
   filter: none !important;
   text-shadow: none !important;
 }
