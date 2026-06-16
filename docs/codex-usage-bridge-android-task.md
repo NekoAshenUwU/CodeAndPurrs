@@ -11,6 +11,26 @@
 
 ---
 
+## 🐾 给机主的 5 步操作清单（Neko 照着点就行）
+
+> 这几步是**你**做的；中间写代码、出 APK 是 Codex 做的。
+
+1. **新建空仓库**：GitHub 上 New repository → 名字填 `neko-usage-bridge` → 设为 Private → Create（**不要**勾 README/.gitignore，留空）。
+2. **把任务丢给 Codex**：让 Codex 读这两份文件——本文件 `docs/codex-usage-bridge-android-task.md` ＋ 契约 `docs/neko-usage-bridge-spec.md`，按里面做，并推到 `neko-usage-bridge` 仓库的 `codex/redmi-bridge-v1` 分支。
+3. **建一个密钥 Secret**：进 `neko-usage-bridge` 仓库 → Settings → Secrets and variables → Actions → New repository secret → 名字 `BRIDGE_TOKEN`，值＝你和 VPS 上 `USAGE_BRIDGE_TOKEN` **一模一样**的那串密钥。
+   - （这串密钥就是 VPS `.env` 里的 `USAGE_BRIDGE_TOKEN`；不记得就先在 VPS 看一眼，App 和 VPS 必须同一串。）
+4. **下载 APK**：Codex 推上去后，进仓库 **Actions** 标签 → 点最新那次 `build-apk` 运行 → 拉到底 **Artifacts** → 下载 `neko-usage-bridge-debug-apk` → 解压得到 `.apk`，传到红米安装（装时若拦截，允许"未知来源"）。
+5. **装机授权 + 测试**：打开 App →
+   ① 按提示开「使用情况访问」权限；
+   ② 按提示设自启动 / 电池「无限制」；
+   ③ 点「测试连接」应显示 VPS 正常返回；
+   ④ 点「立即上传」一次。
+   然后无痕打开 `nekopurrs.uk` 的**猫爪足迹**页，就能看到今天的爪印啦 🐾
+
+> 卡在任何一步（CI 报红、APK 装不上、上传 401、页面没数据），把那一步的截图发我，我帮你看。
+
+---
+
 ## 0. 边界：谁做什么（先看清再动手）
 
 | 部分 | 状态 | 说明 |
