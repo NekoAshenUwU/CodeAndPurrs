@@ -349,13 +349,13 @@ async function getStorageHealth(dataDir) {
   }
 }
 
-export function createUsageBridgeServer({
+export function createUsageBridgeRequestHandler({
   dataDir = process.env.USAGE_BRIDGE_DATA_DIR ?? DEFAULT_DATA_DIR,
   bridgeToken = process.env.USAGE_BRIDGE_TOKEN ?? '',
   allowedOrigins = (process.env.USAGE_BRIDGE_ALLOWED_ORIGINS ?? DEFAULT_ALLOWED_ORIGIN).split(',').map((origin) => origin.trim()).filter(Boolean),
   retentionDays = readRetentionDays(process.env.USAGE_BRIDGE_RETENTION_DAYS),
 } = {}) {
-  return createServer(async (request, response) => {
+  return async function handleUsageBridgeRequest(request, response) {
     const requestUrl = new URL(request.url ?? '/', 'http://localhost');
     const origin = getAllowedOrigin(request.headers.origin, allowedOrigins.length ? allowedOrigins : [DEFAULT_ALLOWED_ORIGIN]);
 
@@ -519,5 +519,9 @@ export function createUsageBridgeServer({
     } catch (error) {
       jsonResponse(response, 500, { ok: false, error: error instanceof Error ? error.message : 'internal server error' }, origin);
     }
-  });
+  };
+}
+
+export function createUsageBridgeServer(options = {}) {
+  return createServer(createUsageBridgeRequestHandler(options));
 }

@@ -5,6 +5,7 @@
 // 没配 key 也能跑：自动进入 mock 模式，回一段假的流式消息，方便先调 UI。
 
 import http from 'node:http';
+import { createUsageBridgeRequestHandler } from './usageBridgeServer.mjs';
 
 // 尝试读 .env（Node 20.12+ 自带），没有就算了，用已有的环境变量。
 try {
@@ -14,6 +15,7 @@ try {
 }
 
 const PORT = Number(process.env.PORT) || 8787;
+const usageBridgeHandler = createUsageBridgeRequestHandler();
 
 const PROVIDERS = {
   deepseek: {
@@ -331,6 +333,11 @@ async function callMock({ res, provider, messages }) {
 
 // ---------- 路由 ----------
 const server = http.createServer(async (req, res) => {
+  if (req.url?.startsWith('/api/usage/')) {
+    await usageBridgeHandler(req, res);
+    return;
+  }
+
   const isChat = req.url?.startsWith('/api/chat');
   const isTranscribe = req.url?.startsWith('/api/transcribe');
   const isSpeak = req.url?.startsWith('/api/speak');

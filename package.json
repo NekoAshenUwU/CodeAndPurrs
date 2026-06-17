@@ -13,7 +13,9 @@
     "bridge:smoke": "node scripts/usageBridgeSmoke.mjs",
     "bridge:verify": "node scripts/usageBridgeVerify.mjs",
     "build": "tsc -b && vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "proxy:test": "node --test test/proxyUsageIntegration.test.mjs",
+    "test": "npm run bridge:test && npm run proxy:test"
   },
   "dependencies": {
     "react": "latest",

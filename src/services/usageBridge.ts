@@ -1,7 +1,7 @@
 // 猫爪足迹前端 ← VPS 接收端读取层。契约见 docs/neko-usage-bridge-spec.md §4。
 // bridge 还没上线时：抓取失败会回退到 demo 示例数据，方便先看页面效果。
 
-const DEFAULT_BRIDGE_BASE_URL = 'https://api.nekopurrs.uk';
+const DEFAULT_BRIDGE_BASE_URL = ''; // same-origin /api; override with VITE_USAGE_BRIDGE_BASE_URL if needed
 
 export type UsageCategory = 'social' | 'work' | 'entertainment' | 'reading' | 'tool' | 'other';
 
