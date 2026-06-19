@@ -288,6 +288,30 @@ function PawTrailView({
               <ellipse cx="14.4" cy="6" rx="2.1" ry="2.7" />
               <ellipse cx="18.6" cy="9.5" rx="2.1" ry="2.6" />
             </g>
+            {/* 果冻感 filter：底部柔影 + 顶部镜面高光（先模糊 alpha 让高光鼓在管子中央）*/}
+            <filter id="jellyFilter" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="sblur" />
+              <feOffset in="sblur" dx="0" dy="4" result="soff" />
+              <feFlood floodColor="#e69ebe" floodOpacity="0.4" />
+              <feComposite in2="soff" operator="in" result="shadow" />
+              <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="bumpA" />
+              <feSpecularLighting
+                in="bumpA"
+                surfaceScale="2.5"
+                specularConstant="0.85"
+                specularExponent="20"
+                lightingColor="#ffffff"
+                result="spec"
+              >
+                <feDistantLight azimuth="235" elevation="55" />
+              </feSpecularLighting>
+              <feComposite in="spec" in2="SourceAlpha" operator="in" result="specClip" />
+              <feMerge>
+                <feMergeNode in="shadow" />
+                <feMergeNode in="SourceGraphic" />
+                <feMergeNode in="specClip" />
+              </feMerge>
+            </filter>
           </defs>
           <circle className="paw-ring__track" cx="100" cy="100" r={RING_R} />
           <circle
@@ -297,8 +321,6 @@ function PawTrailView({
             r={RING_R}
             style={{ strokeDasharray: RING_C, strokeDashoffset: reduced ? ringOff : undefined, ...ringVars }}
           />
-          {/* 果冻高光：顶部一小段柔白反光 */}
-          <circle className="paw-ring__shine" cx="100" cy="100" r={RING_R} />
           {/* 一圈 12 个爪印：走过的点亮，前方的淡淡等着 */}
           {Array.from({ length: 12 }, (_, i) => {
             const ang = (i / 12) * 2 * Math.PI - Math.PI / 2;

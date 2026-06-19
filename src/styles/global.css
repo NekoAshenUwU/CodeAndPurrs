@@ -2612,7 +2612,7 @@ a {
   stroke: url(#pawRingGrad);
   stroke-width: 16;
   stroke-linecap: round;
-  filter: drop-shadow(0 0 6px rgba(166, 166, 206, 0.5)) drop-shadow(0 0 12px rgba(230, 158, 190, 0.45));
+  filter: url(#jellyFilter) drop-shadow(0 0 8px rgba(190, 182, 222, 0.45));
   stroke-dashoffset: var(--ring-off);
   animation: paw-ring-grow 1s ease forwards;
 }
@@ -2626,7 +2626,7 @@ a {
   animation: paw-ring-grow 1s ease forwards;
 }
 .paw-ring.is-full .paw-ring__fill {
-  filter: drop-shadow(0 0 11px rgba(190, 182, 222, 0.85)) drop-shadow(0 0 18px rgba(230, 158, 190, 0.6));
+  filter: url(#jellyFilter) drop-shadow(0 0 14px rgba(230, 158, 190, 0.7));
 }
 @keyframes paw-ring-grow {
   from { stroke-dashoffset: var(--ring-c); }
