@@ -280,6 +280,14 @@ function PawTrailView({
               <stop offset="68%" stopColor="#beb6de" />
               <stop offset="100%" stopColor="#e69ebe" />
             </linearGradient>
+            {/* 一只小爪印（24×24，中心移到原点便于沿环摆放） */}
+            <g id="pawPip" transform="translate(-12 -12)">
+              <ellipse cx="12" cy="15.5" rx="5.6" ry="4.6" />
+              <ellipse cx="5.6" cy="9.5" rx="2.1" ry="2.6" />
+              <ellipse cx="10" cy="6" rx="2.1" ry="2.7" />
+              <ellipse cx="14.4" cy="6" rx="2.1" ry="2.7" />
+              <ellipse cx="18.6" cy="9.5" rx="2.1" ry="2.6" />
+            </g>
           </defs>
           <circle className="paw-ring__track" cx="100" cy="100" r={RING_R} />
           <circle
@@ -289,6 +297,23 @@ function PawTrailView({
             r={RING_R}
             style={{ strokeDasharray: RING_C, strokeDashoffset: reduced ? ringOff : undefined, ...ringVars }}
           />
+          {/* 果冻高光：顶部一小段柔白反光 */}
+          <circle className="paw-ring__shine" cx="100" cy="100" r={RING_R} />
+          {/* 一圈 12 个爪印：走过的点亮，前方的淡淡等着 */}
+          {Array.from({ length: 12 }, (_, i) => {
+            const ang = (i / 12) * 2 * Math.PI - Math.PI / 2;
+            const px = 100 + RING_R * Math.cos(ang);
+            const py = 100 + RING_R * Math.sin(ang);
+            const on = i / 12 < ringPct + 0.001;
+            return (
+              <use
+                key={i}
+                href="#pawPip"
+                className={`paw-pip ${on ? 'is-on' : ''}`}
+                transform={`translate(${px.toFixed(1)} ${py.toFixed(1)}) scale(0.4)`}
+              />
+            );
+          })}
         </svg>
         <div className="paw-ring__center" role="img" aria-label="今日使用时长">
           <img src={PAW_HERO} alt="" className="paw-ring__cat" />

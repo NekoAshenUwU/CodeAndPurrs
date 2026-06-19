@@ -2612,7 +2612,7 @@ a {
   stroke: url(#pawRingGrad);
   stroke-width: 16;
   stroke-linecap: round;
-  filter: drop-shadow(0 0 6px rgba(251, 189, 178, 0.55)) drop-shadow(0 0 11px rgba(234, 167, 184, 0.45));
+  filter: drop-shadow(0 0 6px rgba(166, 166, 206, 0.5)) drop-shadow(0 0 12px rgba(230, 158, 190, 0.45));
   stroke-dashoffset: var(--ring-off);
   animation: paw-ring-grow 1s ease forwards;
 }
@@ -2626,7 +2626,7 @@ a {
   animation: paw-ring-grow 1s ease forwards;
 }
 .paw-ring.is-full .paw-ring__fill {
-  filter: drop-shadow(0 0 11px rgba(251, 189, 178, 0.85)) drop-shadow(0 0 18px rgba(234, 167, 184, 0.6));
+  filter: drop-shadow(0 0 11px rgba(190, 182, 222, 0.85)) drop-shadow(0 0 18px rgba(230, 158, 190, 0.6));
 }
 @keyframes paw-ring-grow {
   from { stroke-dashoffset: var(--ring-c); }
@@ -2665,6 +2665,35 @@ a {
 
 /* 修正:svg 与 circle 都各转了一次 -90°(共 -180°,从6点起)。取消 svg 旋转,只留 circle 的 → 从12点起 */
 .paw-ring { transform: none; }
+
+/* ===== 进度环：果冻高光 + 一圈 12 爪印（棠棠 2026-06-19 需求）===== */
+/* 顶部一小段柔白反光，营造果冻/管壁湿润感（短，不是一整条线）*/
+.paw-ring__shine {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.6);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 26 9999;
+  stroke-dashoffset: 0;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  filter: blur(0.5px);
+  pointer-events: none;
+}
+/* 一圈 12 个爪印：前方的淡淡薰衣草，走过的亮白踩在彩带上 */
+.paw-pip {
+  fill: rgba(150, 120, 196, 0.32);
+  transition: fill 0.35s ease;
+}
+.paw-pip.is-on {
+  fill: #ffffff;
+  filter: drop-shadow(0 1px 1.5px rgba(120, 90, 150, 0.45));
+}
+.paw-page.is-night .paw-pip { fill: rgba(255, 255, 255, 0.22); }
+.paw-page.is-night .paw-pip.is-on { fill: #ffffff; }
+@media (prefers-reduced-motion: reduce) {
+  .paw-pip { transition: none; }
+}
 
 /* ============================================================
    首页背景"压花"：只压夜晚，白天完全不动。
