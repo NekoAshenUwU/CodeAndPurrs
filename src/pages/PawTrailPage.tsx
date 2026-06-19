@@ -273,11 +273,11 @@ function PawTrailView({
       <section className="paw-card paw-ring-card">
         <svg className={`paw-ring ${ringFull ? 'is-full' : ''}`} viewBox="0 0 200 200" aria-hidden="true">
           <defs>
-            {/* 图三色卡：澈涟蓝 → 砚池蓝 → 藕荷紫 → 醉墨粉（冷→暖的柔和马卡龙渐变） */}
-            <linearGradient id="pawRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            {/* 图三色卡（竖直方向：顶蓝→中紫→底粉，让进度弧从顶部扫下来时能看到完整渐变） */}
+            <linearGradient id="pawRingGrad" x1="50%" y1="0%" x2="50%" y2="100%">
               <stop offset="0%" stopColor="#7ebee6" />
-              <stop offset="35%" stopColor="#a6a6ce" />
-              <stop offset="70%" stopColor="#beb6de" />
+              <stop offset="38%" stopColor="#a6a6ce" />
+              <stop offset="68%" stopColor="#beb6de" />
               <stop offset="100%" stopColor="#e69ebe" />
             </linearGradient>
           </defs>
