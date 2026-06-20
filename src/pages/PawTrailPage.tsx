@@ -129,6 +129,10 @@ const APP_ICON_BY_PKG: Record<string, string> = {
   'com.tngdigital.ewallet': 'tng',
   'com.maybank2u.life': 'maybank',
   'com.eg.android.AlipayGphone': 'alipay',
+  'com.twitter.android': 'twitter',
+  'com.facebook.katana': 'facebook',
+  'com.sina.weibo': 'weibo',
+  'com.mt.mtxx.mtxx': 'meitu',
 };
 // 部分东南亚 App 包名按地区会变，用名称兜底匹配
 const APP_ICON_BY_LABEL: Array<[RegExp, string]> = [
@@ -149,6 +153,10 @@ const APP_ICON_BY_LABEL: Array<[RegExp, string]> = [
   [/touch.?n.?go|tng|一触即通/i, 'tng'],
   [/maybank|mbb|马来亚银行/i, 'maybank'],
   [/public ?bank|pbb|大众银行/i, 'publicbank'],
+  [/twitter|推特/i, 'twitter'],
+  [/facebook|脸书/i, 'facebook'],
+  [/微博|weibo/i, 'weibo'],
+  [/美图|meitu/i, 'meitu'],
 ];
 function appIconUrl(pkg: string, label: string): string | null {
   const slug = APP_ICON_BY_PKG[pkg] ?? APP_ICON_BY_LABEL.find(([re]) => re.test(label || ''))?.[1];
