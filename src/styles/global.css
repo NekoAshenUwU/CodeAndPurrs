@@ -3474,8 +3474,9 @@ a {
   min-height: 100vh;
   font-family: var(--hand), cursive;
   color: #6b4a86;
-  /* TODO 背景图：机主提供后换成 url(/rooms/catch-purring-bg.webp) center/cover fixed, ...；先用梦幻渐变兜底 */
-  background: radial-gradient(130% 90% at 50% 0%, #fdeaf4 0%, #efe2fb 45%, #e7ecfd 100%) fixed;
+  background:
+    url(/rooms/catch-purring-bg.webp) center top / cover fixed,
+    radial-gradient(130% 90% at 50% 0%, #fdeaf4 0%, #efe2fb 45%, #e7ecfd 100%) fixed;
 }
 .loc-head { text-align: center; position: relative; padding: 10px 0 4px; }
 .loc-head h1 {
@@ -3515,10 +3516,17 @@ a {
 .loc-share:active { transform: scale(0.96); }
 .loc-share:disabled { opacity: 0.6; }
 .loc-auto {
-  font-family: var(--hand), cursive; font-size: 0.95rem; color: #8a6cb4;
+  font-family: var(--hand), cursive; font-size: 0.95rem; color: #7b5aa6;
   display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 16px; border-radius: 999px;
+  background: linear-gradient(160deg, rgba(255,255,255,0.92), rgba(245,230,251,0.82));
+  box-shadow: 0 6px 14px -7px rgba(123,90,166,0.5), inset 0 2px 2px rgba(255,255,255,0.9);
 }
-.loc-msg { text-align: center; margin: 14px 0 0; font-size: 1rem; font-family: var(--hand), cursive; color: #8a6cb4; }
+.loc-msg {
+  text-align: center; margin: 14px 0 0; font-size: 1rem;
+  font-family: var(--hand), cursive; color: #8a6cb4;
+  text-shadow: 0 1px 3px rgba(255,255,255,0.9), 0 0 8px rgba(255,255,255,0.7);
+}
 .loc-msg.is-error { color: #e87aa0; }
 .loc-msg.is-ok { color: #5bbf95; }
 .loc-info {
