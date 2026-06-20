@@ -112,6 +112,37 @@ function appGlyph(pkg: string, label: string): string {
   return APP_GLYPH[pkg] ?? label.slice(0, 1);
 }
 
+// 原创果冻图标（GPT 绘制，通用功能符号，非品牌 logo）。放 public/app-icons/。
+const ICON_BASE = `${import.meta.env.BASE_URL}app-icons/`;
+const APP_ICON_BY_PKG: Record<string, string> = {
+  'com.tencent.mm': 'wechat',
+  'com.xingin.xhs': 'xiaohongshu',
+  'com.anthropic.claude': 'claude',
+  'com.android.chrome': 'browser',
+  'org.mozilla.firefox': 'browser',
+  'com.whatsapp': 'whatsapp',
+  'com.taobao.taobao': 'taobao',
+  'com.xunmeng.pinduoduo': 'pinduoduo',
+  'com.global.foodpanda.android': 'foodpanda',
+};
+// 部分东南亚 App 包名按地区会变，用名称兜底匹配
+const APP_ICON_BY_LABEL: Array<[RegExp, string]> = [
+  [/微信|wechat/i, 'wechat'],
+  [/小红书|xiaohongshu|rednote/i, 'xiaohongshu'],
+  [/claude/i, 'claude'],
+  [/chrome|firefox|浏览器|browser/i, 'browser'],
+  [/whatsapp/i, 'whatsapp'],
+  [/taobao|淘宝/i, 'taobao'],
+  [/pinduoduo|拼多多/i, 'pinduoduo'],
+  [/foodpanda/i, 'foodpanda'],
+  [/shopee|虾皮/i, 'shopee'],
+  [/grab/i, 'grab'],
+];
+function appIconUrl(pkg: string, label: string): string | null {
+  const slug = APP_ICON_BY_PKG[pkg] ?? APP_ICON_BY_LABEL.find(([re]) => re.test(label || ''))?.[1];
+  return slug ? `${ICON_BASE}${slug}.png` : null;
+}
+
 // ---------- 页面 ----------
 export function PawTrailPage() {
   const navigate = useNavigate();
@@ -369,8 +400,14 @@ function PawTrailView({
               key={app.package}
               style={{ ['--cc' as string]: appColor(app.package, app.category) }}
             >
-              <span className="paw-tile">
-                {app.iconBase64 ? <img src={app.iconBase64} alt="" /> : appGlyph(app.package, app.label)}
+              <span className={`paw-tile${!app.iconBase64 && appIconUrl(app.package, app.label) ? ' paw-tile--art' : ''}`}>
+                {app.iconBase64 ? (
+                  <img src={app.iconBase64} alt="" />
+                ) : appIconUrl(app.package, app.label) ? (
+                  <img src={appIconUrl(app.package, app.label)!} alt="" className="paw-tile__art" />
+                ) : (
+                  appGlyph(app.package, app.label)
+                )}
               </span>
               <div className="paw-app__body">
                 <div className="paw-app__row">

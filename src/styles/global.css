@@ -2473,6 +2473,19 @@ a {
     0 8px 16px -6px var(--cc, rgba(93, 74, 126, 0.5));
 }
 
+/* 原创果冻图标：图标自带玻璃质感，去掉珠子底色，让图标本体填满 */
+.paw-tile--art {
+  background: none !important;
+  box-shadow: none !important;
+  overflow: visible;
+}
+.paw-tile__art {
+  width: 122% !important;
+  height: 122% !important;
+  object-fit: contain !important;
+  filter: drop-shadow(0 6px 10px rgba(93, 74, 126, 0.32));
+}
+
 /* 应用名 / 时间 统一字色，且与进度条不同色 */
 .paw-app__name { color: #534c74; font-weight: 500; }
 .paw-app__dur { color: #7b7398; font-weight: 600; }
