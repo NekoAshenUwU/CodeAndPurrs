@@ -38,6 +38,10 @@ export function HomePage() {
       navigate('/paw-trail');
       return;
     }
+    if (room.id === 'catch-purring') {
+      navigate('/lang-na-le');
+      return;
+    }
     if (room.id === 'switchcore') {
       navigate('/switchcore');
       return;

@@ -78,7 +78,7 @@ export const rooms: Room[] = [
     name: '浪哪了',
     englishName: 'Catch Purring',
     emoji: '📍',
-    status: 'soon',
+    status: 'ready',
     summary: '只做主动打卡和报平安，不做偷偷定位。',
     actionLabel: '报平安',
     scene: true,
