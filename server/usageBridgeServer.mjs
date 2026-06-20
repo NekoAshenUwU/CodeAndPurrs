@@ -317,6 +317,78 @@ async function listUsagePayloads(dataDir, owner) {
   return payloads.sort((a, b) => String(a.date).localeCompare(String(b.date)));
 }
 
+// ===== 「浪哪了」定位：按日存点 + 取最新 =====
+function isCoord(v, max) {
+  return typeof v === 'number' && Number.isFinite(v) && v >= -max && v <= max;
+}
+
+function assertLocationBody(body) {
+  if (!isRecord(body)) return 'body must be an object';
+  if (!isCoord(body.lat, 90)) return 'lat must be a number in [-90,90]';
+  if (!isCoord(body.lng, 180)) return 'lng must be a number in [-180,180]';
+  if (body.accuracy != null && !(typeof body.accuracy === 'number' && Number.isFinite(body.accuracy))) {
+    return 'accuracy must be a number';
+  }
+  return null;
+}
+
+async function appendLocationPoint(dataDir, body) {
+  const owner = sanitizePathPart(body.owner ?? 'neko', 'neko');
+  const at = typeof body.at === 'string' && body.at ? body.at : new Date().toISOString();
+  const date = at.slice(0, 10);
+  const ownerDir = join(dataDir, 'location', owner);
+  const filePath = join(ownerDir, `${date}.json`);
+
+  let day;
+  try {
+    day = JSON.parse(await readFile(filePath, 'utf8'));
+  } catch {
+    day = { owner, date, points: [] };
+  }
+  if (!Array.isArray(day.points)) day.points = [];
+
+  const point = {
+    lat: body.lat,
+    lng: body.lng,
+    accuracy: typeof body.accuracy === 'number' && Number.isFinite(body.accuracy) ? body.accuracy : null,
+    at,
+  };
+  day.points.push(point);
+  if (day.points.length > 1000) day.points = day.points.slice(-1000);
+  day.updatedAt = new Date().toISOString();
+
+  await mkdir(ownerDir, { recursive: true });
+  await writeFile(filePath, `${JSON.stringify(day, null, 2)}\n`, 'utf8');
+  return { owner, date, point, count: day.points.length };
+}
+
+async function readLocationLatest(dataDir, owner) {
+  const safeOwner = sanitizePathPart(owner, 'neko');
+  const ownerDir = join(dataDir, 'location', safeOwner);
+
+  let files;
+  try {
+    files = await readdir(ownerDir);
+  } catch (error) {
+    if (error && error.code === 'ENOENT') return null;
+    throw error;
+  }
+
+  const dateFiles = files.filter((file) => /^\d{4}-\d{2}-\d{2}\.json$/.test(file)).sort();
+  const last = dateFiles.at(-1);
+  if (!last) return null;
+
+  const day = JSON.parse(await readFile(join(ownerDir, last), 'utf8'));
+  const points = Array.isArray(day.points) ? day.points : [];
+  return {
+    owner: safeOwner,
+    date: day.date ?? last.replace('.json', ''),
+    latest: points.at(-1) ?? null,
+    points,
+    updatedAt: day.updatedAt ?? null,
+  };
+}
+
 function requireBridgeToken(request, bridgeToken) {
   if (!bridgeToken) {
     return true;
@@ -428,6 +500,38 @@ export function createUsageBridgeServer({
         }
 
         jsonResponse(response, 200, { ok: true, meta: buildMeta(owner, payload.ingestedAt), data: payload }, origin);
+        return;
+      }
+
+      if (requestUrl.pathname === '/api/location/ingest' && request.method === 'POST') {
+        if (!requireBridgeToken(request, bridgeToken)) {
+          jsonResponse(response, 401, { ok: false, error: 'invalid bridge token' }, origin);
+          return;
+        }
+
+        const body = await readJsonBody(request);
+        const validationError = assertLocationBody(body);
+
+        if (validationError) {
+          jsonResponse(response, 400, { ok: false, error: validationError }, origin);
+          return;
+        }
+
+        const result = await appendLocationPoint(dataDir, body);
+        jsonResponse(response, 201, { ok: true, ...result }, origin);
+        return;
+      }
+
+      if (requestUrl.pathname === '/api/location/latest' && request.method === 'GET') {
+        const owner = requestUrl.searchParams.get('owner') ?? 'neko';
+        const data = await readLocationLatest(dataDir, owner);
+
+        if (!data || !data.latest) {
+          jsonResponse(response, 404, { ok: false, error: 'location not found' }, origin);
+          return;
+        }
+
+        jsonResponse(response, 200, { ok: true, meta: buildMeta(owner, data.updatedAt), data }, origin);
         return;
       }
 
