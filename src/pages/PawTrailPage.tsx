@@ -118,18 +118,24 @@ const APP_ICON_BY_PKG: Record<string, string> = {
   'com.tencent.mm': 'wechat',
   'com.xingin.xhs': 'xiaohongshu',
   'com.anthropic.claude': 'claude',
+  'com.openai.chatgpt': 'chatgpt',
   'com.android.chrome': 'browser',
   'org.mozilla.firefox': 'browser',
   'com.whatsapp': 'whatsapp',
   'com.taobao.taobao': 'taobao',
   'com.xunmeng.pinduoduo': 'pinduoduo',
   'com.global.foodpanda.android': 'foodpanda',
+  'com.ss.android.ugc.aweme': 'douyin',
+  'com.tngdigital.ewallet': 'tng',
+  'com.maybank2u.life': 'maybank',
+  'com.eg.android.AlipayGphone': 'alipay',
 };
 // 部分东南亚 App 包名按地区会变，用名称兜底匹配
 const APP_ICON_BY_LABEL: Array<[RegExp, string]> = [
   [/微信|wechat/i, 'wechat'],
   [/小红书|xiaohongshu|rednote/i, 'xiaohongshu'],
   [/claude/i, 'claude'],
+  [/chatgpt|openai/i, 'chatgpt'],
   [/chrome|firefox|浏览器|browser/i, 'browser'],
   [/whatsapp/i, 'whatsapp'],
   [/taobao|淘宝/i, 'taobao'],
@@ -137,6 +143,12 @@ const APP_ICON_BY_LABEL: Array<[RegExp, string]> = [
   [/foodpanda/i, 'foodpanda'],
   [/shopee|虾皮/i, 'shopee'],
   [/grab/i, 'grab'],
+  [/抖音|douyin/i, 'douyin'],
+  [/支付宝|alipay/i, 'alipay'],
+  [/kfc|肯德基/i, 'kfc'],
+  [/touch.?n.?go|tng|一触即通/i, 'tng'],
+  [/maybank|mbb|马来亚银行/i, 'maybank'],
+  [/public ?bank|pbb|大众银行/i, 'publicbank'],
 ];
 function appIconUrl(pkg: string, label: string): string | null {
   const slug = APP_ICON_BY_PKG[pkg] ?? APP_ICON_BY_LABEL.find(([re]) => re.test(label || ''))?.[1];
