@@ -3551,8 +3551,9 @@ a {
 /* ===== 聊天:时间戳 / 消息编辑 / 语音保存 ===== */
 .bubble-time {
   display: block;
-  font-size: 0.66rem;
-  color: rgba(123, 111, 145, 0.6);
+  font-size: 0.68rem;
+  color: #e07bb0;
+  font-weight: 600;
   margin: 3px 4px 0;
 }
 .bubble-row.is-user .bubble-time { text-align: right; }
@@ -3607,6 +3608,13 @@ a {
   color: #fff;
 }
 
-/* 予予语音条:转文字 + 保存 一行 */
-.voice-wrap__ops { display: flex; gap: 8px; align-items: center; }
-.voice-wrap__ops .voice-wrap__t2t { text-decoration: none; }
+/* 予予语音条:Text + Save 一行，英文花体 */
+.voice-wrap__ops { display: flex; gap: 12px; align-items: center; }
+.voice-wrap__ops .voice-wrap__t2t {
+  text-decoration: none;
+  font-family: var(--script), cursive;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: #b56fb0;
+  padding: 4px 12px;
+}

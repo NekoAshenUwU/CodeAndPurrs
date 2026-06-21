@@ -169,46 +169,17 @@ function SpeakButton({ text }: { text: string }) {
   );
 }
 
-// 予予主动发的「语音条」：检测到 [语音] 标记的消息，自动合成并像微信语音那样播放。
+// 予予主动发的「语音条」：检测到 [语音] 标记的消息，点了才合成（像微信语音，省额度、刷新后也能重听）。
 const VOICE_MARK = /^\s*[[【]\s*语音\s*[\]】]\s*/;
 function CatVoiceBubble({ text }: { text: string }) {
   const [url, setUrl] = useState<string | null>(null);
-  const [state, setState] = useState<'loading' | 'ready' | 'playing' | 'error'>('loading');
+  const [state, setState] = useState<'idle' | 'loading' | 'ready' | 'playing' | 'error'>('idle');
   const [showText, setShowText] = useState(false);
   const [dur, setDur] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const started = useRef(false);
 
-  useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-    let alive = true;
-    speak(text)
-      .then((u) => {
-        if (!alive) return;
-        setUrl(u);
-        setState('ready');
-        const probe = new Audio(u);
-        probe.addEventListener('loadedmetadata', () => {
-          if (alive && Number.isFinite(probe.duration)) setDur(Math.max(1, Math.round(probe.duration)));
-        });
-      })
-      .catch(() => {
-        if (alive) setState('error');
-      });
-    return () => {
-      alive = false;
-    };
-  }, [text]);
-
-  const toggle = () => {
-    if (!url) return;
-    if (state === 'playing') {
-      audioRef.current?.pause();
-      setState('ready');
-      return;
-    }
-    const a = audioRef.current ?? new Audio(url);
+  const playUrl = (u: string) => {
+    const a = audioRef.current ?? new Audio(u);
     audioRef.current = a;
     a.onended = () => setState('ready');
     a.onerror = () => setState('error');
@@ -216,32 +187,58 @@ function CatVoiceBubble({ text }: { text: string }) {
     setState('playing');
   };
 
-  const width = Math.min(70, 30 + dur * 4);
+  const onTap = async () => {
+    if (state === 'playing') {
+      audioRef.current?.pause();
+      setState('ready');
+      return;
+    }
+    if (url) {
+      playUrl(url);
+      return;
+    }
+    setState('loading');
+    try {
+      const u = await speak(text);
+      setUrl(u);
+      const probe = new Audio(u);
+      probe.addEventListener('loadedmetadata', () => {
+        if (Number.isFinite(probe.duration)) setDur(Math.max(1, Math.round(probe.duration)));
+      });
+      playUrl(u);
+    } catch {
+      setState('error');
+    }
+  };
+
+  const width = Math.min(70, 30 + (dur || 6) * 4);
   return (
     <div className="voice-wrap is-cat">
       <button
         type="button"
         className={`voice-bubble${state === 'playing' ? ' is-playing' : ''}`}
         style={{ minWidth: `${width}%` }}
-        onClick={toggle}
-        disabled={state === 'loading' || state === 'error'}
+        onClick={onTap}
+        disabled={state === 'loading'}
         title="点击播放予予的语音"
       >
-        <span className="voice-bubble__icon">{state === 'loading' ? '…' : state === 'playing' ? '⏸' : '▶'}</span>
+        <span className="voice-bubble__icon">
+          {state === 'loading' ? '…' : state === 'playing' ? '⏸' : state === 'error' ? '↻' : '▶'}
+        </span>
         <span className="voice-bubble__bars" aria-hidden="true">
           {Array.from({ length: 12 }).map((_, i) => (
             <i key={i} style={{ height: `${30 + ((i * 7) % 60)}%` }} />
           ))}
         </span>
-        <span className="voice-bubble__dur">{state === 'error' ? '✗' : state === 'loading' ? '…' : `${dur || 1}″`}</span>
+        <span className="voice-bubble__dur">{state === 'error' ? '重试' : dur ? `${dur}″` : '▶'}</span>
       </button>
       <div className="voice-wrap__ops">
         <button type="button" className="voice-wrap__t2t" onClick={() => setShowText((v) => !v)}>
-          {showText ? '收起文字' : '转文字'}
+          {showText ? 'Hide' : 'Text'}
         </button>
         {url ? (
-          <a className="voice-wrap__t2t" href={url} download={`予予的语音_${Date.now()}.mp3`}>
-            ⬇ 保存
+          <a className="voice-wrap__t2t" href={url} download={`Yuyu_voice_${Date.now()}.mp3`}>
+            Save
           </a>
         ) : null}
       </div>
@@ -395,11 +392,18 @@ function ChatRoom({
     setEditTurnId(turn.id);
     setEditText(turn.content);
   };
-  const commitEdit = () => {
+  const commitEdit = async () => {
     const v = editText.trim();
-    if (editTurnId && v) patchTurn(editTurnId, { content: v });
+    const id = editTurnId;
     setEditTurnId(null);
     setEditText('');
+    if (!id || !v || sending) return;
+    const idx = turns.findIndex((t) => t.id === id);
+    if (idx < 0) return;
+    // 改掉这条，丢掉它之后的(过时的)消息，让予予基于新内容重新回答
+    const kept = turns.slice(0, idx + 1).map((t) => (t.id === id ? { ...t, content: v } : t));
+    setTurns(kept);
+    await runAssistant(toMessages(kept));
   };
   const cancelEdit = () => {
     setEditTurnId(null);

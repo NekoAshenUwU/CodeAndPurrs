@@ -271,7 +271,11 @@ async function speak(text) {
     body: JSON.stringify({
       text,
       model_id: ELEVEN.model(),
-      voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+      voice_settings: {
+        stability: 0.5,
+        similarity_boost: 0.75,
+        speed: Number(process.env.ELEVENLABS_SPEED) || 1.12, // 说话语速，1.0 正常、>1 更快（别像催眠曲）
+      },
     }),
   });
   if (!resp.ok) {
