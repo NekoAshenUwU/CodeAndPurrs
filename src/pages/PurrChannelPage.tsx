@@ -30,10 +30,17 @@ type Turn = {
   status: 'streaming' | 'done' | 'error';
   voice?: Voice; // 用户语音消息才有；content 存转写出来的文字
   transcribing?: boolean;
+  at?: number; // 消息创建时间戳
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+const fmtStamp = (at?: number): string => {
+  if (!at) return '';
+  const d = new Date(at);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
 
 // 思考链折叠卡片：流式思考时自动展开，思考结束自动收起。
 function ThinkingCard({ text, streaming }: { text: string; streaming: boolean }) {
@@ -228,9 +235,16 @@ function CatVoiceBubble({ text }: { text: string }) {
         </span>
         <span className="voice-bubble__dur">{state === 'error' ? '✗' : state === 'loading' ? '…' : `${dur || 1}″`}</span>
       </button>
-      <button type="button" className="voice-wrap__t2t" onClick={() => setShowText((v) => !v)}>
-        {showText ? '收起文字' : '转文字'}
-      </button>
+      <div className="voice-wrap__ops">
+        <button type="button" className="voice-wrap__t2t" onClick={() => setShowText((v) => !v)}>
+          {showText ? '收起文字' : '转文字'}
+        </button>
+        {url ? (
+          <a className="voice-wrap__t2t" href={url} download={`予予的语音_${Date.now()}.mp3`}>
+            ⬇ 保存
+          </a>
+        ) : null}
+      </div>
       {showText ? <div className="voice-wrap__text">{text}</div> : null}
     </div>
   );
@@ -332,6 +346,8 @@ function ChatRoom({
   const [sending, setSending] = useState(false);
   const [recording, setRecording] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [editTurnId, setEditTurnId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
   const [notice, setNotice] = useState('');
   const abortRef = useRef<AbortController | null>(null);
   const recorderRef = useRef<VoiceRecorder | null>(null);
@@ -374,6 +390,22 @@ function ChatRoom({
   const patchTurn = (id: string, patch: Partial<Turn>) =>
     setTurns((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
 
+  // 编辑自己发过的文字消息（改错字等）
+  const beginEdit = (turn: Turn) => {
+    setEditTurnId(turn.id);
+    setEditText(turn.content);
+  };
+  const commitEdit = () => {
+    const v = editText.trim();
+    if (editTurnId && v) patchTurn(editTurnId, { content: v });
+    setEditTurnId(null);
+    setEditText('');
+  };
+  const cancelEdit = () => {
+    setEditTurnId(null);
+    setEditText('');
+  };
+
   const toMessages = (ts: Turn[]): ChatMessage[] => [
     // 每次发送都现拼：用当前模型的专属人设 + 最新「关于我」
     { role: 'system', content: buildSystemPrompt(provider) },
@@ -383,7 +415,7 @@ function ChatRoom({
   // 让猫咪基于给定历史回一条
   const runAssistant = async (history: ChatMessage[]) => {
     const botId = uid();
-    setTurns((prev) => [...prev, { id: botId, role: 'assistant', content: '', reasoning: '', status: 'streaming' }]);
+    setTurns((prev) => [...prev, { id: botId, role: 'assistant', content: '', reasoning: '', status: 'streaming', at: Date.now() }]);
     setSending(true);
     const controller = new AbortController();
     abortRef.current = controller;
@@ -408,7 +440,7 @@ function ChatRoom({
   const send = async () => {
     const text = input.trim();
     if (!text || sending) return;
-    const userTurn: Turn = { id: uid(), role: 'user', content: text, reasoning: '', status: 'done' };
+    const userTurn: Turn = { id: uid(), role: 'user', content: text, reasoning: '', status: 'done', at: Date.now() };
     const history = toMessages([...turns, userTurn]);
     setTurns((prev) => [...prev, userTurn]);
     setInput('');
@@ -426,6 +458,7 @@ function ChatRoom({
       status: 'done',
       voice: { url: rec.url, duration: rec.duration },
       transcribing: true,
+      at: Date.now(),
     };
     setTurns((prev) => [...prev, voiceTurn]);
     try {
@@ -571,9 +604,28 @@ function ChatRoom({
             <div key={turn.id} className="bubble-row is-user">
               {turn.voice ? (
                 <VoiceBubble voice={turn.voice} transcript={turn.content} transcribing={!!turn.transcribing} />
+              ) : editTurnId === turn.id ? (
+                <div className="bubble-edit">
+                  <textarea
+                    className="bubble-edit__area"
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    autoFocus
+                  />
+                  <div className="bubble-edit__ops">
+                    <button type="button" onClick={cancelEdit}>取消</button>
+                    <button type="button" className="is-primary" onClick={commitEdit}>保存</button>
+                  </div>
+                </div>
               ) : (
-                <div className="bubble bubble--user">{turn.content}</div>
+                <div className="bubble bubble--user" onDoubleClick={() => beginEdit(turn)}>
+                  <span className="bubble__text">{turn.content}</span>
+                  <button type="button" className="bubble-edit-btn" onClick={() => beginEdit(turn)} title="改一下">
+                    ✎
+                  </button>
+                </div>
               )}
+              {turn.at ? <span className="bubble-time">{fmtStamp(turn.at)}</span> : null}
             </div>
           ) : (
             <div key={turn.id} className="bubble-row is-bot">
@@ -590,6 +642,7 @@ function ChatRoom({
                     {turn.status === 'done' && turn.content ? <SpeakButton text={turn.content.replace(VOICE_MARK, '')} /> : null}
                   </>
                 )}
+                {turn.at && turn.status === 'done' ? <span className="bubble-time">{fmtStamp(turn.at)}</span> : null}
               </div>
             </div>
           ),

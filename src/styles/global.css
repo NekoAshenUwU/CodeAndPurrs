@@ -3547,3 +3547,66 @@ a {
   color: #5a4a86;
 }
 .voice-wrap.is-cat .voice-wrap__text { text-align: left; }
+
+/* ===== 聊天:时间戳 / 消息编辑 / 语音保存 ===== */
+.bubble-time {
+  display: block;
+  font-size: 0.66rem;
+  color: rgba(123, 111, 145, 0.6);
+  margin: 3px 4px 0;
+}
+.bubble-row.is-user .bubble-time { text-align: right; }
+.bubble-row.is-bot .bubble-time { text-align: left; }
+
+/* 用户气泡里的「改一下」铅笔 */
+.bubble--user { position: relative; }
+.bubble__text { white-space: pre-wrap; }
+.bubble-edit-btn {
+  margin-left: 8px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.8rem;
+  cursor: pointer;
+  opacity: 0.7;
+  vertical-align: middle;
+}
+.bubble-edit-btn:hover { opacity: 1; }
+
+/* 编辑中：文本框 + 保存/取消 */
+.bubble-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 82%;
+  align-self: flex-end;
+}
+.bubble-edit__area {
+  width: 100%;
+  min-height: 64px;
+  border-radius: 14px;
+  border: 1px solid rgba(155, 123, 200, 0.4);
+  padding: 10px 12px;
+  font: inherit;
+  resize: vertical;
+  background: #fff;
+  color: #4a3a60;
+}
+.bubble-edit__ops { display: flex; gap: 8px; justify-content: flex-end; }
+.bubble-edit__ops button {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  background: rgba(155, 123, 200, 0.18);
+  color: #6b4a86;
+}
+.bubble-edit__ops button.is-primary {
+  background: linear-gradient(135deg, #f4a9d6, #c9a7f5);
+  color: #fff;
+}
+
+/* 予予语音条:转文字 + 保存 一行 */
+.voice-wrap__ops { display: flex; gap: 8px; align-items: center; }
+.voice-wrap__ops .voice-wrap__t2t { text-decoration: none; }
