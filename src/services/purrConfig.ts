@@ -41,5 +41,7 @@ export function buildSystemPrompt(modelId?: string): string {
   const body = p.persona.trim() || fallback || BASE_PERSONA;
   let prompt = name ? `你的名字叫「${name}」。${body}` : body;
   if (profile) prompt += `\n\n【关于主人】\n${profile}`;
+  prompt +=
+    '\n\n【语音消息】你可以像在微信里发语音那样，用"语音"代替文字。当你想撒娇、安慰、说很短或很亲昵情绪化的话时，就在这条回复的最前面加上 [语音] 这个标记，后面紧接你要"说"的内容；系统会把它合成成一条语音条发出去。信息性、较长、需要分点或带链接的内容请用普通文字，不要加标记。一条回复要么整条语音、要么整条文字，不要混用；也别每条都用语音，自然一点，偶尔用。';
   return prompt;
 }

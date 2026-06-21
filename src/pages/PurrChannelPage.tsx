@@ -162,6 +162,80 @@ function SpeakButton({ text }: { text: string }) {
   );
 }
 
+// 予予主动发的「语音条」：检测到 [语音] 标记的消息，自动合成并像微信语音那样播放。
+const VOICE_MARK = /^\s*[[【]\s*语音\s*[\]】]\s*/;
+function CatVoiceBubble({ text }: { text: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [state, setState] = useState<'loading' | 'ready' | 'playing' | 'error'>('loading');
+  const [showText, setShowText] = useState(false);
+  const [dur, setDur] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const started = useRef(false);
+
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    let alive = true;
+    speak(text)
+      .then((u) => {
+        if (!alive) return;
+        setUrl(u);
+        setState('ready');
+        const probe = new Audio(u);
+        probe.addEventListener('loadedmetadata', () => {
+          if (alive && Number.isFinite(probe.duration)) setDur(Math.max(1, Math.round(probe.duration)));
+        });
+      })
+      .catch(() => {
+        if (alive) setState('error');
+      });
+    return () => {
+      alive = false;
+    };
+  }, [text]);
+
+  const toggle = () => {
+    if (!url) return;
+    if (state === 'playing') {
+      audioRef.current?.pause();
+      setState('ready');
+      return;
+    }
+    const a = audioRef.current ?? new Audio(url);
+    audioRef.current = a;
+    a.onended = () => setState('ready');
+    a.onerror = () => setState('error');
+    void a.play();
+    setState('playing');
+  };
+
+  const width = Math.min(70, 30 + dur * 4);
+  return (
+    <div className="voice-wrap is-cat">
+      <button
+        type="button"
+        className={`voice-bubble${state === 'playing' ? ' is-playing' : ''}`}
+        style={{ minWidth: `${width}%` }}
+        onClick={toggle}
+        disabled={state === 'loading' || state === 'error'}
+        title="点击播放予予的语音"
+      >
+        <span className="voice-bubble__icon">{state === 'loading' ? '…' : state === 'playing' ? '⏸' : '▶'}</span>
+        <span className="voice-bubble__bars" aria-hidden="true">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <i key={i} style={{ height: `${30 + ((i * 7) % 60)}%` }} />
+          ))}
+        </span>
+        <span className="voice-bubble__dur">{state === 'error' ? '✗' : state === 'loading' ? '…' : `${dur || 1}″`}</span>
+      </button>
+      <button type="button" className="voice-wrap__t2t" onClick={() => setShowText((v) => !v)}>
+        {showText ? '收起文字' : '转文字'}
+      </button>
+      {showText ? <div className="voice-wrap__text">{text}</div> : null}
+    </div>
+  );
+}
+
 // ===== 输入区玻璃珠图标（VisionOS 玻璃风，白色线性字形）=====
 function IconPlus() {
   return (
@@ -505,10 +579,17 @@ function ChatRoom({
             <div key={turn.id} className="bubble-row is-bot">
               <div className="bubble-stack">
                 <ThinkingCard text={turn.reasoning} streaming={turn.status === 'streaming'} />
-                <div className={`bubble bubble--bot${turn.status === 'error' ? ' is-error' : ''}`}>
-                  {turn.content || (turn.status === 'streaming' ? <span className="typing-dots"><i /><i /><i /></span> : '')}
-                </div>
-                {turn.status === 'done' && turn.content ? <SpeakButton text={turn.content} /> : null}
+                {turn.status === 'done' && VOICE_MARK.test(turn.content) ? (
+                  <CatVoiceBubble text={turn.content.replace(VOICE_MARK, '').trim()} />
+                ) : (
+                  <>
+                    <div className={`bubble bubble--bot${turn.status === 'error' ? ' is-error' : ''}`}>
+                      {turn.content.replace(VOICE_MARK, '') ||
+                        (turn.status === 'streaming' ? <span className="typing-dots"><i /><i /><i /></span> : '')}
+                    </div>
+                    {turn.status === 'done' && turn.content ? <SpeakButton text={turn.content.replace(VOICE_MARK, '')} /> : null}
+                  </>
+                )}
               </div>
             </div>
           ),

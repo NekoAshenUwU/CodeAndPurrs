@@ -3539,3 +3539,11 @@ a {
     inset 0 2px 3px rgba(255,255,255,0.9);
 }
 
+
+/* 予予主动发的语音条：靠左 + 猫咪薰衣草色（区别于用户的粉色语音条） */
+.voice-wrap.is-cat { align-items: flex-start; }
+.voice-wrap.is-cat .voice-bubble {
+  background: linear-gradient(135deg, #ece3ff 0%, #d6c8f7 100%);
+  color: #5a4a86;
+}
+.voice-wrap.is-cat .voice-wrap__text { text-align: left; }
