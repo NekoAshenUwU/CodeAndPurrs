@@ -116,8 +116,6 @@ function parseDataUrl(url) {
   const m = /^data:([^;]+);base64,([\s\S]*)$/.exec(url || '');
   return m ? { mediaType: m[1], data: m[2] } : null;
 }
-const hasImage = (messages) =>
-  messages.some((m) => Array.isArray(m.content) && m.content.some((p) => p?.type === 'image_url'));
 // 不支持看图的模型：把所有 content 拍平成纯文字
 const flattenMessages = (messages) =>
   messages.map((m) => ({ role: m.role, content: partsToText(m.content) }));
@@ -449,21 +447,17 @@ const server = http.createServer(async (req, res) => {
     } else {
       // deepseek / openai 都是 OpenAI 兼容格式
       const conf = PROVIDERS[provider];
-      const imagePresent = hasImage(messages);
-      // DeepSeek 只有 deepseek-v4-pro 能看图（v4-flash/deepseek-chat 纯文本）。
-      // 带图又没指定具体模型时，自动切到 v4-pro；否则保持默认（文本）。
-      const useModel =
-        provider === 'deepseek' && imagePresent && !model ? 'deepseek-v4-pro' : model;
-      const vision = provider === 'openai' || (provider === 'deepseek' && imagePresent);
+      // 注意：DeepSeek 开放 API 不收图（content 只认 text，发 image_url 会 400），
+      // 所以只给 openai 开 vision；deepseek 一律把图拍平成 [表情包] 文字，优雅降级不报错。
       await callOpenAICompatible({
         res,
         url: conf.url,
         key,
-        model: useModel,
+        model,
         defaultModel: conf.defaultModel,
         messages,
         label: provider === 'openai' ? 'OpenAI' : 'DeepSeek',
-        vision,
+        vision: provider === 'openai',
         // gpt-4o 爱说套话/客服收尾，加点 penalty 压一压；deepseek 本来就自然，不动。
         sampling:
           provider === 'openai'

@@ -17,6 +17,8 @@ export type ModelInfo = {
 export const MODELS: ModelInfo[] = [
   { id: 'deepseek', brand: 'DeepSeek', label: 'DeepSeek', provider: 'deepseek' },
   { id: 'gemini', brand: 'Gemini', label: 'Gemini', provider: 'gemini' },
+  // chatgpt-4o-latest = ChatGPT 里那个"温暖版"4o，比 API 默认的 gpt-4o 像活人得多，看图也行
+  { id: 'chatgpt-4o-latest', brand: 'GPT', label: 'GPT-4o 最新版', provider: 'openai', model: 'chatgpt-4o-latest' },
   { id: 'gpt-4o', brand: 'GPT', label: 'GPT-4o', provider: 'openai', model: 'gpt-4o' },
   { id: 'claude-sonnet-4-6', brand: 'Claude', label: 'Sonnet 4.6', provider: 'anthropic', model: 'claude-sonnet-4-6' },
   { id: 'claude-opus-4-6', brand: 'Claude', label: 'Opus 4.6', provider: 'anthropic', model: 'claude-opus-4-6' },
