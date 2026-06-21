@@ -515,7 +515,15 @@ function ChatRoom({
     for (const t of ts) {
       if (t.meme) {
         const dataUrl = await getMemeDataUrl(t.meme);
-        if (dataUrl) out.push({ role: t.role, content: [{ type: 'image_url', image_url: { url: dataUrl } }] });
+        if (dataUrl)
+          out.push({
+            role: t.role,
+            // 配一句自然语境，免得模型把"纯图片"当成识图任务、丢了人设
+            content: [
+              { type: 'text', text: '（我给你发了张表情包～）' },
+              { type: 'image_url', image_url: { url: dataUrl } },
+            ],
+          });
         continue;
       }
       if (t.content.trim()) out.push({ role: t.role, content: t.content });
