@@ -1617,11 +1617,20 @@ a {
 
 .bubble--bot {
   max-width: 100%;
+  padding: 12px 16px;
   color: var(--ink);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  border-bottom-left-radius: 6px;
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(8px);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 240, 250, 0.85) 0%,
+    rgba(250, 235, 255, 0.85) 100%
+  );
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 20px 20px 20px 6px; /* 左下角小尖，气泡尾巴感 */
+  box-shadow:
+    0 4px 14px rgba(180, 140, 200, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .bubble--bot.is-error {
@@ -3589,10 +3598,12 @@ a {
 /* ===== 聊天:时间戳 / 消息编辑 / 语音保存 ===== */
 .bubble-time {
   display: block;
-  font-size: 0.7rem;
-  color: #e07bb0;
-  font-weight: 800;
-  margin: 3px 4px 0;
+  font-family: var(--round); /* Fredoka 圆润甜甜圈感，带数字 */
+  font-size: 0.85rem;
+  color: #d4569f;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  margin: 4px 4px 0;
 }
 .bubble-row.is-user .bubble-time { text-align: right; }
 .bubble-row.is-bot .bubble-time { text-align: left; }
