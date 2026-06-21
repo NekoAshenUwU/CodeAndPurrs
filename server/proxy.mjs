@@ -120,7 +120,7 @@ const flattenMessages = (messages) =>
   messages.map((m) => ({ role: m.role, content: partsToText(m.content) }));
 
 // ---------- OpenAI 兼容（DeepSeek / OpenAI 共用）----------
-async function callOpenAICompatible({ res, url, key, model, defaultModel, messages, label, vision }) {
+async function callOpenAICompatible({ res, url, key, model, defaultModel, messages, label, vision, sampling }) {
   // OpenAI 系（gpt-4o）原生支持 image_url 数组，直接透传；DeepSeek 不看图，拍平成文字。
   const outMessages = vision ? messages : flattenMessages(messages);
   const upstream = await fetch(url, {
@@ -133,6 +133,7 @@ async function callOpenAICompatible({ res, url, key, model, defaultModel, messag
       model: model || defaultModel,
       messages: outMessages,
       stream: true,
+      ...(sampling || {}),
     }),
   });
 
@@ -454,6 +455,11 @@ const server = http.createServer(async (req, res) => {
         messages,
         label: provider === 'openai' ? 'OpenAI' : 'DeepSeek',
         vision: provider === 'openai', // gpt-4o 能看图；deepseek-chat 不行（降级成文字）
+        // gpt-4o 爱说套话/客服收尾，加点 penalty 压一压；deepseek 本来就自然，不动。
+        sampling:
+          provider === 'openai'
+            ? { temperature: 0.95, frequency_penalty: 0.5, presence_penalty: 0.4 }
+            : undefined,
       });
     }
     send(res, { type: 'done' });
