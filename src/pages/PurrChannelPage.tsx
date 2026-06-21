@@ -5,7 +5,7 @@ import { getModel, MODEL_GROUPS } from '../data/models';
 import { buildSystemPrompt, loadDefaultModel, loadChatBg } from '../services/purrConfig';
 import { clearLocal, loadLocal, saveLocal } from '../services/storage';
 import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
-import { getMemeURL, listMemes, type MemeItem } from '../services/memes';
+import { getMemeURL, getMemeDataUrl, listMemes, type MemeItem } from '../services/memes';
 
 const WINDOWS_KEY = 'purr-channel:windows';
 const LEGACY_TURNS_KEY = 'purr-channel:turns'; // 旧版单一对话，首次进入迁移成一个窗口
@@ -465,14 +465,14 @@ function ChatRoom({
     setNotice(`「${label}」马上就来啦，先占个位～`);
   };
 
-  // 从贴纸盒选了一张：作为一条用户消息发出去（纯贴纸，不走模型回复）
-  const sendMeme = (memeId: string) => {
+  // 从贴纸盒选了一张：作为一条用户消息发出去，并把图片喂给予予让她看图回应。
+  const sendMeme = async (memeId: string) => {
     setMemeOpen(false);
     if (sending) return;
-    setTurns((prev) => [
-      ...prev,
-      { id: uid(), role: 'user', content: '', reasoning: '', status: 'done', meme: memeId, at: Date.now() },
-    ]);
+    const memeTurn: Turn = { id: uid(), role: 'user', content: '', reasoning: '', status: 'done', meme: memeId, at: Date.now() };
+    const history = await toMessages([...turns, memeTurn]);
+    setTurns((prev) => [...prev, memeTurn]);
+    await runAssistant(history);
   };
 
   const clearHistory = () => {
@@ -501,18 +501,27 @@ function ChatRoom({
     // 改掉这条，丢掉它之后的(过时的)消息，让予予基于新内容重新回答
     const kept = turns.slice(0, idx + 1).map((t) => (t.id === id ? { ...t, content: v } : t));
     setTurns(kept);
-    await runAssistant(toMessages(kept));
+    await runAssistant(await toMessages(kept));
   };
   const cancelEdit = () => {
     setEditTurnId(null);
     setEditText('');
   };
 
-  const toMessages = (ts: Turn[]): ChatMessage[] => [
+  // 拼历史给模型：系统人设 + 文字消息；表情包消息取出 base64 当图片发（能看图的模型会真看见）。
+  const toMessages = async (ts: Turn[]): Promise<ChatMessage[]> => {
     // 每次发送都现拼：用当前模型的专属人设 + 最新「关于我」
-    { role: 'system', content: buildSystemPrompt(provider) },
-    ...ts.filter((t) => t.content.trim()).map((t) => ({ role: t.role, content: t.content })),
-  ];
+    const out: ChatMessage[] = [{ role: 'system', content: buildSystemPrompt(provider) }];
+    for (const t of ts) {
+      if (t.meme) {
+        const dataUrl = await getMemeDataUrl(t.meme);
+        if (dataUrl) out.push({ role: t.role, content: [{ type: 'image_url', image_url: { url: dataUrl } }] });
+        continue;
+      }
+      if (t.content.trim()) out.push({ role: t.role, content: t.content });
+    }
+    return out;
+  };
 
   // 让猫咪基于给定历史回一条
   const runAssistant = async (history: ChatMessage[]) => {
@@ -543,7 +552,7 @@ function ChatRoom({
     const text = input.trim();
     if (!text || sending) return;
     const userTurn: Turn = { id: uid(), role: 'user', content: text, reasoning: '', status: 'done', at: Date.now() };
-    const history = toMessages([...turns, userTurn]);
+    const history = await toMessages([...turns, userTurn]);
     setTurns((prev) => [...prev, userTurn]);
     setInput('');
     await runAssistant(history);
@@ -567,7 +576,7 @@ function ChatRoom({
       const text = await transcribeAudio(rec);
       patchTurn(vId, { content: text, transcribing: false });
       if (text.trim()) {
-        await runAssistant(toMessages([...prevTurns, { ...voiceTurn, content: text, transcribing: false }]));
+        await runAssistant(await toMessages([...prevTurns, { ...voiceTurn, content: text, transcribing: false }]));
       }
     } catch (err) {
       patchTurn(vId, { transcribing: false, content: `（转写失败：${(err as Error).message}）` });

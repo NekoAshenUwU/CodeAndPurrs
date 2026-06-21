@@ -95,3 +95,20 @@ export async function getMemeURL(id: string): Promise<string | null> {
     req.onerror = () => reject(req.error ?? new Error('取不到这张贴纸'));
   });
 }
+
+// 取某张贴纸的 base64 data URL —— 发给能看图的模型（GPT-4o/Gemini/Claude）用。
+export async function getMemeDataUrl(id: string): Promise<string | null> {
+  const db = await openDB();
+  const blob = await new Promise<Blob | null>((resolve, reject) => {
+    const req = tx(db, 'readonly').get(id);
+    req.onsuccess = () => resolve((req.result as MemeRecord | undefined)?.blob ?? null);
+    req.onerror = () => reject(req.error ?? new Error('取不到这张贴纸'));
+  });
+  if (!blob) return null;
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(typeof fr.result === 'string' ? fr.result : null);
+    fr.onerror = () => reject(fr.error ?? new Error('读不出这张贴纸'));
+    fr.readAsDataURL(blob);
+  });
+}

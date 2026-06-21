@@ -103,8 +103,26 @@ async function pumpSSE(upstreamBody, onData) {
   }
 }
 
+// ---------- 多模态内容翻译（表情包图片）----------
+// 前端统一用 OpenAI 风格 content 数组：{type:'text'} / {type:'image_url',image_url:{url:dataUrl}}。
+// 各家格式不同，下面按需翻译；不支持看图的模型则把图降级成 [表情包] 文字。
+function partsToText(content) {
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+  return content.map((p) => (p?.type === 'text' ? p.text : '[表情包]')).join(' ').trim();
+}
+function parseDataUrl(url) {
+  const m = /^data:([^;]+);base64,([\s\S]*)$/.exec(url || '');
+  return m ? { mediaType: m[1], data: m[2] } : null;
+}
+// 不支持看图的模型：把所有 content 拍平成纯文字
+const flattenMessages = (messages) =>
+  messages.map((m) => ({ role: m.role, content: partsToText(m.content) }));
+
 // ---------- OpenAI 兼容（DeepSeek / OpenAI 共用）----------
-async function callOpenAICompatible({ res, url, key, model, defaultModel, messages, label }) {
+async function callOpenAICompatible({ res, url, key, model, defaultModel, messages, label, vision }) {
+  // OpenAI 系（gpt-4o）原生支持 image_url 数组，直接透传；DeepSeek 不看图，拍平成文字。
+  const outMessages = vision ? messages : flattenMessages(messages);
   const upstream = await fetch(url, {
     method: 'POST',
     headers: {
@@ -113,7 +131,7 @@ async function callOpenAICompatible({ res, url, key, model, defaultModel, messag
     },
     body: JSON.stringify({
       model: model || defaultModel,
-      messages,
+      messages: outMessages,
       stream: true,
     }),
   });
@@ -140,9 +158,21 @@ async function callAnthropic({ res, key, model, messages }) {
     .filter((m) => m.role === 'system')
     .map((m) => m.content)
     .join('\n');
+  const toAnthropicContent = (content) => {
+    if (typeof content === 'string') return content;
+    if (!Array.isArray(content)) return '';
+    return content.map((p) => {
+      if (p?.type === 'image_url') {
+        const d = parseDataUrl(p.image_url?.url);
+        if (d) return { type: 'image', source: { type: 'base64', media_type: d.mediaType, data: d.data } };
+        return { type: 'text', text: '[表情包]' };
+      }
+      return { type: 'text', text: p?.text ?? '' };
+    });
+  };
   const msgs = messages
     .filter((m) => m.role !== 'system')
-    .map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }));
+    .map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: toAnthropicContent(m.content) }));
 
   const upstream = await fetch(PROVIDERS.anthropic.url, {
     method: 'POST',
@@ -181,11 +211,23 @@ async function callGemini({ res, key, model, messages }) {
     .filter((m) => m.role === 'system')
     .map((m) => m.content)
     .join('\n');
+  const toGeminiParts = (content) => {
+    if (typeof content === 'string') return [{ text: content }];
+    if (!Array.isArray(content)) return [{ text: '' }];
+    return content.map((p) => {
+      if (p?.type === 'image_url') {
+        const d = parseDataUrl(p.image_url?.url);
+        if (d) return { inline_data: { mime_type: d.mediaType, data: d.data } };
+        return { text: '[表情包]' };
+      }
+      return { text: p?.text ?? '' };
+    });
+  };
   const contents = messages
     .filter((m) => m.role !== 'system')
     .map((m) => ({
       role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
+      parts: toGeminiParts(m.content),
     }));
 
   const url =
@@ -314,7 +356,8 @@ function beepWav(freq = 523, ms = 400, rate = 16000) {
 
 // ---------- Mock（没配 key 时）----------
 async function callMock({ res, provider, messages }) {
-  const last = [...messages].reverse().find((m) => m.role === 'user')?.content ?? '';
+  const lastMsg = [...messages].reverse().find((m) => m.role === 'user');
+  const last = partsToText(lastMsg?.content ?? '') || '（一张表情包）';
   const reasoning =
     `（mock 模式）还没配 ${provider} 的 API key，所以这条是假的。\n` +
     `我先假装在想：用户说了「${last.slice(0, 40)}」，该怎么温柔地回。`;
@@ -410,6 +453,7 @@ const server = http.createServer(async (req, res) => {
         defaultModel: conf.defaultModel,
         messages,
         label: provider === 'openai' ? 'OpenAI' : 'DeepSeek',
+        vision: provider === 'openai', // gpt-4o 能看图；deepseek-chat 不行（降级成文字）
       });
     }
     send(res, { type: 'done' });

@@ -2,9 +2,15 @@
 
 export type ChatRole = 'system' | 'user' | 'assistant';
 
+// 一条消息的内容：纯文字，或「文字 + 图片」的多模态片段（发表情包时用）。
+// 图片用 OpenAI 风格的 data URL，后端再按各家格式翻译。
+export type ContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } };
+
 export type ChatMessage = {
   role: ChatRole;
-  content: string;
+  content: string | ContentPart[];
 };
 
 // 后端实际对接的服务商（openai/anthropic 待后端接入，前端先可选）
