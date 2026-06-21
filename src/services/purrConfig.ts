@@ -32,6 +32,11 @@ export const CHAT_AVATAR_KEY = 'purr-channel:avatar';
 export const loadChatAvatar = (): string => loadLocal<string>(CHAT_AVATAR_KEY, '');
 export const saveChatAvatar = (v: string): void => saveLocal(CHAT_AVATAR_KEY, v);
 
+// 我（主人）头像，显示在自己消息气泡旁
+export const CHAT_USER_AVATAR_KEY = 'purr-channel:user-avatar';
+export const loadChatUserAvatar = (): string => loadLocal<string>(CHAT_USER_AVATAR_KEY, '');
+export const saveChatUserAvatar = (v: string): void => saveLocal(CHAT_USER_AVATAR_KEY, v);
+
 // 默认人设（兜底）
 export const loadInstructions = (): string => loadLocal<string>(INSTRUCTIONS_KEY, '');
 export const saveInstructions = (v: string): void => saveLocal(INSTRUCTIONS_KEY, v);

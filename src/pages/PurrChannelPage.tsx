@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { streamChat, type ChatMessage } from '../services/chat';
 import { getModel, MODEL_GROUPS } from '../data/models';
-import { buildSystemPrompt, loadDefaultModel, loadChatBg, loadChatAvatar } from '../services/purrConfig';
+import { buildSystemPrompt, loadDefaultModel, loadChatBg, loadChatAvatar, loadChatUserAvatar } from '../services/purrConfig';
 import { clearLocal, loadLocal, saveLocal } from '../services/storage';
 import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
 import { getMemeURL, getMemeDataUrl, listMemes, type MemeItem } from '../services/memes';
@@ -405,8 +405,9 @@ function ChatRoom({
   onTouch: (id: string, preview: string) => void;
   onSetProvider: (id: string, modelId: string) => void;
 }) {
-  // 予予头像（调频页上传的，显示在每条回复旁；空则用默认爪印）
+  // 头像（调频页上传的，显示在气泡旁；空则用默认爪印）
   const [botAvatar] = useState<string>(loadChatAvatar);
+  const [userAvatar] = useState<string>(loadChatUserAvatar);
   // 从小暗格读出这个窗口的聊天记录；半截没说完的归位，语音 blob 刷新后失效就丢掉播放地址。
   const [turns, setTurns] = useState<Turn[]>(() =>
     loadLocal<Turn[]>(turnsKey(win.id), []).map((t) => ({
@@ -723,32 +724,39 @@ function ChatRoom({
         {turns.map((turn) =>
           turn.role === 'user' ? (
             <div key={turn.id} className="bubble-row is-user">
-              {turn.meme ? (
-                <MemeBubble memeId={turn.meme} />
-              ) : turn.voice ? (
-                <VoiceBubble voice={turn.voice} transcript={turn.content} transcribing={!!turn.transcribing} />
-              ) : editTurnId === turn.id ? (
-                <div className="bubble-edit">
-                  <textarea
-                    className="bubble-edit__area"
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
-                    autoFocus
-                  />
-                  <div className="bubble-edit__ops">
-                    <button type="button" onClick={cancelEdit}>取消</button>
-                    <button type="button" className="is-primary" onClick={commitEdit}>保存</button>
+              <div className="bubble-stack bubble-stack--user">
+                {turn.meme ? (
+                  <MemeBubble memeId={turn.meme} />
+                ) : turn.voice ? (
+                  <VoiceBubble voice={turn.voice} transcript={turn.content} transcribing={!!turn.transcribing} />
+                ) : editTurnId === turn.id ? (
+                  <div className="bubble-edit">
+                    <textarea
+                      className="bubble-edit__area"
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      autoFocus
+                    />
+                    <div className="bubble-edit__ops">
+                      <button type="button" onClick={cancelEdit}>取消</button>
+                      <button type="button" className="is-primary" onClick={commitEdit}>保存</button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="bubble bubble--user" onDoubleClick={() => beginEdit(turn)}>
+                    <span className="bubble__text">{turn.content}</span>
+                    <button type="button" className="bubble-edit-btn" onClick={() => beginEdit(turn)} title="改一下">
+                      ✎
+                    </button>
+                  </div>
+                )}
+                {turn.at ? <span className="bubble-time">{fmtStamp(turn.at)}</span> : null}
+              </div>
+              {userAvatar ? (
+                <img className="bubble-avatar bubble-avatar--me" src={userAvatar} alt="我的头像" />
               ) : (
-                <div className="bubble bubble--user" onDoubleClick={() => beginEdit(turn)}>
-                  <span className="bubble__text">{turn.content}</span>
-                  <button type="button" className="bubble-edit-btn" onClick={() => beginEdit(turn)} title="改一下">
-                    ✎
-                  </button>
-                </div>
+                <span className="bubble-avatar bubble-avatar--me bubble-avatar--ph" aria-hidden="true">🐾</span>
               )}
-              {turn.at ? <span className="bubble-time">{fmtStamp(turn.at)}</span> : null}
             </div>
           ) : (
             <div key={turn.id} className="bubble-row is-bot">

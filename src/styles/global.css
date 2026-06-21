@@ -1553,10 +1553,21 @@ a {
 
 .bubble-row.is-user {
   justify-content: flex-end;
+  align-items: flex-start; /* 头像跟气泡顶端对齐 */
 }
 
 .bubble-row.is-bot {
   align-items: flex-start; /* 头像跟气泡顶端对齐 */
+}
+
+/* 我自己的消息：内容靠右，头像在最右边 */
+.bubble-stack--user {
+  align-items: flex-end;
+}
+
+.bubble-avatar--me {
+  margin-right: 0;
+  margin-left: 8px;
 }
 
 /* 予予头像：每条回复气泡左边 */

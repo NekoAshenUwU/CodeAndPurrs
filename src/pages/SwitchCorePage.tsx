@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom';
 import { getModel, MODEL_GROUPS, MODELS } from '../data/models';
 import {
   loadChatAvatar,
+  loadChatUserAvatar,
   loadChatBg,
   loadDefaultModel,
   loadInstructions,
   loadPersonas,
   loadProfile,
   saveChatAvatar,
+  saveChatUserAvatar,
   saveChatBg,
   saveDefaultModel,
   saveInstructions,
@@ -58,6 +60,8 @@ export function SwitchCorePage() {
   const [bgBusy, setBgBusy] = useState(false);
   const [avatar, setAvatar] = useState<string>(loadChatAvatar);
   const [avBusy, setAvBusy] = useState(false);
+  const [myAvatar, setMyAvatar] = useState<string>(loadChatUserAvatar);
+  const [myAvBusy, setMyAvBusy] = useState(false);
 
   const applyBg = (dataUrl: string) => {
     const root = document.documentElement;
@@ -100,6 +104,24 @@ export function SwitchCorePage() {
   const resetAvatar = () => {
     saveChatAvatar('');
     setAvatar('');
+  };
+
+  const onPickMyAvatar = async (file: File | undefined) => {
+    if (!file) return;
+    setMyAvBusy(true);
+    try {
+      const dataUrl = await compressImage(file, 256);
+      saveChatUserAvatar(dataUrl);
+      setMyAvatar(dataUrl);
+    } catch {
+      window.alert('这张头像处理失败了，换一张试试～');
+    } finally {
+      setMyAvBusy(false);
+    }
+  };
+  const resetMyAvatar = () => {
+    saveChatUserAvatar('');
+    setMyAvatar('');
   };
 
   // 自动存：改动后静悄悄写进暗格，并闪一下「已记住」
@@ -263,6 +285,36 @@ export function SwitchCorePage() {
               </label>
               {avatar ? (
                 <button type="button" className="switch-bg__btn is-ghost" onClick={resetAvatar}>
+                  恢复默认
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </section>
+
+        <section className="switch-card">
+          <h2 className="switch-card__title">我的头像</h2>
+          <p className="switch-card__hint">传一张图当你自己的头像，会显示在你发的消息气泡旁边（只存在你手机里）。</p>
+          <div className="switch-bg switch-bg--avatar">
+            <div
+              className="switch-bg__preview switch-bg__preview--avatar"
+              style={myAvatar ? { backgroundImage: `url(${myAvatar})` } : undefined}
+            >
+              {myAvatar ? null : <span>🐾</span>}
+            </div>
+            <div className="switch-bg__ops">
+              <label className={`switch-bg__btn${myAvBusy ? ' is-busy' : ''}`}>
+                {myAvBusy ? '处理中…' : myAvatar ? '换一张' : '上传头像'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  disabled={myAvBusy}
+                  onChange={(e) => onPickMyAvatar(e.target.files?.[0])}
+                />
+              </label>
+              {myAvatar ? (
+                <button type="button" className="switch-bg__btn is-ghost" onClick={resetMyAvatar}>
                   恢复默认
                 </button>
               ) : null}
