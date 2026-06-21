@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getModel, MODEL_GROUPS, MODELS } from '../data/models';
+import { loadMemories } from '../services/memory';
 import {
   loadChatAvatar,
   loadChatUserAvatar,
@@ -56,6 +57,7 @@ export function SwitchCorePage() {
   const [personas, setPersonas] = useState<Record<string, Persona>>(loadPersonas);
   const [editId, setEditId] = useState<string>(() => loadDefaultModel() || MODELS[0].id);
   const [savedFlash, setSavedFlash] = useState(false);
+  const memCount = loadMemories().length; // 记忆罐头总览数
   const [chatBg, setChatBg] = useState<string>(loadChatBg);
   const [bgBusy, setBgBusy] = useState(false);
   const [avatar, setAvatar] = useState<string>(loadChatAvatar);
@@ -165,6 +167,16 @@ export function SwitchCorePage() {
       </header>
 
       <div className="switch-body">
+        <Link to="/memory-jar" className="switch-card switch-memcard">
+          <div className="switch-memcard__icon">🫙</div>
+          <div className="switch-memcard__body">
+            <h2 className="switch-card__title">记忆罐头</h2>
+            <p className="switch-card__hint">
+              已存 {memCount} 条长期记忆。聊天时予予会自己把重要的事记进来，跨对话都记得。点这里查看 / 增删改 →
+            </p>
+          </div>
+        </Link>
+
         <section className="switch-card">
           <h2 className="switch-card__title">默认模型</h2>
           <p className="switch-card__hint">新开的聊天窗会用这个模型；进了窗口还能在顶栏单独换。</p>

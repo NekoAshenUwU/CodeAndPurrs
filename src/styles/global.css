@@ -3921,6 +3921,25 @@ a {
   border-color: transparent;
 }
 
+/* 调频页·记忆罐头总览入口卡 */
+.switch-memcard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-decoration: none;
+  background: linear-gradient(135deg, rgba(201, 167, 245, 0.22), rgba(242, 169, 196, 0.22));
+}
+.switch-memcard__icon {
+  flex-shrink: 0;
+  font-size: 2rem;
+}
+.switch-memcard__body {
+  min-width: 0;
+}
+.switch-memcard .switch-card__hint {
+  margin-bottom: 0;
+}
+
 /* 聊天里"已存进记忆罐头"的小条 */
 .memo-chip {
   align-self: flex-start;
