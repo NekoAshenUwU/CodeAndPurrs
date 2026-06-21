@@ -1424,20 +1424,6 @@ a {
     var(--chat-bg-image, url("/rooms/purr-channel.webp")) center / cover no-repeat;
 }
 
-/* 各房间顶栏整条字体 → 汉仪花仙子；记忆罐头正文 → 顺风顺水 */
-.chat-head,
-.chat-head *,
-.paw-top,
-.paw-top *,
-.loc-head,
-.loc-head * {
-  font-family: "HuaXianZi", var(--display);
-}
-.memory-scroll,
-.memory-scroll * {
-  font-family: "ShunFengFull", var(--round);
-}
-
 /* ---------- 顶栏 ---------- */
 .chat-head {
   position: sticky; /* 吸顶：聊多了往下滚，顶栏(返回/模型/清空)也一直钉在最上面 */
@@ -4158,4 +4144,24 @@ a {
 }
 @media (prefers-reduced-motion: reduce) {
   .meme-picker { animation: none; }
+}
+
+/* ===== 自定义字体的最终应用（放最后，确保不被更具体的旧规则按源序覆盖） ===== */
+/* 各房间顶栏整条 → 汉仪花仙子 */
+.chat-head,
+.chat-head *,
+.paw-top,
+.paw-top *,
+.loc-head,
+.loc-head * {
+  font-family: "HuaXianZi", var(--display);
+}
+/* 记忆罐头正文 → 顺风顺水（顶栏仍走花仙子，上面已盖） */
+.memory-scroll,
+.memory-scroll * {
+  font-family: "ShunFengFull", var(--round);
+}
+/* 首页房间名 → 花仙子（CaoKe 子集缺「忆罐头」等新字，统一用花仙子免得花字） */
+.room-tile__name {
+  font-family: "HuaXianZi", var(--cute);
 }
