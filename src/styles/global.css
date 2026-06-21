@@ -3551,9 +3551,9 @@ a {
 /* ===== 聊天:时间戳 / 消息编辑 / 语音保存 ===== */
 .bubble-time {
   display: block;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   color: #e07bb0;
-  font-weight: 600;
+  font-weight: 800;
   margin: 3px 4px 0;
 }
 .bubble-row.is-user .bubble-time { text-align: right; }
