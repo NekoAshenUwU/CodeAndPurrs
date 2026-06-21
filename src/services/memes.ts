@@ -96,8 +96,10 @@ export async function getMemeURL(id: string): Promise<string | null> {
   });
 }
 
-// 取某张贴纸的 base64 data URL —— 发给能看图的模型（GPT-4o/Gemini/Claude）用。
-export async function getMemeDataUrl(id: string): Promise<string | null> {
+// 取某张贴纸的 base64 data URL —— 发给能看图的模型（GPT-4o/Gemini/Claude/DeepSeek-v4-pro）用。
+// 关键：发给模型前先把图压到 maxDim 见方的 JPEG，体积从几百KB降到几十KB，
+// 否则多张全尺寸图叠进聊天历史会把请求体撑爆（上游报 invalid_request_error）。
+export async function getMemeDataUrl(id: string, maxDim = 768): Promise<string | null> {
   const db = await openDB();
   const blob = await new Promise<Blob | null>((resolve, reject) => {
     const req = tx(db, 'readonly').get(id);
@@ -105,6 +107,40 @@ export async function getMemeDataUrl(id: string): Promise<string | null> {
     req.onerror = () => reject(req.error ?? new Error('取不到这张贴纸'));
   });
   if (!blob) return null;
+  try {
+    return await downscaleToDataUrl(blob, maxDim);
+  } catch {
+    // 压缩失败（解码不了等）就退回原图 base64，至少能发出去
+    return blobToDataUrl(blob);
+  }
+}
+
+// 把 blob 缩到 maxDim 见方、导出 JPEG data URL（动图只取首帧，够模型看了）
+async function downscaleToDataUrl(blob: Blob, maxDim: number): Promise<string> {
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const im = new Image();
+      im.onload = () => resolve(im);
+      im.onerror = () => reject(new Error('图片解码失败'));
+      im.src = url;
+    });
+    const scale = Math.min(1, maxDim / Math.max(img.width, img.height) || 1);
+    const w = Math.max(1, Math.round(img.width * scale));
+    const h = Math.max(1, Math.round(img.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('拿不到画布');
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvas.toDataURL('image/jpeg', 0.82);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function blobToDataUrl(blob: Blob): Promise<string | null> {
   return new Promise((resolve, reject) => {
     const fr = new FileReader();
     fr.onload = () => resolve(typeof fr.result === 'string' ? fr.result : null);
