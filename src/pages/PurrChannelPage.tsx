@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { streamChat, type ChatMessage } from '../services/chat';
 import { getModel, MODEL_GROUPS } from '../data/models';
-import { buildSystemPrompt, loadDefaultModel, loadChatBg } from '../services/purrConfig';
+import { buildSystemPrompt, loadDefaultModel, loadChatBg, loadChatAvatar } from '../services/purrConfig';
 import { clearLocal, loadLocal, saveLocal } from '../services/storage';
 import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
 import { getMemeURL, getMemeDataUrl, listMemes, type MemeItem } from '../services/memes';
@@ -405,6 +405,8 @@ function ChatRoom({
   onTouch: (id: string, preview: string) => void;
   onSetProvider: (id: string, modelId: string) => void;
 }) {
+  // 予予头像（调频页上传的，显示在每条回复旁；空则用默认爪印）
+  const [botAvatar] = useState<string>(loadChatAvatar);
   // 从小暗格读出这个窗口的聊天记录；半截没说完的归位，语音 blob 刷新后失效就丢掉播放地址。
   const [turns, setTurns] = useState<Turn[]>(() =>
     loadLocal<Turn[]>(turnsKey(win.id), []).map((t) => ({
@@ -750,6 +752,11 @@ function ChatRoom({
             </div>
           ) : (
             <div key={turn.id} className="bubble-row is-bot">
+              {botAvatar ? (
+                <img className="bubble-avatar" src={botAvatar} alt="头像" />
+              ) : (
+                <span className="bubble-avatar bubble-avatar--ph" aria-hidden="true">🐾</span>
+              )}
               <div className="bubble-stack">
                 <ThinkingCard text={turn.reasoning} streaming={turn.status === 'streaming'} />
                 {turn.status === 'done' && VOICE_MARK.test(turn.content) ? (

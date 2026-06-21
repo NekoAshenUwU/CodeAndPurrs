@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getModel, MODEL_GROUPS, MODELS } from '../data/models';
 import {
+  loadChatAvatar,
   loadChatBg,
   loadDefaultModel,
   loadInstructions,
   loadPersonas,
   loadProfile,
+  saveChatAvatar,
   saveChatBg,
   saveDefaultModel,
   saveInstructions,
@@ -15,14 +17,13 @@ import {
   type Persona,
 } from '../services/purrConfig';
 
-// 把上传的图压成不太大的 dataURL（最长边 1280，jpeg 0.82），省 localStorage
-function compressImage(file: File): Promise<string> {
+// 把上传的图压成不太大的 dataURL（jpeg 0.82），省 localStorage。头像传小一点的 max。
+function compressImage(file: File, max = 1280): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
-        const max = 1280;
         const scale = Math.min(1, max / Math.max(img.width, img.height));
         const w = Math.round(img.width * scale);
         const h = Math.round(img.height * scale);
@@ -55,6 +56,8 @@ export function SwitchCorePage() {
   const [savedFlash, setSavedFlash] = useState(false);
   const [chatBg, setChatBg] = useState<string>(loadChatBg);
   const [bgBusy, setBgBusy] = useState(false);
+  const [avatar, setAvatar] = useState<string>(loadChatAvatar);
+  const [avBusy, setAvBusy] = useState(false);
 
   const applyBg = (dataUrl: string) => {
     const root = document.documentElement;
@@ -79,6 +82,24 @@ export function SwitchCorePage() {
     saveChatBg('');
     setChatBg('');
     applyBg('');
+  };
+
+  const onPickAvatar = async (file: File | undefined) => {
+    if (!file) return;
+    setAvBusy(true);
+    try {
+      const dataUrl = await compressImage(file, 256); // 头像小一点就够，省空间
+      saveChatAvatar(dataUrl);
+      setAvatar(dataUrl);
+    } catch {
+      window.alert('这张头像处理失败了，换一张试试～');
+    } finally {
+      setAvBusy(false);
+    }
+  };
+  const resetAvatar = () => {
+    saveChatAvatar('');
+    setAvatar('');
   };
 
   // 自动存：改动后静悄悄写进暗格，并闪一下「已记住」
@@ -217,6 +238,36 @@ export function SwitchCorePage() {
             maxLength={6000}
           />
           <span className="switch-count">{instructions.length}/6000</span>
+        </section>
+
+        <section className="switch-card">
+          <h2 className="switch-card__title">对方头像</h2>
+          <p className="switch-card__hint">传一张图当予予的头像，会显示在每条回复气泡旁边（只存在你手机里）。</p>
+          <div className="switch-bg switch-bg--avatar">
+            <div
+              className="switch-bg__preview switch-bg__preview--avatar"
+              style={avatar ? { backgroundImage: `url(${avatar})` } : undefined}
+            >
+              {avatar ? null : <span>🐾</span>}
+            </div>
+            <div className="switch-bg__ops">
+              <label className={`switch-bg__btn${avBusy ? ' is-busy' : ''}`}>
+                {avBusy ? '处理中…' : avatar ? '换一张' : '上传头像'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  disabled={avBusy}
+                  onChange={(e) => onPickAvatar(e.target.files?.[0])}
+                />
+              </label>
+              {avatar ? (
+                <button type="button" className="switch-bg__btn is-ghost" onClick={resetAvatar}>
+                  恢复默认
+                </button>
+              ) : null}
+            </div>
+          </div>
         </section>
 
         <section className="switch-card">

@@ -27,6 +27,11 @@ export const CHAT_BG_KEY = 'purr-channel:bg';
 export const loadChatBg = (): string => loadLocal<string>(CHAT_BG_KEY, '');
 export const saveChatBg = (v: string): void => saveLocal(CHAT_BG_KEY, v);
 
+// 对方（予予）头像，显示在每条回复气泡旁（存 dataURL；空 = 用默认爪印）
+export const CHAT_AVATAR_KEY = 'purr-channel:avatar';
+export const loadChatAvatar = (): string => loadLocal<string>(CHAT_AVATAR_KEY, '');
+export const saveChatAvatar = (v: string): void => saveLocal(CHAT_AVATAR_KEY, v);
+
 // 默认人设（兜底）
 export const loadInstructions = (): string => loadLocal<string>(INSTRUCTIONS_KEY, '');
 export const saveInstructions = (v: string): void => saveLocal(INSTRUCTIONS_KEY, v);

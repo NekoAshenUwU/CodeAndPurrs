@@ -1555,6 +1555,29 @@ a {
   justify-content: flex-end;
 }
 
+.bubble-row.is-bot {
+  align-items: flex-start; /* 头像跟气泡顶端对齐 */
+}
+
+/* 予予头像：每条回复气泡左边 */
+.bubble-avatar {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  margin-right: 8px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.65);
+  box-shadow: 0 4px 12px rgba(118, 96, 132, 0.16);
+}
+
+.bubble-avatar--ph {
+  display: grid;
+  place-items: center;
+  font-size: 1.05rem;
+}
+
 .bubble-stack {
   display: flex;
   flex-direction: column;
@@ -1566,7 +1589,7 @@ a {
   max-width: 82%;
   padding: 11px 14px;
   font-family: var(--chat);
-  font-size: 1.04rem;
+  font-size: 0.96rem;
   line-height: 1.6;
   letter-spacing: 0.01em;
   white-space: pre-wrap;
@@ -3633,6 +3656,9 @@ a {
   display: grid; place-items: center;
 }
 .switch-bg__preview span { font-size: 0.78rem; color: #9a7fc0; }
+/* 头像预览：正方形圆形 */
+.switch-bg__preview--avatar { width: 96px; height: 96px; border-radius: 999px; }
+.switch-bg__preview--avatar span { font-size: 2rem; }
 .switch-bg__ops { display: flex; flex-direction: column; gap: 10px; }
 .switch-bg__btn {
   display: inline-flex; align-items: center; justify-content: center;
