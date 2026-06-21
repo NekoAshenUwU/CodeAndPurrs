@@ -24,6 +24,16 @@ export const rooms: Room[] = [
     scene: true,
   },
   {
+    id: 'switchcore',
+    name: '调频',
+    englishName: 'SwitchCore',
+    emoji: '🎚️',
+    status: 'ready',
+    summary: '设默认模型，写「关于我 / 猫咪人设」，上传头像，新窗口聊天前自动读取。',
+    actionLabel: '去调频',
+    scene: true,
+  },
+  {
     id: 'whisperline',
     name: '耳边话',
     englishName: 'Whisperline',
@@ -101,16 +111,6 @@ export const rooms: Room[] = [
     status: 'soon',
     summary: '任务、笔记、小提醒，完成后还能联动甜甜口袋。',
     actionLabel: '写待办',
-    scene: true,
-  },
-  {
-    id: 'switchcore',
-    name: '调频',
-    englishName: 'SwitchCore',
-    emoji: '🎚️',
-    status: 'ready',
-    summary: '设默认模型，写「关于我 / 猫咪人设」，新窗口聊天前自动读取。',
-    actionLabel: '去调频',
     scene: true,
   },
   {

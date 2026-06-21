@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { streamChat, type ChatMessage } from '../services/chat';
 import { getModel, MODEL_GROUPS } from '../data/models';
@@ -252,6 +252,21 @@ function SpeakButton({ text }: { text: string }) {
 
 // 予予主动发的「语音条」：检测到 [语音] 标记的消息，点了才合成（像微信语音，省额度、刷新后也能重听）。
 const VOICE_MARK = /^\s*[[【]\s*语音\s*[\]】]\s*/;
+
+// AI 发表情包用的标记：[贴纸:名字] / 【贴纸：名字】，名字对应脑洞贴纸盒里的贴纸名。
+const STICKER_TAG = /[[【]\s*贴纸\s*[:：]\s*([^\]】]+?)\s*[\]】]/g;
+// 从回复里抠出贴纸标记：返回去掉标记后的文字 + 命中的贴纸 id 列表。
+function extractStickers(content: string, nameToId: Map<string, string>) {
+  const ids: string[] = [];
+  const text = content
+    .replace(STICKER_TAG, (_m, raw: string) => {
+      const id = nameToId.get(raw.trim());
+      if (id) ids.push(id);
+      return '';
+    })
+    .trim();
+  return { text, ids };
+}
 function CatVoiceBubble({ text }: { text: string }) {
   const [url, setUrl] = useState<string | null>(null);
   const [state, setState] = useState<'idle' | 'loading' | 'ready' | 'playing' | 'error'>('idle');
@@ -408,6 +423,16 @@ function ChatRoom({
   // 头像（调频页上传的，显示在气泡旁；空则用默认爪印）
   const [botAvatar] = useState<string>(loadChatAvatar);
   const [userAvatar] = useState<string>(loadChatUserAvatar);
+  // 脑洞贴纸盒里的表情包：AI 可以按名字发，渲染时按名字找回 id
+  const [memes, setMemes] = useState<MemeItem[]>([]);
+  useEffect(() => {
+    void listMemes().then(setMemes);
+  }, []);
+  const nameToId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const it of memes) if (it.name) m.set(it.name.trim(), it.id);
+    return m;
+  }, [memes]);
   // 从小暗格读出这个窗口的聊天记录；半截没说完的归位，语音 blob 刷新后失效就丢掉播放地址。
   const [turns, setTurns] = useState<Turn[]>(() =>
     loadLocal<Turn[]>(turnsKey(win.id), []).map((t) => ({
@@ -514,7 +539,16 @@ function ChatRoom({
   // 拼历史给模型：系统人设 + 文字消息；表情包消息取出 base64 当图片发（能看图的模型会真看见）。
   const toMessages = async (ts: Turn[]): Promise<ChatMessage[]> => {
     // 每次发送都现拼：用当前模型的专属人设 + 最新「关于我」
-    const out: ChatMessage[] = [{ role: 'system', content: buildSystemPrompt(provider) }];
+    let sys = buildSystemPrompt(provider);
+    // 告诉模型它也能发表情包：列出贴纸名字，约定 [贴纸:名字] 的发法
+    const names = memes.map((m) => m.name?.trim()).filter(Boolean);
+    if (names.length) {
+      sys +=
+        `\n\n【你也可以发表情包】你的贴纸盒里有这些表情包：${names.join('、')}。` +
+        '想发的时候，单独写一行 [贴纸:名字]（名字必须和上面列表里的完全一致），系统就会把那张图发出去给老婆。' +
+        '要应景、自然，一次最多发一张；不想发就别硬发，普通聊天还是以文字为主。';
+    }
+    const out: ChatMessage[] = [{ role: 'system', content: sys }];
     for (const t of ts) {
       if (t.meme) {
         const dataUrl = await getMemeDataUrl(t.meme);
@@ -770,13 +804,27 @@ function ChatRoom({
                 {turn.status === 'done' && VOICE_MARK.test(turn.content) ? (
                   <CatVoiceBubble text={turn.content.replace(VOICE_MARK, '').trim()} />
                 ) : (
-                  <>
-                    <div className={`bubble bubble--bot${turn.status === 'error' ? ' is-error' : ''}`}>
-                      {turn.content.replace(VOICE_MARK, '') ||
-                        (turn.status === 'streaming' ? <span className="typing-dots"><i /><i /><i /></span> : '')}
-                    </div>
-                    {turn.status === 'done' && turn.content ? <SpeakButton text={turn.content.replace(VOICE_MARK, '')} /> : null}
-                  </>
+                  (() => {
+                    const raw = turn.content.replace(VOICE_MARK, '');
+                    // 回复完成后才解析贴纸标记（流式中先原样显示）
+                    const { text, ids } =
+                      turn.status === 'done' ? extractStickers(raw, nameToId) : { text: raw, ids: [] as string[] };
+                    const showBubble = text || turn.status === 'streaming';
+                    return (
+                      <>
+                        {showBubble ? (
+                          <div className={`bubble bubble--bot${turn.status === 'error' ? ' is-error' : ''}`}>
+                            {text ||
+                              (turn.status === 'streaming' ? <span className="typing-dots"><i /><i /><i /></span> : '')}
+                          </div>
+                        ) : null}
+                        {ids.map((id, i) => (
+                          <MemeBubble key={`${id}-${i}`} memeId={id} />
+                        ))}
+                        {turn.status === 'done' && text ? <SpeakButton text={text} /> : null}
+                      </>
+                    );
+                  })()
                 )}
                 {turn.at && turn.status === 'done' ? <span className="bubble-time">{fmtStamp(turn.at)}</span> : null}
               </div>

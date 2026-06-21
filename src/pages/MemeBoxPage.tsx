@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { addMeme, getMemeURL, listMemes, removeMeme, type MemeItem } from '../services/memes';
+import { addMeme, getMemeURL, listMemes, removeMeme, renameMeme, type MemeItem } from '../services/memes';
 
 // 脑洞贴纸盒 —— 上传/收藏表情包，存这台设备的 IndexedDB。
 // 聊天时呼噜频道「＋ → 表情包」会从这里读出来发。
@@ -9,7 +9,24 @@ export function MemeBoxPage() {
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState('');
   const fileRef = useRef<HTMLInputElement | null>(null);
+
+  const startRename = (item: MemeItem) => {
+    setEditingId(item.id);
+    setDraft(item.name);
+  };
+  const commitRename = async () => {
+    const id = editingId;
+    if (!id) return;
+    const name = draft.trim();
+    setEditingId(null);
+    if (name) {
+      await renameMeme(id, name);
+      await refresh();
+    }
+  };
 
   // 拉一遍贴纸列表 + 取每张的可显示地址
   const refresh = async () => {
@@ -119,6 +136,29 @@ export function MemeBoxPage() {
                 >
                   ×
                 </button>
+                {editingId === item.id ? (
+                  <input
+                    className="meme-cell__rename"
+                    value={draft}
+                    autoFocus
+                    maxLength={20}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onBlur={() => void commitRename()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') void commitRename();
+                      if (e.key === 'Escape') setEditingId(null);
+                    }}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="meme-cell__name"
+                    onClick={() => startRename(item)}
+                    title="点一下改名字（AI 会按名字发表情）"
+                  >
+                    {item.name}
+                  </button>
+                )}
               </figure>
             ))}
           </div>

@@ -73,6 +73,27 @@ export async function addMeme(file: File): Promise<MemeItem> {
   });
 }
 
+// 给贴纸改名（AI 靠名字挑表情包发，所以名字最好起得有意义）。
+export async function renameMeme(id: string, name: string): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const store = tx(db, 'readwrite');
+    const g = store.get(id);
+    g.onsuccess = () => {
+      const rec = g.result as MemeRecord | undefined;
+      if (!rec) {
+        resolve();
+        return;
+      }
+      rec.name = name;
+      const p = store.put(rec);
+      p.onsuccess = () => resolve();
+      p.onerror = () => reject(p.error ?? new Error('改名失败'));
+    };
+    g.onerror = () => reject(g.error ?? new Error('改名失败'));
+  });
+}
+
 export async function removeMeme(id: string): Promise<void> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
