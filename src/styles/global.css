@@ -54,6 +54,18 @@
   font-display: swap;
 }
 @font-face {
+  font-family: "HuaXianZi"; /* 汉仪花仙子 子集(GB2312) · 各房间顶栏 */
+  src: url("/fonts/huaxianzi.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "ShunFengFull"; /* Aa顺风顺水顺财神 子集(GB2312) · 记忆罐头正文 */
+  src: url("/fonts/shunfeng-full.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
   font-family: "ShanHai"; /* 山海潮玩星球 子集 · 首页中文标语 */
   src: url("/fonts/shanhai-vow.woff2") format("woff2");
   font-weight: 900;
@@ -1410,6 +1422,20 @@ a {
       rgba(255, 245, 206, 0.62) 100%
     ),
     var(--chat-bg-image, url("/rooms/purr-channel.webp")) center / cover no-repeat;
+}
+
+/* 各房间顶栏整条字体 → 汉仪花仙子；记忆罐头正文 → 顺风顺水 */
+.chat-head,
+.chat-head *,
+.paw-top,
+.paw-top *,
+.loc-head,
+.loc-head * {
+  font-family: "HuaXianZi", var(--display);
+}
+.memory-scroll,
+.memory-scroll * {
+  font-family: "ShunFengFull", var(--round);
 }
 
 /* ---------- 顶栏 ---------- */
