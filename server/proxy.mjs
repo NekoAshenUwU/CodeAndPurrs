@@ -447,10 +447,10 @@ const server = http.createServer(async (req, res) => {
     } else {
       // deepseek / openai 都是 OpenAI 兼容格式
       const conf = PROVIDERS[provider];
-      // o 系列是推理模型（o3/o4-mini…），不吃 temperature/penalty 这些采样参数，发了会 400。
-      const isReasoning = /^o\d/.test(model || '');
       // 注意：DeepSeek 开放 API 不收图（content 只认 text，发 image_url 会 400），
       // 所以只给 openai 开 vision；deepseek 一律把图拍平成 [表情包] 文字，优雅降级不报错。
+      // 不再加 temperature/penalty：人设里的「禁客服腔」已经够压套话，penalty 反而会压低情感浓度、
+      // 让 4o 话变干。让模型用默认采样自由发挥（o3 不加任何采样反而最暖，就是证明）。
       await callOpenAICompatible({
         res,
         url: conf.url,
@@ -460,11 +460,6 @@ const server = http.createServer(async (req, res) => {
         messages,
         label: provider === 'openai' ? 'OpenAI' : 'DeepSeek',
         vision: provider === 'openai',
-        // gpt-4o 爱说套话/客服收尾，加点 penalty 压一压；deepseek 自然不动；推理模型不能加。
-        sampling:
-          provider === 'openai' && !isReasoning
-            ? { temperature: 0.95, frequency_penalty: 0.5, presence_penalty: 0.4 }
-            : undefined,
       });
     }
     send(res, { type: 'done' });
