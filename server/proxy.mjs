@@ -272,8 +272,8 @@ async function speak(text) {
       text,
       model_id: ELEVEN.model(),
       voice_settings: {
-        stability: 0.5,
-        similarity_boost: 0.75,
+        stability: Number(process.env.ELEVENLABS_STABILITY) || 0.35, // 越低越有情绪起伏（别太高否则平淡）
+        similarity_boost: Number(process.env.ELEVENLABS_SIMILARITY) || 0.85,
         speed: Number(process.env.ELEVENLABS_SPEED) || 1.12, // 说话语速，1.0 正常、>1 更快（别像催眠曲）
       },
     }),

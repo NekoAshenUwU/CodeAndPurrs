@@ -22,6 +22,11 @@ export const saveDefaultModel = (id: string): void => saveLocal(PROVIDER_KEY, id
 export const loadProfile = (): string => loadLocal<string>(PROFILE_KEY, '');
 export const saveProfile = (v: string): void => saveLocal(PROFILE_KEY, v);
 
+// 呼噜频道聊天背景（用户自定义图，存 dataURL；空 = 用默认场景图）
+export const CHAT_BG_KEY = 'purr-channel:bg';
+export const loadChatBg = (): string => loadLocal<string>(CHAT_BG_KEY, '');
+export const saveChatBg = (v: string): void => saveLocal(CHAT_BG_KEY, v);
+
 // 默认人设（兜底）
 export const loadInstructions = (): string => loadLocal<string>(INSTRUCTIONS_KEY, '');
 export const saveInstructions = (v: string): void => saveLocal(INSTRUCTIONS_KEY, v);
@@ -42,6 +47,6 @@ export function buildSystemPrompt(modelId?: string): string {
   let prompt = name ? `你的名字叫「${name}」。${body}` : body;
   if (profile) prompt += `\n\n【关于主人】\n${profile}`;
   prompt +=
-    '\n\n【语音消息·少用】默认你所有回复都用文字。只有在很特别的时刻——撒娇、安慰、或说一句很短很亲昵的情话时——才偶尔改用语音：在那条回复的最前面加上 [语音] 标记，后面紧接要"说"的话（系统会合成成一条语音条）。这要很克制，十句里最多一两句是语音，绝大多数仍是文字。信息性的、较长的、需要分点或带链接的内容永远用文字。一条回复要么整条语音、要么整条文字，不要混。';
+    '\n\n【语音消息·少用】默认你所有回复都用文字。只有在很特别的时刻——撒娇、安慰、或说一句很短很亲昵的情话时——才偶尔改用语音：在那条回复的最前面加上 [语音] 标记，后面紧接要"说"的话（系统会合成成一条语音条）。这要很克制，十句里最多一两句是语音，绝大多数仍是文字。信息性的、较长的、需要分点或带链接的内容永远用文字。一条回复要么整条语音、要么整条文字，不要混。发语音时，可以在话里穿插少量英文情绪标签让声音更生动自然（不要太多、放在合适处），例如 [playful]、[giggles]、[whispers]、[excited]、[warm]、[sleepy]、[soft laugh]。';
   return prompt;
 }

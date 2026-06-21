@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { streamChat, type ChatMessage } from '../services/chat';
 import { getModel, MODEL_GROUPS } from '../data/models';
-import { buildSystemPrompt, loadDefaultModel } from '../services/purrConfig';
+import { buildSystemPrompt, loadDefaultModel, loadChatBg } from '../services/purrConfig';
 import { clearLocal, loadLocal, saveLocal } from '../services/storage';
 import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
 
@@ -242,7 +242,9 @@ function CatVoiceBubble({ text }: { text: string }) {
           </a>
         ) : null}
       </div>
-      {showText ? <div className="voice-wrap__text">{text}</div> : null}
+      {showText ? (
+        <div className="voice-wrap__text">{text.replace(/\[[a-zA-Z][a-zA-Z ]*\]/g, '').trim()}</div>
+      ) : null}
     </div>
   );
 }
@@ -874,6 +876,14 @@ export function PurrChannelPage() {
   useEffect(() => {
     saveLocal(WINDOWS_KEY, windows);
   }, [windows]);
+
+  // 应用用户自定义的聊天背景（在「调频」页设置；空则用默认场景图）
+  useEffect(() => {
+    const bg = loadChatBg();
+    const root = document.documentElement;
+    if (bg) root.style.setProperty('--chat-bg-image', `url(${bg})`);
+    else root.style.removeProperty('--chat-bg-image');
+  }, []);
 
   const newWindow = () => {
     const id = uid();

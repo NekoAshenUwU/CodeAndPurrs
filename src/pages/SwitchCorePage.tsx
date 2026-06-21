@@ -2,16 +2,48 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getModel, MODEL_GROUPS, MODELS } from '../data/models';
 import {
+  loadChatBg,
   loadDefaultModel,
   loadInstructions,
   loadPersonas,
   loadProfile,
+  saveChatBg,
   saveDefaultModel,
   saveInstructions,
   savePersonas,
   saveProfile,
   type Persona,
 } from '../services/purrConfig';
+
+// 把上传的图压成不太大的 dataURL（最长边 1280，jpeg 0.82），省 localStorage
+function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 1280;
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('no canvas'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = reject;
+      img.src = String(reader.result);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 // 调频 SwitchCore：设默认模型 + 关于我 + 默认人设 + 每个模型各自的名字/人设。
 export function SwitchCorePage() {
@@ -21,6 +53,33 @@ export function SwitchCorePage() {
   const [personas, setPersonas] = useState<Record<string, Persona>>(loadPersonas);
   const [editId, setEditId] = useState<string>(() => loadDefaultModel() || MODELS[0].id);
   const [savedFlash, setSavedFlash] = useState(false);
+  const [chatBg, setChatBg] = useState<string>(loadChatBg);
+  const [bgBusy, setBgBusy] = useState(false);
+
+  const applyBg = (dataUrl: string) => {
+    const root = document.documentElement;
+    if (dataUrl) root.style.setProperty('--chat-bg-image', `url(${dataUrl})`);
+    else root.style.removeProperty('--chat-bg-image');
+  };
+  const onPickBg = async (file: File | undefined) => {
+    if (!file) return;
+    setBgBusy(true);
+    try {
+      const dataUrl = await compressImage(file);
+      saveChatBg(dataUrl);
+      setChatBg(dataUrl);
+      applyBg(dataUrl);
+    } catch {
+      window.alert('这张图处理失败了，换一张试试～');
+    } finally {
+      setBgBusy(false);
+    }
+  };
+  const resetBg = () => {
+    saveChatBg('');
+    setChatBg('');
+    applyBg('');
+  };
 
   // 自动存：改动后静悄悄写进暗格，并闪一下「已记住」
   useEffect(() => {
@@ -158,6 +217,36 @@ export function SwitchCorePage() {
             maxLength={6000}
           />
           <span className="switch-count">{instructions.length}/6000</span>
+        </section>
+
+        <section className="switch-card">
+          <h2 className="switch-card__title">聊天背景</h2>
+          <p className="switch-card__hint">换成你喜欢的图，呼噜频道就用它当背景（只存在你手机里，随时换/还原）。</p>
+          <div className="switch-bg">
+            <div
+              className="switch-bg__preview"
+              style={chatBg ? { backgroundImage: `url(${chatBg})` } : undefined}
+            >
+              {chatBg ? null : <span>默认场景</span>}
+            </div>
+            <div className="switch-bg__ops">
+              <label className={`switch-bg__btn${bgBusy ? ' is-busy' : ''}`}>
+                {bgBusy ? '处理中…' : chatBg ? '换一张' : '上传图片'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  disabled={bgBusy}
+                  onChange={(e) => onPickBg(e.target.files?.[0])}
+                />
+              </label>
+              {chatBg ? (
+                <button type="button" className="switch-bg__btn is-ghost" onClick={resetBg}>
+                  恢复默认
+                </button>
+              ) : null}
+            </div>
+          </div>
         </section>
 
         <p className="switch-foot">写完直接返回去聊就行，新消息会自动带上这些设定 🐾</p>
