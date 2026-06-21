@@ -1414,6 +1414,10 @@ a {
 
 /* ---------- 顶栏 ---------- */
 .chat-head {
+  position: sticky; /* 吸顶：聊多了往下滚，顶栏(返回/模型/清空)也一直钉在最上面 */
+  top: 0;
+  z-index: 30;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 12px;
