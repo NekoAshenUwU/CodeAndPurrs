@@ -94,9 +94,9 @@ export function SwitchCorePage() {
             onChange={(e) => setProfile(e.target.value)}
             placeholder="例：叫我喵喵就好；做前端的，常熬夜；喜欢被夸、怕被催…"
             rows={5}
-            maxLength={1000}
+            maxLength={6000}
           />
-          <span className="switch-count">{profile.length}/1000</span>
+          <span className="switch-count">{profile.length}/6000</span>
         </section>
 
         <section className="switch-card">
@@ -140,10 +140,10 @@ export function SwitchCorePage() {
               onChange={(e) => patchPersona({ persona: e.target.value })}
               placeholder="例：高冷毒舌但暗暗关心；说话简短带点傲娇；偶尔蹦英文…（留空就用默认人设）"
               rows={5}
-              maxLength={1000}
+              maxLength={6000}
             />
           </label>
-          <span className="switch-count">{editPersona.persona.length}/1000</span>
+          <span className="switch-count">{editPersona.persona.length}/6000</span>
         </section>
 
         <section className="switch-card">
@@ -155,9 +155,9 @@ export function SwitchCorePage() {
             onChange={(e) => setInstructions(e.target.value)}
             placeholder="例：多撒娇、用「喵」收尾；我难过时先安慰别讲道理；偶尔主动关心我有没有吃饭…"
             rows={5}
-            maxLength={1000}
+            maxLength={6000}
           />
-          <span className="switch-count">{instructions.length}/1000</span>
+          <span className="switch-count">{instructions.length}/6000</span>
         </section>
 
         <p className="switch-foot">写完直接返回去聊就行，新消息会自动带上这些设定 🐾</p>
