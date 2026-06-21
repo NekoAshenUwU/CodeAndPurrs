@@ -38,7 +38,7 @@ export const rooms: Room[] = [
     name: '脑洞贴纸盒',
     englishName: 'Meme Box',
     emoji: '✨',
-    status: 'soon',
+    status: 'ready',
     summary: '放表情包、贴纸和那些奇奇怪怪但超可爱的脑洞。',
     actionLabel: '打开盒子',
     scene: true,

@@ -5,6 +5,7 @@ import { getModel, MODEL_GROUPS } from '../data/models';
 import { buildSystemPrompt, loadDefaultModel, loadChatBg } from '../services/purrConfig';
 import { clearLocal, loadLocal, saveLocal } from '../services/storage';
 import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
+import { getMemeURL, listMemes, type MemeItem } from '../services/memes';
 
 const WINDOWS_KEY = 'purr-channel:windows';
 const LEGACY_TURNS_KEY = 'purr-channel:turns'; // 旧版单一对话，首次进入迁移成一个窗口
@@ -30,6 +31,7 @@ type Turn = {
   status: 'streaming' | 'done' | 'error';
   voice?: Voice; // 用户语音消息才有；content 存转写出来的文字
   transcribing?: boolean;
+  meme?: string; // 表情包消息才有：脑洞贴纸盒里的 meme id，渲染时按需取 blob
   at?: number; // 消息创建时间戳
 };
 
@@ -122,6 +124,85 @@ function VoiceBubble({ voice, transcript, transcribing }: { voice: Voice; transc
       </button>
       {showText && !transcribing ? <div className="voice-wrap__text">{transcript || '（没听清）'}</div> : null}
     </div>
+  );
+}
+
+// 聊天里发出去的表情包气泡：只存 meme id，渲染时从脑洞贴纸盒按需取图。
+// 贴纸被删了就显示占位（刷新后依旧能认出这条是表情）。
+function MemeBubble({ memeId }: { memeId: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [gone, setGone] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    void getMemeURL(memeId).then((u) => {
+      if (!alive) return;
+      if (u) setUrl(u);
+      else setGone(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [memeId]);
+
+  if (gone) return <div className="meme-msg meme-msg--gone">这张贴纸被拿走了～</div>;
+  if (!url) return <div className="meme-msg meme-msg--loading" />;
+  return <img className="meme-msg" src={url} alt="表情包" />;
+}
+
+// 「＋ → 表情包」弹出的选择器：列出脑洞贴纸盒里的收藏，点一张就发。
+function MemePicker({ onPick, onClose }: { onPick: (id: string) => void; onClose: () => void }) {
+  const [items, setItems] = useState<MemeItem[]>([]);
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const metas = await listMemes();
+      const pairs = await Promise.all(metas.map(async (m) => [m.id, await getMemeURL(m.id)] as const));
+      if (!alive) return;
+      const map: Record<string, string> = {};
+      for (const [id, u] of pairs) if (u) map[id] = u;
+      setItems(metas);
+      setUrls(map);
+      setLoading(false);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  return (
+    <>
+      <button type="button" className="chat-more__scrim" aria-label="关闭表情包" onClick={onClose} />
+      <div className="meme-picker" role="menu">
+        {loading ? (
+          <div className="meme-picker__hint">打开盒子中…</div>
+        ) : items.length === 0 ? (
+          <div className="meme-picker__hint">
+            盒子还空空的～
+            <Link to="/meme-box" className="meme-picker__link">
+              去脑洞贴纸盒存几张
+            </Link>
+          </div>
+        ) : (
+          <div className="meme-picker__grid">
+            {items.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                className="meme-picker__cell"
+                onClick={() => onPick(m.id)}
+                title={m.name}
+              >
+                {urls[m.id] ? <img src={urls[m.id]} alt={m.name} loading="lazy" /> : <span>·</span>}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -345,6 +426,7 @@ function ChatRoom({
   const [sending, setSending] = useState(false);
   const [recording, setRecording] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [memeOpen, setMemeOpen] = useState(false);
   const [editTurnId, setEditTurnId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [notice, setNotice] = useState('');
@@ -373,10 +455,24 @@ function ChatRoom({
     return () => window.clearTimeout(t);
   }, [notice]);
 
-  // 「+」菜单：图片 / 红包 / 表情包（后端待接，先给温柔占位）
-  const pickMore = (label: string) => {
+  // 「+」菜单：表情包已通脑洞贴纸盒；图片/红包还在装修，先给温柔占位
+  const pickMore = (key: string, label: string) => {
     setMoreOpen(false);
+    if (key === 'meme') {
+      setMemeOpen(true);
+      return;
+    }
     setNotice(`「${label}」马上就来啦，先占个位～`);
+  };
+
+  // 从贴纸盒选了一张：作为一条用户消息发出去（纯贴纸，不走模型回复）
+  const sendMeme = (memeId: string) => {
+    setMemeOpen(false);
+    if (sending) return;
+    setTurns((prev) => [
+      ...prev,
+      { id: uid(), role: 'user', content: '', reasoning: '', status: 'done', meme: memeId, at: Date.now() },
+    ]);
   };
 
   const clearHistory = () => {
@@ -608,7 +704,9 @@ function ChatRoom({
         {turns.map((turn) =>
           turn.role === 'user' ? (
             <div key={turn.id} className="bubble-row is-user">
-              {turn.voice ? (
+              {turn.meme ? (
+                <MemeBubble memeId={turn.meme} />
+              ) : turn.voice ? (
                 <VoiceBubble voice={turn.voice} transcript={turn.content} transcribing={!!turn.transcribing} />
               ) : editTurnId === turn.id ? (
                 <div className="bubble-edit">
@@ -679,13 +777,14 @@ function ChatRoom({
               />
               <div className="chat-more" role="menu">
                 {MORE_ITEMS.map((it) => (
-                  <button key={it.key} type="button" role="menuitem" onClick={() => pickMore(it.label)}>
+                  <button key={it.key} type="button" role="menuitem" onClick={() => pickMore(it.key, it.label)}>
                     {it.label}
                   </button>
                 ))}
               </div>
             </>
           ) : null}
+          {memeOpen ? <MemePicker onPick={sendMeme} onClose={() => setMemeOpen(false)} /> : null}
         </div>
 
         <textarea

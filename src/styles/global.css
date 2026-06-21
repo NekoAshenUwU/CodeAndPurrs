@@ -3641,3 +3641,175 @@ a {
 .switch-bg__btn.is-ghost {
   background: rgba(155,123,200,0.16); color: #6b4a86; box-shadow: none;
 }
+
+/* ============================================================
+   脑洞贴纸盒 · Meme Box（收藏表情包，存这台设备）
+   ============================================================ */
+.meme-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  background:
+    linear-gradient(170deg, rgba(248, 224, 240, 0.72) 0%, rgba(238, 228, 252, 0.72) 55%, rgba(255, 244, 214, 0.7) 100%),
+    var(--chat-bg-image, url("/rooms/meme-box.webp")) center / cover no-repeat;
+}
+.meme-add-btn {
+  flex-shrink: 0;
+  padding: 9px 15px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffd2ec, #c9a7f5);
+  color: #fff;
+  font-family: var(--round);
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 16px -7px rgba(201, 167, 245, 0.9), inset 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+.meme-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 16px calc(20px + env(safe-area-inset-bottom));
+}
+.meme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 12px;
+}
+.meme-cell {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1 / 1;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7), 0 8px 18px -10px rgba(123, 90, 166, 0.5);
+}
+.meme-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.meme-cell__broken {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: #9a7fc0;
+  font-size: 0.76rem;
+}
+.meme-cell__del {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(74, 59, 107, 0.66);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.meme-empty-cta {
+  margin-top: 14px;
+  padding: 10px 22px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffd2ec, #c9a7f5);
+  color: #fff;
+  font-family: var(--round);
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 16px -7px rgba(201, 167, 245, 0.9);
+}
+.meme-toast { bottom: auto; top: 76px; }
+
+/* 聊天里的表情包气泡 */
+.meme-msg {
+  max-width: 168px;
+  max-height: 168px;
+  border-radius: 16px;
+  display: block;
+  object-fit: contain;
+  box-shadow: 0 8px 18px -10px rgba(123, 90, 166, 0.55);
+}
+.meme-msg--loading {
+  width: 120px;
+  height: 120px;
+  background: rgba(255, 255, 255, 0.5);
+}
+.meme-msg--gone {
+  padding: 10px 14px;
+  width: auto;
+  height: auto;
+  color: #9a7fc0;
+  font-size: 0.82rem;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+/* 「＋ → 表情包」选择器（浮在输入框上方） */
+.meme-picker {
+  position: absolute;
+  bottom: 56px;
+  left: 0;
+  z-index: 20;
+  width: min(80vw, 300px);
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 14px 32px rgba(118, 96, 160, 0.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  animation: chatMorePop 0.16s ease;
+}
+.meme-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 8px;
+}
+.meme-picker__cell {
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(201, 184, 241, 0.18);
+  cursor: pointer;
+}
+.meme-picker__cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.meme-picker__hint {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  padding: 18px 10px;
+  color: #7a5f9e;
+  font-size: 0.85rem;
+  text-align: center;
+}
+.meme-picker__link {
+  color: #b06a8a;
+  font-weight: 600;
+  text-decoration: underline;
+}
+@media (prefers-reduced-motion: reduce) {
+  .meme-picker { animation: none; }
+}

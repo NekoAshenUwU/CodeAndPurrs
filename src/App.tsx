@@ -4,6 +4,7 @@ import { PurrChannelPage } from './pages/PurrChannelPage';
 import { PawTrailPage } from './pages/PawTrailPage';
 import { LocationPage } from './pages/LocationPage';
 import { SwitchCorePage } from './pages/SwitchCorePage';
+import { MemeBoxPage } from './pages/MemeBoxPage';
 
 export function App() {
   return (
@@ -13,6 +14,7 @@ export function App() {
       <Route path="/paw-trail" element={<PawTrailPage />} />
       <Route path="/lang-na-le" element={<LocationPage />} />
       <Route path="/switchcore" element={<SwitchCorePage />} />
+      <Route path="/meme-box" element={<MemeBoxPage />} />
       <Route path="*" element={<HomePage />} />
     </Routes>
   );

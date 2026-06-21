@@ -46,6 +46,10 @@ export function HomePage() {
       navigate('/switchcore');
       return;
     }
+    if (room.id === 'meme-box') {
+      navigate('/meme-box');
+      return;
+    }
     setSelectedRoom(room);
   };
 
