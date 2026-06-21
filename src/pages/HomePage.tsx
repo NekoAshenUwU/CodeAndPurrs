@@ -50,6 +50,10 @@ export function HomePage() {
       navigate('/meme-box');
       return;
     }
+    if (room.id === 'memory-jar') {
+      navigate('/memory-jar');
+      return;
+    }
     setSelectedRoom(room);
   };
 

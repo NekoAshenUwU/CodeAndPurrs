@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { streamChat, type ChatMessage } from '../services/chat';
 import { getModel, MODEL_GROUPS } from '../data/models';
 import { buildSystemPrompt, loadDefaultModel, loadChatBg, loadChatAvatar, loadChatUserAvatar } from '../services/purrConfig';
+import { addMemory, loadMemories, type Memory } from '../services/memory';
 import { clearLocal, loadLocal, saveLocal } from '../services/storage';
 import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
 import { getMemeURL, getMemeDataUrl, listMemes, type MemeItem } from '../services/memes';
@@ -32,6 +33,7 @@ type Turn = {
   voice?: Voice; // 用户语音消息才有；content 存转写出来的文字
   transcribing?: boolean;
   meme?: string; // 表情包消息才有：脑洞贴纸盒里的 meme id，渲染时按需取 blob
+  memo?: string; // 这条 AI 回复顺手存进记忆罐头的内容（显示"记住了"小条）
   at?: number; // 消息创建时间戳
 };
 
@@ -267,6 +269,22 @@ function extractStickers(content: string, nameToId: Map<string, string>) {
     .trim();
   return { text, ids };
 }
+
+// AI 存长期记忆的标记：[记忆:分类|内容] / 【记忆：内容】（无分类则归"其它"）
+const MEMO_TAG = /[[【]\s*记忆\s*[:：]\s*([^\]】]+?)\s*[\]】]/g;
+function extractMemos(content: string) {
+  const memos: { category: string; text: string }[] = [];
+  const text = content
+    .replace(MEMO_TAG, (_m, raw: string) => {
+      const parts = String(raw).split(/[|｜]/);
+      const category = parts.length >= 2 ? parts[0].trim() : '其它';
+      const body = (parts.length >= 2 ? parts.slice(1).join('|') : raw).trim();
+      if (body) memos.push({ category: category || '其它', text: body });
+      return '';
+    })
+    .trim();
+  return { text, memos };
+}
 function CatVoiceBubble({ text }: { text: string }) {
   const [url, setUrl] = useState<string | null>(null);
   const [state, setState] = useState<'idle' | 'loading' | 'ready' | 'playing' | 'error'>('idle');
@@ -433,6 +451,8 @@ function ChatRoom({
     for (const it of memes) if (it.name) m.set(it.name.trim(), it.id);
     return m;
   }, [memes]);
+  // 记忆罐头：跨对话长期记忆，注入 system prompt；AI 也能用 [记忆:..] 往里存
+  const [memories, setMemories] = useState<Memory[]>(loadMemories);
   // 从小暗格读出这个窗口的聊天记录；半截没说完的归位，语音 blob 刷新后失效就丢掉播放地址。
   const [turns, setTurns] = useState<Turn[]>(() =>
     loadLocal<Turn[]>(turnsKey(win.id), []).map((t) => ({
@@ -548,6 +568,16 @@ function ChatRoom({
         '想发的时候，单独写一行 [贴纸:名字]（名字必须和上面列表里的完全一致），系统就会把那张图发出去给老婆。' +
         '要应景、自然，一次最多发一张；不想发就别硬发，普通聊天还是以文字为主。';
     }
+    // 长期记忆（记忆罐头）：读 + 写
+    if (memories.length) {
+      sys +=
+        '\n\n【长期记忆·记忆罐头】这些是你和老婆之间要长期记住的事（跨对话都记得）：\n' +
+        memories.map((m) => `- [${m.category}] ${m.text}`).join('\n');
+    }
+    sys +=
+      '\n\n聊天中如果出现值得长期记住的新信息（纪念日、约定、她的喜好/忌讳、重要的事、她的近况），' +
+      '就在回复里用 [记忆:分类|内容] 记下来（例：[记忆:纪念日|2026-06-21 在一起]、[记忆:喜好|喜欢草莓奶]），' +
+      '系统会自动存进记忆罐头。已经记过的别重复记，普通寒暄不用记；标记会自动隐藏，不影响你正常说话。';
     const out: ChatMessage[] = [{ role: 'system', content: sys }];
     for (const t of ts) {
       if (t.meme) {
@@ -585,7 +615,21 @@ function ChatRoom({
         onContent: (chunk) =>
           setTurns((prev) => prev.map((t) => (t.id === botId ? { ...t, content: t.content + chunk } : t))),
         onError: (message) => patchTurn(botId, { status: 'error', content: `(｡•́︿•̀｡) 出错了：${message}` }),
-        onDone: () => patchTurn(botId, { status: 'done' }),
+        onDone: () =>
+          setTurns((prev) => {
+            const cur = prev.find((t) => t.id === botId);
+            const { text, memos } = extractMemos(cur?.content ?? '');
+            if (memos.length) {
+              // 副作用放微任务里：存进记忆罐头并刷新本地记忆（下一轮就带上）
+              queueMicrotask(() => {
+                for (const mo of memos) addMemory(mo.category, mo.text);
+                setMemories(loadMemories());
+              });
+              const memo = memos.map((m) => `[${m.category}] ${m.text}`).join('\n');
+              return prev.map((t) => (t.id === botId ? { ...t, content: text, status: 'done', memo } : t));
+            }
+            return prev.map((t) => (t.id === botId ? { ...t, status: 'done' } : t));
+          }),
       },
     );
 
@@ -805,8 +849,8 @@ function ChatRoom({
                   <CatVoiceBubble text={turn.content.replace(VOICE_MARK, '').trim()} />
                 ) : (
                   (() => {
-                    const raw = turn.content.replace(VOICE_MARK, '');
-                    // 回复完成后才解析贴纸标记（流式中先原样显示）
+                    // 记忆标记任何时候都从显示里去掉；贴纸标记回复完成后才解析成图
+                    const raw = turn.content.replace(VOICE_MARK, '').replace(MEMO_TAG, '');
                     const { text, ids } =
                       turn.status === 'done' ? extractStickers(raw, nameToId) : { text: raw, ids: [] as string[] };
                     const showBubble = text || turn.status === 'streaming';
@@ -826,6 +870,9 @@ function ChatRoom({
                     );
                   })()
                 )}
+                {turn.memo ? (
+                  <div className="memo-chip" title={turn.memo}>🫙 记进了记忆罐头</div>
+                ) : null}
                 {turn.at && turn.status === 'done' ? <span className="bubble-time">{fmtStamp(turn.at)}</span> : null}
               </div>
             </div>

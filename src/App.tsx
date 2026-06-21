@@ -5,6 +5,7 @@ import { PawTrailPage } from './pages/PawTrailPage';
 import { LocationPage } from './pages/LocationPage';
 import { SwitchCorePage } from './pages/SwitchCorePage';
 import { MemeBoxPage } from './pages/MemeBoxPage';
+import { MemoryJarPage } from './pages/MemoryJarPage';
 
 export function App() {
   return (
@@ -15,6 +16,7 @@ export function App() {
       <Route path="/lang-na-le" element={<LocationPage />} />
       <Route path="/switchcore" element={<SwitchCorePage />} />
       <Route path="/meme-box" element={<MemeBoxPage />} />
+      <Route path="/memory-jar" element={<MemoryJarPage />} />
       <Route path="*" element={<HomePage />} />
     </Routes>
   );

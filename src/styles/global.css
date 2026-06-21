@@ -3727,6 +3727,212 @@ a {
     linear-gradient(170deg, rgba(248, 224, 240, 0.72) 0%, rgba(238, 228, 252, 0.72) 55%, rgba(255, 244, 214, 0.7) 100%),
     var(--chat-bg-image, url("/rooms/meme-box.webp")) center / cover no-repeat;
 }
+/* ---------- 记忆罐头 Memory Jar ---------- */
+.memory-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  background:
+    linear-gradient(170deg, rgba(244, 234, 253, 0.82) 0%, rgba(253, 234, 244, 0.8) 55%, rgba(255, 244, 220, 0.78) 100%),
+    radial-gradient(130% 90% at 50% 0%, #fdeaf4 0%, #efe2fb 50%, #e7ecfd 100%) fixed;
+}
+.memory-count {
+  flex-shrink: 0;
+  font-family: var(--round);
+  font-size: 0.8rem;
+  color: #8c79ac;
+}
+.memory-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px calc(28px + env(safe-area-inset-bottom));
+}
+.memory-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7), 0 6px 16px -10px rgba(123, 90, 166, 0.5);
+}
+.memory-add__cat {
+  flex: 0 0 auto;
+  width: 150px;
+  padding: 8px 12px;
+  border: 1px solid rgba(155, 123, 200, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  font-family: var(--round);
+  font-size: 0.85rem;
+  color: #5d4a7e;
+}
+.memory-add__text {
+  flex: 1 1 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(155, 123, 200, 0.25);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.85);
+  font-family: var(--round);
+  font-size: 0.92rem;
+  color: #5d4a7e;
+  resize: vertical;
+}
+.memory-add__btn {
+  margin-left: auto;
+  padding: 9px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #c9a7f5, #f2a9c4);
+  color: #fff;
+  font-family: var(--round);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.memory-add__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.memory-search {
+  margin-top: 14px;
+}
+.memory-search input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid rgba(155, 123, 200, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  font-family: var(--round);
+  font-size: 0.9rem;
+  color: #5d4a7e;
+}
+.memory-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.memory-cats button {
+  padding: 5px 14px;
+  border: 1px solid rgba(155, 123, 200, 0.3);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  color: #8c79ac;
+  font-family: var(--round);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.memory-cats button.is-on {
+  background: linear-gradient(135deg, #c9a7f5, #f2a9c4);
+  color: #fff;
+  border-color: transparent;
+}
+.memory-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.memory-card {
+  position: relative;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fff5fb 0%, #f4eafd 100%);
+  box-shadow: 0 3px 12px rgba(200, 170, 220, 0.2);
+}
+.memory-card__cat {
+  display: inline-block;
+  margin-bottom: 5px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(201, 167, 245, 0.25);
+  color: #7b5aa6;
+  font-family: var(--round);
+  font-size: 0.72rem;
+}
+.memory-card__text {
+  margin: 0;
+  padding-right: 56px;
+  color: #5d4a7e;
+  font-family: var(--round);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.memory-card__actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 4px;
+}
+.memory-card__actions button {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.memory-card__edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.memory-card__edit input,
+.memory-card__edit textarea {
+  padding: 8px 12px;
+  border: 1px solid rgba(155, 123, 200, 0.3);
+  border-radius: 12px;
+  background: #fff;
+  font-family: var(--round);
+  font-size: 0.9rem;
+  color: #5d4a7e;
+  resize: vertical;
+}
+.memory-card__ops {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.memory-card__ops button {
+  padding: 6px 16px;
+  border: 1px solid rgba(155, 123, 200, 0.3);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  color: #8c79ac;
+  font-family: var(--round);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.memory-card__ops button.is-primary {
+  background: linear-gradient(135deg, #c9a7f5, #f2a9c4);
+  color: #fff;
+  border-color: transparent;
+}
+
+/* 聊天里"已存进记忆罐头"的小条 */
+.memo-chip {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(201, 167, 245, 0.22);
+  color: #8c79ac;
+  font-family: var(--round);
+  font-size: 0.72rem;
+}
+
 .meme-add-btn {
   flex-shrink: 0;
   padding: 9px 15px;
