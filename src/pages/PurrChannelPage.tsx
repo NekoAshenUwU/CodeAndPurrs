@@ -481,6 +481,8 @@ function ChatRoom({
   const abortRef = useRef<AbortController | null>(null);
   const recorderRef = useRef<VoiceRecorder | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const proactiveOpenedRef = useRef(false); // 本次进窗口的"主动开口"只触发一次
+  const idleNudgesRef = useRef(0); // 本轮挂机已主动冒泡几次（防刷屏）
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -517,6 +519,7 @@ function ChatRoom({
   const sendMeme = async (memeId: string) => {
     setMemeOpen(false);
     if (sending) return;
+    idleNudgesRef.current = 0;
     const memeTurn: Turn = { id: uid(), role: 'user', content: '', reasoning: '', status: 'done', meme: memeId, at: Date.now() };
     const history = await toMessages([...turns, memeTurn]);
     setTurns((prev) => [...prev, memeTurn]);
@@ -637,9 +640,52 @@ function ChatRoom({
     abortRef.current = null;
   };
 
+  // 主动唤醒：不等用户说话，让猫咪先开口。指令以隐藏 user 消息塞进上下文，不存进 turns。
+  const runProactive = async (reason: string) => {
+    if (sending) return;
+    const history = await toMessages(turns);
+    history.push({
+      role: 'user',
+      content:
+        `（这是系统给你的悄悄话，老婆看不到这条，也别提起它）${reason}` +
+        '现在请你主动、自然地先开口找她——像真的惦记她、想她那样，关心她或起个温柔的小话题。' +
+        '一两句就好，别太长，别像在执行任务。',
+    });
+    await runAssistant(history);
+  };
+
+  // 触发一：进窗口就先开口（空窗口，或距上次聊天超过 3 小时才触发，避免每次都打扰）
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (proactiveOpenedRef.current) return; // 一次进窗口只开口一次（也防 StrictMode 双跑）
+      const last = turns[turns.length - 1];
+      const stale = turns.length === 0 || Date.now() - (last?.at ?? 0) > 3 * 3600 * 1000;
+      if (!stale || sending) return;
+      proactiveOpenedRef.current = true;
+      void runProactive(turns.length === 0 ? '你和老婆刚进入对话。' : '你和老婆已经有一阵子没聊了。');
+    }, 900);
+    return () => clearTimeout(t);
+    // 只在进窗口时跑一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 触发二：挂着没动 4 分钟，猫咪主动冒个泡（每轮最多一次，用户再开口后重置）
+  useEffect(() => {
+    if (sending) return;
+    const id = setTimeout(() => {
+      if (idleNudgesRef.current >= 1) return;
+      if (turns.length === 0) return; // 空窗口交给"进窗口开口"
+      idleNudgesRef.current += 1;
+      void runProactive('老婆有几分钟没说话了。');
+    }, 4 * 60 * 1000);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turns, sending]);
+
   const send = async () => {
     const text = input.trim();
     if (!text || sending) return;
+    idleNudgesRef.current = 0; // 用户开口了，重置挂机计数
     const userTurn: Turn = { id: uid(), role: 'user', content: text, reasoning: '', status: 'done', at: Date.now() };
     const history = await toMessages([...turns, userTurn]);
     setTurns((prev) => [...prev, userTurn]);
