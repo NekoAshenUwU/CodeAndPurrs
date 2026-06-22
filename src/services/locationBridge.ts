@@ -46,3 +46,26 @@ export async function fetchLocationLatest(owner = 'neko'): Promise<LocationLates
     return null;
   }
 }
+
+// 把坐标尽量反查成人话地名（给猫咪聊「浪哪了」用）。失败就回 null，调用方自己回退坐标。
+export async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=16&accept-language=zh&lat=${lat}&lon=${lng}`,
+      { headers: { Accept: 'application/json' } },
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+    const a = json?.address ?? {};
+    // 挑几段最像「在哪」的：城市/区 + 街道/地点，太长的全名就不要了
+    const parts = [
+      a.city || a.town || a.county || a.state,
+      a.suburb || a.district || a.neighbourhood,
+      a.road || a.amenity || a.building,
+    ].filter(Boolean);
+    const short = Array.from(new Set(parts)).join(' · ');
+    return short || (json?.display_name as string) || null;
+  } catch {
+    return null;
+  }
+}

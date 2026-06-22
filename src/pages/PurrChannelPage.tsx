@@ -7,6 +7,9 @@ import { addMemory, loadMemories, type Memory } from '../services/memory';
 import { clearLocal, loadLocal, saveLocal } from '../services/storage';
 import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
 import { getMemeURL, getMemeDataUrl, listMemes, type MemeItem } from '../services/memes';
+import { fetchLatestUsage } from '../services/usageBridge';
+import { fetchLocationLatest, reverseGeocode } from '../services/locationBridge';
+import { getTimeOfDay } from '../components/ambient/timeOfDay';
 
 const WINDOWS_KEY = 'purr-channel:windows';
 const LEGACY_TURNS_KEY = 'purr-channel:turns'; // 旧版单一对话，首次进入迁移成一个窗口
@@ -285,6 +288,60 @@ function extractMemos(content: string) {
     .trim();
   return { text, memos };
 }
+
+// 此刻时间，给猫咪一个「现在几点、今天星期几、什么时段」的概念（每次发送都现算）。
+function buildTimeContext(): string {
+  const now = new Date();
+  const tod = { dawn: '清晨', day: '白天', dusk: '傍晚', night: '深夜' }[getTimeOfDay()];
+  const stamp = now.toLocaleString('zh-CN', {
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+  return `\n\n【此刻】现在是 ${stamp}（${tod}）。你能感知真实时间，回应里该应景就应景（早问安、晚催睡），但别每句都报时刻。`;
+}
+
+const fmtDur = (ms: number) => {
+  const m = Math.round(ms / 60000);
+  return m >= 60 ? `${Math.floor(m / 60)} 小时 ${m % 60} 分` : `${m} 分钟`;
+};
+
+// 猫爪足迹（手机使用）+ 浪哪了（位置）拼成一段背景，让猫咪能主动聊老婆的近况。
+// 拉不到就返回空串（demo 数据也不硬塞，免得猫咪当真）。
+async function buildLiveContext(): Promise<string> {
+  let ctx = '';
+  try {
+    const u = await fetchLatestUsage('neko');
+    if (u.source === 'live' && u.data) {
+      const d = u.data;
+      const top = [...(d.apps ?? [])]
+        .sort((a, b) => b.foregroundMs - a.foregroundMs)
+        .slice(0, 4)
+        .map((a) => `${a.label}（${fmtDur(a.foregroundMs)}）`)
+        .join('、');
+      ctx +=
+        `\n\n【猫爪足迹·她今天的手机】${d.date} 共用了 ${fmtDur(d.summary.totalForegroundMs)}，解锁 ${d.summary.unlocks} 次` +
+        (top ? `；用得最多：${top}。` : '。') +
+        '你可以温柔地关心（用太久就提醒她歇眼睛/早点睡），别说教、别像监控。';
+    }
+  } catch {
+    /* 拉不到就算了 */
+  }
+  try {
+    const loc = await fetchLocationLatest('neko');
+    if (loc?.latest) {
+      const { lat, lng, at } = loc.latest;
+      const place = await reverseGeocode(lat, lng);
+      const ago = Math.round((Date.now() - new Date(at).getTime()) / 60000);
+      const when = ago <= 1 ? '刚刚' : ago < 60 ? `${ago} 分钟前` : `${Math.floor(ago / 60)} 小时前`;
+      ctx +=
+        `\n\n【浪哪了·她分享的位置】${when}她在「${place ?? `${lat.toFixed(3)},${lng.toFixed(3)}`}」附近。` +
+        '这是她自愿分享给你的，可以自然地提一句（在外面注意安全、回家路上小心），别追问、别让她有被盯着的感觉。';
+    }
+  } catch {
+    /* 拉不到就算了 */
+  }
+  return ctx;
+}
+
 function CatVoiceBubble({ text }: { text: string }) {
   const [url, setUrl] = useState<string | null>(null);
   const [state, setState] = useState<'idle' | 'loading' | 'ready' | 'playing' | 'error'>('idle');
@@ -478,6 +535,7 @@ function ChatRoom({
   const [editTurnId, setEditTurnId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [notice, setNotice] = useState('');
+  const [liveCtx, setLiveCtx] = useState(''); // 猫爪足迹+浪哪了的实时背景，进窗口拉一次、之后每5分钟刷
   const abortRef = useRef<AbortController | null>(null);
   const recorderRef = useRef<VoiceRecorder | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -581,6 +639,9 @@ function ChatRoom({
       '\n\n聊天中如果出现值得长期记住的新信息（纪念日、约定、她的喜好/忌讳、重要的事、她的近况），' +
       '就在回复里用 [记忆:分类|内容] 记下来（例：[记忆:纪念日|2026-06-21 在一起]、[记忆:喜好|喜欢草莓奶]），' +
       '系统会自动存进记忆罐头。已经记过的别重复记，普通寒暄不用记；标记会自动隐藏，不影响你正常说话。';
+    // 此刻时间（每次现算）+ 猫爪足迹/浪哪了的实时背景（进窗口拉好缓存在 liveCtx）
+    sys += buildTimeContext();
+    if (liveCtx) sys += liveCtx;
     const out: ChatMessage[] = [{ role: 'system', content: sys }];
     for (const t of ts) {
       if (t.meme) {
@@ -653,6 +714,18 @@ function ChatRoom({
     });
     await runAssistant(history);
   };
+
+  // 进窗口拉一次猫爪足迹/浪哪了，之后每 5 分钟刷一次，给猫咪当聊天背景
+  useEffect(() => {
+    let alive = true;
+    const refresh = () => void buildLiveContext().then((c) => alive && setLiveCtx(c));
+    refresh();
+    const id = window.setInterval(refresh, 5 * 60 * 1000);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+    };
+  }, []);
 
   // 触发一：进窗口就先开口（空窗口，或距上次聊天超过 3 小时才触发，避免每次都打扰）
   useEffect(() => {
