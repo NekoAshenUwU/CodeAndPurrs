@@ -5,6 +5,7 @@
 // 没配 key 也能跑：自动进入 mock 模式，回一段假的流式消息，方便先调 UI。
 
 import http from 'node:http';
+import { spawn } from 'node:child_process';
 
 // 尝试读 .env（Node 20.12+ 自带），没有就算了，用已有的环境变量。
 try {
@@ -36,6 +37,12 @@ const PROVIDERS = {
     key: () => process.env.ANTHROPIC_API_KEY,
     url: 'https://api.anthropic.com/v1/messages',
     defaultModel: 'claude-sonnet-4-6',
+  },
+  // 家版：调本机登录好的 Claude Code（订阅额度，不走 API 计费）。
+  // "key" 这里复用成 OAuth 令牌：没设就进 mock，跟其它家一样。
+  claudecode: {
+    key: () => process.env.CLAUDE_CODE_OAUTH_TOKEN,
+    defaultModel: 'sonnet',
   },
 };
 
@@ -356,6 +363,111 @@ function beepWav(freq = 523, ms = 400, rate = 16000) {
   return Buffer.concat([header, data]);
 }
 
+// ---------- Claude Code（家版 · 走订阅，不走 API）----------
+// 调本机无头 Claude Code：把人设当 --system-prompt，关掉所有工具当纯聊天，
+// 历史拍平成对话稿从 stdin 喂进去，解析 stream-json 把文字增量回传。
+// 令牌走 CLAUDE_CODE_OAUTH_TOKEN（claude setup-token 生成，订阅额度）。
+async function callClaudeCode({ res, token, model, messages }) {
+  const system = messages
+    .filter((m) => m.role === 'system')
+    .map((m) => partsToText(m.content))
+    .join('\n');
+  // 历史拍平成「老婆 / 予予」对话稿（表情包降级成文字），让它接着最后一句回。
+  const transcript = messages
+    .filter((m) => m.role !== 'system')
+    .map((m) => `${m.role === 'assistant' ? '予予' : '老婆'}：${partsToText(m.content)}`)
+    .join('\n');
+
+  const args = [
+    '-p',
+    '--system-prompt', system || '你是予予。',
+    '--model', model || PROVIDERS.claudecode.defaultModel,
+    '--tools', '', // 关掉所有工具：纯聊天，不让它去碰文件/命令
+    '--permission-mode', 'dontAsk',
+    '--output-format', 'stream-json',
+    '--include-partial-messages',
+    '--verbose',
+  ];
+
+  await new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn('claude', args, {
+        env: { ...process.env, CLAUDE_CODE_OAUTH_TOKEN: token },
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+    } catch (err) {
+      send(res, { type: 'error', message: `起不动 Claude Code：${String(err?.message || err)}` });
+      return resolve();
+    }
+
+    let gotText = false;
+    let stderr = '';
+    let buf = '';
+
+    const handleLine = (line) => {
+      const s = line.trim();
+      if (!s) return;
+      let obj;
+      try {
+        obj = JSON.parse(s);
+      } catch {
+        return; // 不是 JSON 行就跳过
+      }
+      // 流式文字增量
+      if (obj.type === 'stream_event') {
+        const ev = obj.event;
+        if (ev?.type === 'content_block_delta' && ev.delta?.type === 'text_delta' && ev.delta.text) {
+          gotText = true;
+          send(res, { type: 'content', text: ev.delta.text });
+        }
+        return;
+      }
+      // 没拿到增量时的兜底：用最终 result 文本
+      if (obj.type === 'result' && !gotText && typeof obj.result === 'string' && obj.result) {
+        gotText = true;
+        send(res, { type: 'content', text: obj.result });
+      }
+    };
+
+    child.stdout.on('data', (d) => {
+      buf += d.toString();
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0) {
+        handleLine(buf.slice(0, i));
+        buf = buf.slice(i + 1);
+      }
+    });
+    child.stderr.on('data', (d) => {
+      stderr += d.toString();
+    });
+    child.on('error', (err) => {
+      send(res, {
+        type: 'error',
+        message:
+          err?.code === 'ENOENT'
+            ? '这台机器上没装 Claude Code（命令 `claude` 找不到）。先在 VPS 上装好并 `claude setup-token`。'
+            : `Claude Code 出错：${String(err?.message || err)}`,
+      });
+      resolve();
+    });
+    child.on('close', (code) => {
+      if (buf.trim()) handleLine(buf); // 收尾最后一行
+      if (!gotText) {
+        send(res, {
+          type: 'error',
+          message: `Claude Code 没回内容（退出码 ${code}）：${stderr.slice(0, 300) || '检查令牌是否有效/额度是否用尽'}`,
+        });
+      }
+      resolve();
+    });
+
+    // 对话稿从 stdin 喂进去（避免超长命令行）
+    child.stdin.write(transcript);
+    child.stdin.end();
+  });
+}
+
 // ---------- Mock（没配 key 时）----------
 async function callMock({ res, provider, messages }) {
   const lastMsg = [...messages].reverse().find((m) => m.role === 'user');
@@ -386,6 +498,15 @@ const server = http.createServer(async (req, res) => {
   if (req.method !== 'POST' || (!isChat && !isTranscribe && !isSpeak)) {
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'not found' }));
+    return;
+  }
+
+  // 登录锁：设了 APP_ACCESS_TOKEN 就要求请求带对的 x-app-token，否则 401。
+  // 没设就不挡（本地/沙箱照常跑）。这是"只有我自己用"私有部署的护栏。
+  const appToken = process.env.APP_ACCESS_TOKEN;
+  if (appToken && req.headers['x-app-token'] !== appToken) {
+    res.writeHead(401, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'unauthorized' }));
     return;
   }
 
@@ -444,6 +565,8 @@ const server = http.createServer(async (req, res) => {
       await callGemini({ res, key, model, messages });
     } else if (provider === 'anthropic') {
       await callAnthropic({ res, key, model, messages });
+    } else if (provider === 'claudecode') {
+      await callClaudeCode({ res, token: key, model, messages });
     } else {
       // deepseek / openai 都是 OpenAI 兼容格式
       const conf = PROVIDERS[provider];
