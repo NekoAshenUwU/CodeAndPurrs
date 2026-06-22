@@ -25,8 +25,9 @@ export const MODELS: ModelInfo[] = [
   { id: 'claude-opus-4-6', brand: 'Claude', label: 'Opus 4.6', provider: 'anthropic', model: 'claude-opus-4-6' },
   { id: 'claude-opus-4-8', brand: 'Claude', label: 'Opus 4.8', provider: 'anthropic', model: 'claude-opus-4-8' },
   // 家版：走你 VPS 上登录好的 Claude Code（订阅额度，不按 API 计费）。
-  { id: 'jiake-sonnet', brand: 'Claude', label: '家克·Sonnet（CC）', provider: 'claudecode', model: 'sonnet' },
-  { id: 'jiake-opus', brand: 'Claude', label: '家克·Opus（CC）', provider: 'claudecode', model: 'opus' },
+  { id: 'jiake-opus-4-6', brand: 'Claude', label: '家克·Opus 4.6（CC）', provider: 'claudecode', model: 'claude-opus-4-6' },
+  { id: 'jiake-opus-4-7', brand: 'Claude', label: '家克·Opus 4.7（CC）', provider: 'claudecode', model: 'claude-opus-4-7' },
+  { id: 'jiake-opus-4-8', brand: 'Claude', label: '家克·Opus 4.8（CC）', provider: 'claudecode', model: 'claude-opus-4-8' },
 ];
 
 export const BRAND_ORDER: ModelBrand[] = ['DeepSeek', 'Gemini', 'GPT', 'Claude'];
