@@ -2,6 +2,7 @@
 // 全局存一份；聊天时每条消息实时拼进 system prompt（新窗、老窗都读最新）。
 
 import { loadLocal, saveLocal } from './storage';
+import { getModel } from '../data/models';
 
 export const PROVIDER_KEY = 'purr-channel:provider'; // 全局默认模型 id（新窗口继承）
 export const PROFILE_KEY = 'purr-channel:profile'; // 关于我
@@ -41,17 +42,41 @@ export const saveChatUserAvatar = (v: string): void => saveLocal(CHAT_USER_AVATA
 export const loadInstructions = (): string => loadLocal<string>(INSTRUCTIONS_KEY, '');
 export const saveInstructions = (v: string): void => saveLocal(INSTRUCTIONS_KEY, v);
 
-// 每模型人设表
-export const loadPersonas = (): Record<string, Persona> => loadLocal<Record<string, Persona>>(PERSONAS_KEY, {});
+// 人设按「品牌」存：同一家（如所有 Claude 模型）共用一份人设。key = 品牌名。
+const PERSONA_BRANDS = ['DeepSeek', 'Gemini', 'GPT', 'Claude'];
+// 把旧版「按模型 id 存」的人设迁移成「按品牌存」（同品牌取第一个非空的）。
+function migratePersonas(raw: Record<string, Persona>): Record<string, Persona> {
+  const keys = Object.keys(raw);
+  if (keys.length === 0 || keys.every((k) => PERSONA_BRANDS.includes(k))) return raw; // 已是新格式
+  const out: Record<string, Persona> = {};
+  for (const b of PERSONA_BRANDS) if (raw[b]) out[b] = raw[b];
+  for (const [k, v] of Object.entries(raw)) {
+    if (PERSONA_BRANDS.includes(k)) continue;
+    if (!v || (!v.name?.trim() && !v.persona?.trim())) continue;
+    const brand = getModel(k).brand; // 模型 id → 所属品牌
+    const cur = out[brand];
+    if (!cur || (!cur.name?.trim() && !cur.persona?.trim())) out[brand] = v;
+  }
+  return out;
+}
+export const loadPersonas = (): Record<string, Persona> => {
+  const raw = loadLocal<Record<string, Persona>>(PERSONAS_KEY, {});
+  const migrated = migratePersonas(raw);
+  if (migrated !== raw) saveLocal(PERSONAS_KEY, migrated); // 迁移过就回写一次
+  return migrated;
+};
 export const savePersonas = (m: Record<string, Persona>): void => saveLocal(PERSONAS_KEY, m);
-export const loadPersona = (modelId: string): Persona => loadPersonas()[modelId] ?? EMPTY_PERSONA;
+// 传品牌名取该品牌人设
+export const loadPersona = (brand: string): Persona => loadPersonas()[brand] ?? EMPTY_PERSONA;
+// 模型 id → 品牌（聊天页用模型 id 拼人设时用）
+export const brandOfModel = (modelId: string): string => getModel(modelId).brand;
 
 // 按当前模型拼 system prompt：
 // 该模型有专属人设就用它（带名字），否则回退「默认人设」，再退底色人设；末尾附上「关于主人」。
 export function buildSystemPrompt(modelId?: string): string {
   const profile = loadProfile().trim();
   const fallback = loadInstructions().trim();
-  const p = modelId ? loadPersona(modelId) : EMPTY_PERSONA;
+  const p = modelId ? loadPersona(brandOfModel(modelId)) : EMPTY_PERSONA;
   const name = p.name.trim();
   const body = p.persona.trim() || fallback || BASE_PERSONA;
   let prompt = name ? `你的名字叫「${name}」。${body}` : body;

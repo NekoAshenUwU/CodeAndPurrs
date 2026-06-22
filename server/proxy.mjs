@@ -192,10 +192,12 @@ async function callAnthropic({ res, key, model, messages }) {
     },
     body: JSON.stringify({
       model: model || PROVIDERS.anthropic.defaultModel,
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: system || undefined,
       messages: msgs,
       stream: true,
+      // 让 Claude 自适应思考，并回传可读的思考摘要（前端思考链可点开看 + 计时）
+      thinking: { type: 'adaptive', display: 'summarized' },
     }),
   });
 
@@ -206,9 +208,10 @@ async function callAnthropic({ res, key, model, messages }) {
   }
 
   await pumpSSE(upstream.body, (chunk) => {
-    if (chunk?.type === 'content_block_delta' && chunk.delta?.text) {
-      send(res, { type: 'content', text: chunk.delta.text });
-    }
+    if (chunk?.type !== 'content_block_delta') return;
+    const d = chunk.delta;
+    if (d?.type === 'thinking_delta' && d.thinking) send(res, { type: 'reasoning', text: d.thinking });
+    else if (d?.text) send(res, { type: 'content', text: d.text });
   });
 }
 
@@ -414,12 +417,16 @@ async function callClaudeCode({ res, token, model, messages }) {
       } catch {
         return; // 不是 JSON 行就跳过
       }
-      // 流式文字增量
+      // 流式文字增量 / 思考链增量
       if (obj.type === 'stream_event') {
         const ev = obj.event;
-        if (ev?.type === 'content_block_delta' && ev.delta?.type === 'text_delta' && ev.delta.text) {
-          gotText = true;
-          send(res, { type: 'content', text: ev.delta.text });
+        if (ev?.type === 'content_block_delta') {
+          if (ev.delta?.type === 'text_delta' && ev.delta.text) {
+            gotText = true;
+            send(res, { type: 'content', text: ev.delta.text });
+          } else if (ev.delta?.type === 'thinking_delta' && ev.delta.thinking) {
+            send(res, { type: 'reasoning', text: ev.delta.thinking });
+          }
         }
         return;
       }

@@ -38,6 +38,7 @@ type Turn = {
   meme?: string; // 表情包消息才有：脑洞贴纸盒里的 meme id，渲染时按需取 blob
   memo?: string; // 这条 AI 回复顺手存进记忆罐头的内容（显示"记住了"小条）
   at?: number; // 消息创建时间戳
+  thinkMs?: number; // 思考链耗时（从第一段思考到开始正式回复），用来显示「想了 N 秒」
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -50,7 +51,7 @@ const fmtStamp = (at?: number): string => {
 };
 
 // 思考链折叠卡片：流式思考时自动展开，思考结束自动收起。
-function ThinkingCard({ text, streaming }: { text: string; streaming: boolean }) {
+function ThinkingCard({ text, streaming, ms }: { text: string; streaming: boolean; ms?: number }) {
   const [open, setOpen] = useState(true);
   const wasStreaming = useRef(streaming);
 
@@ -61,11 +62,13 @@ function ThinkingCard({ text, streaming }: { text: string; streaming: boolean })
 
   if (!text) return null;
 
+  const label = streaming ? '正在想…' : ms ? `想了 ${Math.max(1, Math.round(ms / 1000))} 秒` : '想了想';
+
   return (
     <div className={`think-card${open ? ' is-open' : ''}`}>
       <button type="button" className="think-card__toggle" onClick={() => setOpen((v) => !v)}>
         <span className="think-card__spark">{streaming ? '🌀' : '💭'}</span>
-        <span>{streaming ? '正在想…' : '想了想'}</span>
+        <span>{label}</span>
         <span className="think-card__chevron" aria-hidden="true">
           {open ? '▾' : '▸'}
         </span>
@@ -686,15 +689,28 @@ function ChatRoom({
     abortRef.current = controller;
 
     const m = getModel(provider); // 模型 id → 后端服务商 + 具体模型名
+    let thinkStart = 0; // 第一段思考的时刻
+    let thinkSet = false;
+    const markThinkDone = () => {
+      if (thinkStart && !thinkSet) {
+        thinkSet = true;
+        patchTurn(botId, { thinkMs: Date.now() - thinkStart });
+      }
+    };
     await streamChat(
       { provider: m.provider, model: m.model, messages: history, signal: controller.signal },
       {
-        onReasoning: (chunk) =>
-          setTurns((prev) => prev.map((t) => (t.id === botId ? { ...t, reasoning: t.reasoning + chunk } : t))),
-        onContent: (chunk) =>
-          setTurns((prev) => prev.map((t) => (t.id === botId ? { ...t, content: t.content + chunk } : t))),
+        onReasoning: (chunk) => {
+          if (!thinkStart) thinkStart = Date.now();
+          setTurns((prev) => prev.map((t) => (t.id === botId ? { ...t, reasoning: t.reasoning + chunk } : t)));
+        },
+        onContent: (chunk) => {
+          markThinkDone(); // 开始正式回复 = 思考结束，定格耗时
+          setTurns((prev) => prev.map((t) => (t.id === botId ? { ...t, content: t.content + chunk } : t)));
+        },
         onError: (message) => patchTurn(botId, { status: 'error', content: `(｡•́︿•̀｡) 出错了：${message}` }),
-        onDone: () =>
+        onDone: () => {
+          markThinkDone();
           setTurns((prev) => {
             const cur = prev.find((t) => t.id === botId);
             const { text, memos } = extractMemos(cur?.content ?? '');
@@ -708,7 +724,8 @@ function ChatRoom({
               return prev.map((t) => (t.id === botId ? { ...t, content: text, status: 'done', memo } : t));
             }
             return prev.map((t) => (t.id === botId ? { ...t, status: 'done' } : t));
-          }),
+          });
+        },
       },
     );
 
@@ -742,15 +759,16 @@ function ChatRoom({
     };
   }, []);
 
-  // 触发一：进窗口就先开口（空窗口，或距上次聊天超过 3 小时才触发，避免每次都打扰）
+  // 触发一：久别重逢才先开口——只有"已有聊天记录且距上次>3小时"才主动招呼。
+  // 全新空窗口绝不自动开口（避免还没选模型就自己 text）。
   useEffect(() => {
     const t = setTimeout(() => {
       if (proactiveOpenedRef.current) return; // 一次进窗口只开口一次（也防 StrictMode 双跑）
       const last = turns[turns.length - 1];
-      const stale = turns.length === 0 || Date.now() - (last?.at ?? 0) > 3 * 3600 * 1000;
+      const stale = turns.length > 0 && Date.now() - (last?.at ?? 0) > 3 * 3600 * 1000;
       if (!stale || sending) return;
       proactiveOpenedRef.current = true;
-      void runProactive(turns.length === 0 ? '你和老婆刚进入对话。' : '你和老婆已经有一阵子没聊了。');
+      void runProactive('你和老婆已经有一阵子没聊了。');
     }, 900);
     return () => clearTimeout(t);
     // 只在进窗口时跑一次
@@ -978,7 +996,7 @@ function ChatRoom({
                 <span className="bubble-avatar bubble-avatar--ph" aria-hidden="true">🐾</span>
               )}
               <div className="bubble-stack">
-                <ThinkingCard text={turn.reasoning} streaming={turn.status === 'streaming'} />
+                <ThinkingCard text={turn.reasoning} streaming={turn.status === 'streaming'} ms={turn.thinkMs} />
                 {turn.status === 'done' && VOICE_MARK.test(turn.content) ? (
                   <CatVoiceBubble text={turn.content.replace(VOICE_MARK, '').trim()} />
                 ) : (

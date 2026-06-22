@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getModel, MODEL_GROUPS, MODELS } from '../data/models';
+import { BRAND_ORDER, MODEL_GROUPS } from '../data/models';
 import { loadMemories } from '../services/memory';
 import {
+  brandOfModel,
   loadChatAvatar,
   loadChatUserAvatar,
   loadChatBg,
@@ -55,7 +56,8 @@ export function SwitchCorePage() {
   const [profile, setProfile] = useState<string>(loadProfile);
   const [instructions, setInstructions] = useState<string>(loadInstructions);
   const [personas, setPersonas] = useState<Record<string, Persona>>(loadPersonas);
-  const [editId, setEditId] = useState<string>(() => loadDefaultModel() || MODELS[0].id);
+  // 人设按「品牌」编辑：同一家共用一份。默认选默认模型所属的品牌。
+  const [editBrand, setEditBrand] = useState<string>(() => brandOfModel(loadDefaultModel()));
   const [savedFlash, setSavedFlash] = useState(false);
   const memCount = loadMemories().length; // 记忆罐头总览数
   const [chatBg, setChatBg] = useState<string>(loadChatBg);
@@ -147,9 +149,9 @@ export function SwitchCorePage() {
     return () => window.clearTimeout(t);
   }, [savedFlash]);
 
-  const editPersona: Persona = personas[editId] ?? { name: '', persona: '' };
+  const editPersona: Persona = personas[editBrand] ?? { name: '', persona: '' };
   const patchPersona = (patch: Partial<Persona>) =>
-    setPersonas((prev) => ({ ...prev, [editId]: { ...{ name: '', persona: '' }, ...prev[editId], ...patch } }));
+    setPersonas((prev) => ({ ...prev, [editBrand]: { ...{ name: '', persona: '' }, ...prev[editBrand], ...patch } }));
 
   return (
     <main className="switch-page">
@@ -214,21 +216,21 @@ export function SwitchCorePage() {
         </section>
 
         <section className="switch-card">
-          <h2 className="switch-card__title">每个模型的人设</h2>
+          <h2 className="switch-card__title">每家模型的人设</h2>
           <p className="switch-card__hint">
-            给每个模型起名字、定性格——切到哪个模型，猫咪就用哪份人设。没单独设的，用下面的「默认人设」。
+            按「家」设：同一家的所有模型（比如所有 Claude、所有 GPT）共用一份人设。没单独设的，用下面的「默认人设」。
           </p>
           <div className="switch-models switch-models--edit">
-            {MODELS.map((m) => {
-              const has = !!(personas[m.id]?.name?.trim() || personas[m.id]?.persona?.trim());
+            {BRAND_ORDER.map((brand) => {
+              const has = !!(personas[brand]?.name?.trim() || personas[brand]?.persona?.trim());
               return (
                 <button
-                  key={m.id}
+                  key={brand}
                   type="button"
-                  className={`model-pill switch-edit-pill${m.id === editId ? ' is-on' : ''}`}
-                  onClick={() => setEditId(m.id)}
+                  className={`model-pill switch-edit-pill${brand === editBrand ? ' is-on' : ''}`}
+                  onClick={() => setEditBrand(brand)}
                 >
-                  {m.label}
+                  {brand}
                   {has ? <span className="switch-edit-pill__dot" aria-label="已设人设" /> : null}
                 </button>
               );
@@ -236,7 +238,7 @@ export function SwitchCorePage() {
           </div>
 
           <label className="switch-field">
-            <span className="switch-field__label">「{getModel(editId).label}」的名字</span>
+            <span className="switch-field__label">「{editBrand}」的名字</span>
             <input
               className="switch-input"
               value={editPersona.name}
@@ -247,7 +249,7 @@ export function SwitchCorePage() {
           </label>
 
           <label className="switch-field">
-            <span className="switch-field__label">「{getModel(editId).label}」的性格人设</span>
+            <span className="switch-field__label">「{editBrand}」的性格人设</span>
             <textarea
               className="switch-textarea"
               value={editPersona.persona}
