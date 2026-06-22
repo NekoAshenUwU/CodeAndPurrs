@@ -1025,7 +1025,7 @@ function WindowList({
             <span>点右上角 ＋ 开一个新窗口，开始跟猫咪聊天吧～</span>
           </div>
         ) : (
-          windows.map((w) => (
+          [...windows].sort((a, b) => b.updatedAt - a.updatedAt).map((w) => (
             <div key={w.id} className="win-card">
               {editingId === w.id ? (
                 <input
