@@ -320,6 +320,7 @@ async function buildLiveContext(): Promise<string> {
       ctx +=
         `\n\n【猫爪足迹·她今天的手机】${d.date} 共用了 ${fmtDur(d.summary.totalForegroundMs)}，解锁 ${d.summary.unlocks} 次` +
         (top ? `；用得最多：${top}。` : '。') +
+        '（这些是系统估算的大概数字，可能不准也不全，别当成铁证去质问或下结论。）' +
         '你可以温柔地关心（用太久就提醒她歇眼睛/早点睡），别说教、别像监控。';
     }
   } catch {
@@ -329,12 +330,22 @@ async function buildLiveContext(): Promise<string> {
     const loc = await fetchLocationLatest('neko');
     if (loc?.latest) {
       const { lat, lng, at } = loc.latest;
-      const place = await reverseGeocode(lat, lng);
       const ago = Math.round((Date.now() - new Date(at).getTime()) / 60000);
-      const when = ago <= 1 ? '刚刚' : ago < 60 ? `${ago} 分钟前` : `${Math.floor(ago / 60)} 小时前`;
-      ctx +=
-        `\n\n【浪哪了·她分享的位置】${when}她在「${place ?? `${lat.toFixed(3)},${lng.toFixed(3)}`}」附近。` +
-        '这是她自愿分享给你的，可以自然地提一句（在外面注意安全、回家路上小心），别追问、别让她有被盯着的感觉。';
+      // 超过一天的旧定位点对「她现在在哪」毫无意义，还容易让猫咪脑补，直接不给
+      if (ago <= 24 * 60) {
+        const place = await reverseGeocode(lat, lng);
+        const when = ago <= 1 ? '刚刚' : ago < 60 ? `${ago} 分钟前` : `${Math.floor(ago / 60)} 小时前`;
+        const placeStr = place ?? `${lat.toFixed(3)},${lng.toFixed(3)}`;
+        const old = ago >= 90; // 超过一个半小时就别当成"此刻位置"了
+        ctx +=
+          `\n\n【浪哪了·她分享过的一个定位点】${when}她的定位在「${placeStr}」附近。` +
+          (old
+            ? `注意：这已经是 ${when}的旧点了，她现在多半早就不在那儿——别当成她此刻的位置。`
+            : '') +
+          '这只是她自愿分享的一个坐标，不代表她常住哪、要去哪、刚去过哪。' +
+          '严禁据此推断她的身份/国籍/是不是本地人/在不在旅行，更别编「你已经离开/搬家了/是游客/回去了」这类剧本——你没有这些信息。' +
+          '想关心就轻轻带一句（在外注意安全就好），拿不准就别提；这点信息可有可无，宁可不说也别猜。';
+      }
     }
   } catch {
     /* 拉不到就算了 */
