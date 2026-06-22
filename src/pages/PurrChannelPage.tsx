@@ -296,7 +296,11 @@ function buildTimeContext(): string {
   const stamp = now.toLocaleString('zh-CN', {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour: '2-digit', minute: '2-digit', hour12: false,
   });
-  return `\n\n【此刻】现在是 ${stamp}（${tod}）。你能感知真实时间，回应里该应景就应景（早问安、晚催睡），但别每句都报时刻。`;
+  return (
+    `\n\n【此刻·系统实时提供】现在是 ${stamp}（${tod}）。这是系统每条消息实时塞给你的真实时间，` +
+    '千真万确——她问几点/今天几号/星期几，就照这个答；**绝对不许说自己「看不到时间」「感知不到时间」，也不许自己另编一个时间**。' +
+    '平时该应景就应景（早问安、晚催睡），但别每句都报时刻。'
+  );
 }
 
 const fmtDur = (ms: number) => {
