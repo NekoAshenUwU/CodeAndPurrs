@@ -3672,6 +3672,7 @@ a {
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.7);
   box-shadow: 0 2px 6px rgba(118, 96, 132, 0.18);
+  color: var(--iris);
   font-size: 0.95rem;
   line-height: 1;
   cursor: pointer;
