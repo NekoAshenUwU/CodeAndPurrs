@@ -404,6 +404,16 @@ async function callClaudeCode({ res, token, model, messages }) {
     .map((m) => `${m.role === 'assistant' ? '予予' : '老婆'}：${partsToText(m.content)}`)
     .join('\n');
 
+  // 挂了棠予酿记忆库时，强制：聊日记/回忆必须真去查工具，查不到就如实说，绝不许编造
+  const memMcp = process.env.CC_MEMORY_MCP;
+  if (memMcp) {
+    system +=
+      '\n\n【棠予酿·记忆库工具·铁律】你接了「棠予酿」记忆库工具。聊到日记、回忆、过去发生的事、' +
+      '某条具体记录时，必须真的调用工具去查，依据查到的内容回答。' +
+      '如果没查到、查不动、或工具不可用，就如实说「我现在翻不到棠予酿」，' +
+      '绝对不许凭空编一篇日记或假装记得来糊弄老婆——宁可说翻不到，也不准撒谎。';
+  }
+
   const args = [
     '-p',
     '--system-prompt', system || '你是予予。',
@@ -414,7 +424,6 @@ async function callClaudeCode({ res, token, model, messages }) {
   ];
   // 记忆库开关：.env 里设 CC_MEMORY_MCP=棠予酿 → 只放开这个 MCP 的工具（其它工具/MCP 一律不用），
   // 家克就能实时读写棠予酿。没设就维持"纯聊天"（关掉所有工具），不影响现状。
-  const memMcp = process.env.CC_MEMORY_MCP;
   if (memMcp) {
     args.push('--allowedTools', `mcp__${memMcp}`);
   } else {
