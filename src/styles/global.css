@@ -3643,17 +3643,25 @@ a {
 /* 用户气泡里的「改一下」铅笔 */
 .bubble--user { position: relative; }
 .bubble__text { white-space: pre-wrap; }
-.bubble-edit-btn {
-  margin-left: 8px;
+/* 我消息左边那颗固定的编辑按钮：圆形、好戳，不再藏在气泡里 */
+.bubble-edit-side {
+  align-self: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  margin-right: 6px;
+  display: grid;
+  place-items: center;
   border: none;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 0.8rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2px 6px rgba(118, 96, 132, 0.18);
+  font-size: 0.95rem;
+  line-height: 1;
   cursor: pointer;
-  opacity: 0.7;
-  vertical-align: middle;
+  opacity: 0.9;
 }
-.bubble-edit-btn:hover { opacity: 1; }
+.bubble-edit-side:active { transform: scale(0.9); }
 
 /* 编辑中：文本框 + 保存/取消 */
 .bubble-edit {

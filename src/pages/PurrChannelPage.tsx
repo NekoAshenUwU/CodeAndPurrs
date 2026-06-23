@@ -954,6 +954,17 @@ function ChatRoom({
         {turns.map((turn) =>
           turn.role === 'user' ? (
             <div key={turn.id} className="bubble-row is-user">
+              {!turn.meme && !turn.voice && editTurnId !== turn.id ? (
+                <button
+                  type="button"
+                  className="bubble-edit-side"
+                  onClick={() => beginEdit(turn)}
+                  aria-label="编辑这条"
+                  title="改一下"
+                >
+                  ✏️
+                </button>
+              ) : null}
               <div className="bubble-stack bubble-stack--user">
                 {turn.meme ? (
                   <MemeBubble memeId={turn.meme} />
@@ -975,9 +986,6 @@ function ChatRoom({
                 ) : (
                   <div className="bubble bubble--user" onDoubleClick={() => beginEdit(turn)}>
                     <span className="bubble__text">{turn.content}</span>
-                    <button type="button" className="bubble-edit-btn" onClick={() => beginEdit(turn)} title="改一下">
-                      ✎
-                    </button>
                   </div>
                 )}
                 {turn.at ? <span className="bubble-time">{fmtStamp(turn.at)}</span> : null}
