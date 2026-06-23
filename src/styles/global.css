@@ -1755,14 +1755,14 @@ a {
 }
 
 /* ---------- 思考链折叠卡片 ---------- */
-/* 思考链：故意做成跟聊天气泡不一样的"沉思云朵"——灰蓝、衬线斜体、虚线云边 */
+/* 思考链：跟聊天气泡区分的"沉思云朵"——衬线、柔蓝边，但字色加深好读 */
 .think-card {
   align-self: flex-start;
   max-width: 100%;
   margin-bottom: 4px;
-  border: 1px dashed rgba(138, 156, 196, 0.55);
+  border: 1px dashed rgba(132, 150, 192, 0.5);
   border-radius: 14px 14px 14px 4px;
-  background: rgba(150, 168, 205, 0.1);
+  background: rgba(170, 185, 220, 0.16);
   overflow: hidden;
 }
 
@@ -1772,10 +1772,10 @@ a {
   gap: 7px;
   width: 100%;
   padding: 7px 12px;
-  color: #6b7a9c;
+  color: #4a5680;
   font-family: var(--serif-cn);
-  font-style: italic;
-  font-size: 0.8rem;
+  font-weight: 600;
+  font-size: 0.82rem;
   letter-spacing: 0.02em;
   border: 0;
   background: none;
@@ -1789,13 +1789,12 @@ a {
 
 .think-card__body {
   padding: 2px 13px 10px;
-  border-left: 2px solid rgba(138, 156, 196, 0.4);
+  border-left: 2px solid rgba(132, 150, 192, 0.45);
   margin: 0 0 8px 11px;
-  color: rgba(94, 108, 138, 0.92);
+  color: #424c6e;
   font-family: var(--serif-cn);
-  font-style: italic;
-  font-size: 0.8rem;
-  line-height: 1.7;
+  font-size: 0.84rem;
+  line-height: 1.75;
   white-space: pre-wrap;
   word-break: break-word;
 }
