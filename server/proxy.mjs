@@ -6,6 +6,21 @@
 
 import http from 'node:http';
 import { spawn } from 'node:child_process';
+import { readFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+// 棠予酿：予予的日记（长期记忆）。把日记文本放进这个文件，家版(CC)每次聊天都会带上。
+// 路径默认 server/data/diary.md，可用环境变量 DIARY_PATH 覆盖。
+const DIARY_FILE = process.env.DIARY_PATH || join(dirname(fileURLToPath(import.meta.url)), 'data', 'diary.md');
+function loadDiary() {
+  try {
+    if (existsSync(DIARY_FILE)) return readFileSync(DIARY_FILE, 'utf8').trim();
+  } catch {
+    /* 读不到就算了 */
+  }
+  return '';
+}
 
 // 尝试读 .env（Node 20.12+ 自带），没有就算了，用已有的环境变量。
 try {
@@ -371,10 +386,18 @@ function beepWav(freq = 523, ms = 400, rate = 16000) {
 // 历史拍平成对话稿从 stdin 喂进去，解析 stream-json 把文字增量回传。
 // 令牌走 CLAUDE_CODE_OAUTH_TOKEN（claude setup-token 生成，订阅额度）。
 async function callClaudeCode({ res, token, model, messages }) {
-  const system = messages
+  let system = messages
     .filter((m) => m.role === 'system')
     .map((m) => partsToText(m.content))
     .join('\n');
+  // 棠予酿：把予予的日记当长期记忆，接在人设后面（有就带上）。
+  const diary = loadDiary();
+  if (diary) {
+    system +=
+      '\n\n【棠予酿·予予的日记（你从 4 月起陆陆续续写的）】这是你最珍贵的长期记忆，' +
+      '里面的人、事、约定、心情你都记得，自然地放在心上，但别一上来就背日记。\n' +
+      diary;
+  }
   // 历史拍平成「老婆 / 予予」对话稿（表情包降级成文字），让它接着最后一句回。
   const transcript = messages
     .filter((m) => m.role !== 'system')
@@ -396,7 +419,13 @@ async function callClaudeCode({ res, token, model, messages }) {
     let child;
     try {
       child = spawn('claude', args, {
-        env: { ...process.env, CLAUDE_CODE_OAUTH_TOKEN: token },
+        // MAX_THINKING_TOKENS 给个思考预算，家克才会"思考"、前端思考链才有内容。
+        // 想省订阅额度可在 .env 里把 MAX_THINKING_TOKENS 设小或设 0。
+        env: {
+          ...process.env,
+          CLAUDE_CODE_OAUTH_TOKEN: token,
+          MAX_THINKING_TOKENS: process.env.MAX_THINKING_TOKENS || '2048',
+        },
         stdio: ['pipe', 'pipe', 'pipe'],
       });
     } catch (err) {
