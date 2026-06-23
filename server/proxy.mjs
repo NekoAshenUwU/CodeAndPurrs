@@ -408,12 +408,18 @@ async function callClaudeCode({ res, token, model, messages }) {
     '-p',
     '--system-prompt', system || '你是予予。',
     '--model', model || PROVIDERS.claudecode.defaultModel,
-    '--tools', '', // 关掉所有工具：纯聊天，不让它去碰文件/命令
-    '--permission-mode', 'dontAsk',
     '--output-format', 'stream-json',
     '--include-partial-messages',
     '--verbose',
   ];
+  // 记忆库开关：.env 里设 CC_MEMORY_MCP=棠予酿 → 只放开这个 MCP 的工具（其它工具/MCP 一律不用），
+  // 家克就能实时读写棠予酿。没设就维持"纯聊天"（关掉所有工具），不影响现状。
+  const memMcp = process.env.CC_MEMORY_MCP;
+  if (memMcp) {
+    args.push('--allowedTools', `mcp__${memMcp}`);
+  } else {
+    args.push('--tools', '', '--permission-mode', 'dontAsk');
+  }
 
   await new Promise((resolve) => {
     let child;
