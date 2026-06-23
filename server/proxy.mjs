@@ -405,6 +405,7 @@ async function callClaudeCode({ res, token, model, messages }) {
     }
 
     let gotText = false;
+    let gotThinking = false;
     let stderr = '';
     let buf = '';
 
@@ -425,12 +426,26 @@ async function callClaudeCode({ res, token, model, messages }) {
             gotText = true;
             send(res, { type: 'content', text: ev.delta.text });
           } else if (ev.delta?.type === 'thinking_delta' && ev.delta.thinking) {
+            gotThinking = true;
             send(res, { type: 'reasoning', text: ev.delta.thinking });
           }
         }
         return;
       }
-      // 没拿到增量时的兜底：用最终 result 文本
+      // 兜底：有些版本不流式吐思考/正文，就从完整 assistant 消息里取
+      if (obj.type === 'assistant' && Array.isArray(obj.message?.content)) {
+        for (const blk of obj.message.content) {
+          if (blk?.type === 'thinking' && blk.thinking && !gotThinking) {
+            gotThinking = true;
+            send(res, { type: 'reasoning', text: blk.thinking });
+          } else if (blk?.type === 'text' && blk.text && !gotText) {
+            gotText = true;
+            send(res, { type: 'content', text: blk.text });
+          }
+        }
+        return;
+      }
+      // 最后兜底：用 result 文本
       if (obj.type === 'result' && !gotText && typeof obj.result === 'string' && obj.result) {
         gotText = true;
         send(res, { type: 'content', text: obj.result });
