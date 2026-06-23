@@ -418,6 +418,7 @@ async function callClaudeCode({ res, token, model, messages }) {
     '-p',
     '--system-prompt', system || '你是予予。',
     '--model', model || PROVIDERS.claudecode.defaultModel,
+    '--settings', '{"alwaysThinkingEnabled":true}', // 尽量让它思考（显不显示由模型默认决定：4.6 显示、4.7/4.8 默认隐藏）
     '--output-format', 'stream-json',
     '--include-partial-messages',
     '--verbose',
