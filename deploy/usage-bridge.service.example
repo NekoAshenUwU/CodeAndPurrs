@@ -1,0 +1,26 @@
+[Unit]
+Description=Neko Usage Bridge API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/CodeAndPurrs
+ExecStart=/usr/bin/npm run bridge:start
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=BRIDGE_PORT=8788
+Environment=USAGE_BRIDGE_TOKEN=replace-with-a-long-random-secret
+Environment=USAGE_BRIDGE_ALLOWED_ORIGINS=https://nekopurrs.uk,https://api.nekopurrs.uk
+Environment=USAGE_BRIDGE_RETENTION_DAYS=60
+
+# 加固。ReadWritePaths 跟 server/data 运行时存储对齐。
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/opt/CodeAndPurrs/server/data
+
+[Install]
+WantedBy=multi-user.target

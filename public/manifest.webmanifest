@@ -1,0 +1,17 @@
+{
+  "name": "猫爪足迹 · Paw Trail",
+  "short_name": "猫爪足迹",
+  "description": "予予与棠棠的猫爪足迹 —— 自愿分享的一天，只看不扰。",
+  "start_url": "/paw-trail",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1030",
+  "theme_color": "#f6dbe8",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
