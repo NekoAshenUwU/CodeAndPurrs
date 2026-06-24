@@ -253,8 +253,7 @@ function SpeakButton({ text }: { text: string }) {
 
   return (
     <button type="button" className={`speak-btn is-${state}`} onClick={() => void onClick()} title="听猫咪念这句">
-      {state === 'loading' ? '…' : state === 'playing' ? '⏸' : '🔊'}
-      <span>{state === 'loading' ? '生成中' : state === 'playing' ? '播放中' : '听一声'}</span>
+      <span>{state === 'loading' ? '生成中' : state === 'playing' ? '播放中' : '耳边话'}</span>
     </button>
   );
 }

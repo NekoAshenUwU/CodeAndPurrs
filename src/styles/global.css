@@ -1799,17 +1799,18 @@ a {
   word-break: break-word;
 }
 
-/* ---------- 听一声（AI 语音）---------- */
+/* ---------- 耳边话（AI 语音）---------- */
 .speak-btn {
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
   gap: 5px;
   margin-top: 2px;
-  padding: 4px 11px;
+  padding: 5px 13px;
   color: #7a6bb0;
-  font-family: var(--round);
-  font-size: 0.74rem;
+  font-family: "ShunFengFull", "ShunFeng", var(--round);
+  font-size: 0.84rem;
+  letter-spacing: 0.04em;
   border: 1px solid rgba(201, 184, 241, 0.55);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.55);
@@ -3195,7 +3196,7 @@ a {
 }
 
 .switch-saved {
-  font-family: var(--round);
+  font-family: "ShunFengFull", var(--round);
   font-size: 0.82rem;
   color: #4e8a6a;
   opacity: 0;
@@ -3238,9 +3239,10 @@ a {
 .switch-card__hint {
   margin: 0 0 12px;
   color: var(--muted);
-  font-family: var(--round);
-  font-size: 0.84rem;
-  line-height: 1.5;
+  font-family: "ShunFengFull", var(--round);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  letter-spacing: 0.02em;
 }
 
 .switch-models {
@@ -3312,8 +3314,9 @@ a {
   margin: 4px 0 0;
   text-align: center;
   color: var(--muted);
-  font-family: var(--round);
-  font-size: 0.86rem;
+  font-family: "ShunFengFull", var(--round);
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
 }
 
 /* ============================================================
@@ -3532,8 +3535,9 @@ a {
   display: block;
   margin-bottom: 6px;
   color: var(--ink);
-  font-family: var(--round);
-  font-size: 0.86rem;
+  font-family: "ShunFengFull", var(--round);
+  font-size: 0.92rem;
+  letter-spacing: 0.03em;
 }
 .switch-input {
   width: 100%;
@@ -3783,13 +3787,21 @@ a {
   margin-top: 10px;
 }
 .diary-meta {
-  font-size: 0.78rem; color: #806699; opacity: 0.9; flex: 1 1 auto;
+  font-family: "ShunFengFull", var(--round);
+  font-size: 0.82rem; color: #806699; opacity: 0.9; flex: 1 1 auto;
+  letter-spacing: 0.03em;
 }
 .diary-msg {
   display: inline-block; margin-top: 8px;
-  font-size: 0.82rem; color: #6b4a86;
+  font-family: "ShunFengFull", var(--round);
+  font-size: 0.86rem; color: #6b4a86;
   background: rgba(201,167,245,0.16);
   padding: 6px 12px; border-radius: 999px;
+  letter-spacing: 0.03em;
+}
+.switch-bg__btn {
+  font-family: "ShunFengFull", var(--round);
+  letter-spacing: 0.04em;
 }
 
 /* ============================================================
