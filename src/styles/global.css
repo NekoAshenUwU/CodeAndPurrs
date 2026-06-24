@@ -646,8 +646,16 @@ a {
 .vow span {
   display: block;
   width: fit-content;
-  /* 白天版：玻璃海蓝 → 长春花蓝 → 紫罗兰 → 蓝紫（蓝紫都看得见，紫色更明显）*/
-  background-image: linear-gradient(90deg, #6fc9ee 0%, #8aa6e6 28%, #a07fd8 60%, #7d5fc6 100%);
+  /* 白天版：雾感蓝→紫→粉→紫→蓝 六段对称渐变（蓝紫粉都看得见，老婆指定不要发灰发蓝单调）*/
+  background-image: linear-gradient(
+    95deg,
+    #6fb0ef 0%,
+    #8f9fe8 22%,
+    #bb9fe6 42%,
+    #e6a3c9 58%,
+    #a7a6ea 80%,
+    #74c0f0 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -1255,9 +1263,17 @@ a {
     0 0 6px rgba(150, 175, 245, 0.2);
 }
 
-/* 仅深夜(深色背景)：月光蓝紫玻璃浅色字。傍晚dusk背景是浅的，不归这组(用白天深色字才看得清) */
+/* 仅深夜(深色背景)：蓝→紫→粉→紫→蓝亮版（保留中间那点粉，跟白天对应；夜里饱和度更高一档）*/
 .home-page.is-night .vow span {
-  background-image: linear-gradient(90deg, #a6dcff 0%, #cfe0ff 35%, #e8ddff 62%, #c2bcf6 100%);
+  background-image: linear-gradient(
+    95deg,
+    #88c4f5 0%,
+    #a6b2f1 22%,
+    #cdb0f0 42%,
+    #f0b6d6 58%,
+    #bcb8f2 80%,
+    #8cccf5 100%
+  );
   opacity: 1;
   text-shadow:
     0 0 1px rgba(255, 255, 255, 0.25),
