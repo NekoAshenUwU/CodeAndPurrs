@@ -6,7 +6,6 @@
 
 import http from 'node:http';
 import { spawn } from 'node:child_process';
-import { timingSafeEqual } from 'node:crypto';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -634,17 +633,6 @@ async function callMock({ res, provider, messages }) {
   }
 }
 
-// 定长安全比较请求令牌和后端口令：长度不同直接 false，长度相同走 timingSafeEqual。
-// header 可能是 undefined 或字符串数组，统一成单个字符串再比。
-function tokenMatches(provided, expected) {
-  const got = Array.isArray(provided) ? provided[0] : provided;
-  if (typeof got !== 'string') return false;
-  const a = Buffer.from(got);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
-
 // ---------- 路由 ----------
 const server = http.createServer(async (req, res) => {
   const isChat = req.url?.startsWith('/api/chat');
@@ -653,16 +641,6 @@ const server = http.createServer(async (req, res) => {
   if (req.method !== 'POST' || (!isChat && !isTranscribe && !isSpeak)) {
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'not found' }));
-    return;
-  }
-
-  // 登录锁：设了 APP_ACCESS_TOKEN 就要求请求带对的 x-app-token，否则 401。
-  // 没设就不挡（本地/沙箱照常跑）。这是"只有我自己用"私有部署的护栏。
-  // 用 timingSafeEqual 做定长比较，避免按字符早退泄露时序信息。
-  const appToken = process.env.APP_ACCESS_TOKEN;
-  if (appToken && !tokenMatches(req.headers['x-app-token'], appToken)) {
-    res.writeHead(401, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'unauthorized' }));
     return;
   }
 

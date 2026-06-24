@@ -16,16 +16,6 @@ export type ChatMessage = {
 // 后端实际对接的服务商
 export type Provider = 'deepseek' | 'gemini' | 'openai' | 'anthropic' | 'claudecode';
 
-// 登录锁：进 App 时存的访问令牌，每次请求都带上（后端 APP_ACCESS_TOKEN 校验）。
-export const ACCESS_KEY = 'purr-channel:access';
-export const getAccessToken = (): string => {
-  try {
-    return localStorage.getItem(ACCESS_KEY) ?? '';
-  } catch {
-    return '';
-  }
-};
-
 export type StreamHandlers = {
   onReasoning?: (text: string) => void;
   onContent?: (text: string) => void;
@@ -47,10 +37,9 @@ export async function streamChat(
 ): Promise<void> {
   let response: Response;
   try {
-    const token = getAccessToken();
     response = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(token ? { 'x-app-token': token } : {}) },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ provider, messages, model }),
       signal,
     });
@@ -59,16 +48,6 @@ export async function streamChat(
     return;
   }
 
-  if (response.status === 401) {
-    // 令牌不对：清掉，让登录锁重新弹出来
-    try {
-      localStorage.removeItem(ACCESS_KEY);
-    } catch {
-      /* ignore */
-    }
-    handlers.onError?.('登录已失效，请刷新页面重新输入访问密码。');
-    return;
-  }
   if (!response.ok || !response.body) {
     handlers.onError?.(`后端返回了 ${response.status}`);
     return;

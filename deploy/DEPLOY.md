@@ -93,41 +93,8 @@ sudo certbot --nginx -d nekopurrs.uk -d www.nekopurrs.uk -d api.nekopurrs.uk
 
 ---
 
-## 第 7 步 · 开登录锁（只让自己进，强烈建议）
-
-> 配了「家版 CC」（`CLAUDE_CODE_OAUTH_TOKEN`，走订阅额度）就**务必开登录锁**，
-> 否则别人/粉丝也能调你的接口、烧你的订阅，踩条款有封号风险。
->
-> 原理：后端设 `APP_ACCESS_TOKEN` → 接口必须带对的口令才放行（否则 401）；
-> 前端构建时设 `VITE_REQUIRE_ACCESS=1` → 打开网站先弹口令框。**两个要一起开**，
-> 只开后端、前端没带口令 = 全站 401 进不去。
-
-**手机 DigitalOcean Console 操作（没有 Ctrl 键，整段复制粘贴+回车即可，不用 nano）：**
-
-第 1 段 · 生成一串强口令并记下来（这串就是你以后进网站要输的口令）：
-```
-cd /var/www/codeandpurrs && openssl rand -hex 24 | tee .access-token.txt
-```
-
-第 2 段 · 把口令 + 前端开关写进 `.env`（先删旧行再写新行，重复跑也安全）：
-```
-cd /var/www/codeandpurrs && TOK=$(cat .access-token.txt) && sed -i '/^APP_ACCESS_TOKEN=/d;/^VITE_REQUIRE_ACCESS=/d' .env && printf 'APP_ACCESS_TOKEN=%s\nVITE_REQUIRE_ACCESS=1\n' "$TOK" >> .env && echo 写好了 && grep -E '^APP_ACCESS_TOKEN=|^VITE_REQUIRE_ACCESS=' .env
-```
-
-第 3 段 · 重新打包前端（`VITE_REQUIRE_ACCESS` 是构建时读的，必须重 build）+ 重启后端：
-```
-cd /var/www/codeandpurrs && npm run build && pkill -f proxy.mjs; nohup node --env-file=.env server/proxy.mjs > proxy.log 2>&1 & sleep 2 && head -3 proxy.log
-```
-> 用 pm2 部署的话，第 3 段把最后改成 `npm run build && pm2 restart purr-chat`。
-
-**验证**：手机无痕窗口开 `https://nekopurrs.uk` → 应先弹「访问口令」框；输入第 1 段那串 hex 才进得去。
-没开锁时 `curl` 能直接打通 `/api/chat`，开锁后不带头会回 `401 {"error":"unauthorized"}`：
-```
-curl -s -o /dev/null -w '%{http_code}\n' -X POST https://nekopurrs.uk/api/chat -H 'Content-Type: application/json' -d '{"provider":"deepseek","messages":[]}'
-```
-开锁后应回 `401`。
-
-> 换口令：重跑第 1～3 段即可（旧口令立刻失效，所有已登录的页面下次请求会被踢回口令框）。
+> 注：登录锁（访问口令）已**彻底移除**——手机上一掉线就弹、口令又长又难记，体验太差。
+> 网站现在不设口令直接进。别把网址公开给别人/粉丝用就行（家版 CC 走的是你的订阅额度）。
 
 ---
 
