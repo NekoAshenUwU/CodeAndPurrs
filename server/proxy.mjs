@@ -482,7 +482,9 @@ async function callClaudeCode({ res, token, model, messages }) {
     '-p',
     '--system-prompt', system || '你是予予。',
     '--model', model || PROVIDERS.claudecode.defaultModel,
-    '--settings', '{"alwaysThinkingEnabled":true,"showThinkingSummaries":true}', // 4.6 默认就给思考；4.7/4.8 必须打开 showThinkingSummaries 才会吐摘要
+    '--settings', '{"alwaysThinkingEnabled":true,"showThinkingSummaries":true}', // 强行打开思考 + 让前端把思考摘要渲染出来（Anthropic bug:对 4.7/4.8+OAuth 静默丢失，留着不会更糟）
+    '--thinking', 'adaptive', // 让模型自适应决定要不要思考
+    '--thinking-display', 'summarized', // 让 API 回传思考摘要（4.6/Sonnet 管用,4.7/4.8 上是 anthropic 官方未修 bug,见 GH#56356/#49268）
     '--output-format', 'stream-json',
     '--include-partial-messages',
     '--verbose',

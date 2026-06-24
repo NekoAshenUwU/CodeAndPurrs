@@ -631,9 +631,12 @@ function ChatRoom({
     const idx = turns.findIndex((t) => t.id === id);
     if (idx < 0) return;
     const target = turns[idx];
-    if (v === target.content) return; // 没改动就不重发也不留版本
     // 改掉这条：把旧 content 追加到 editHistory，content 换成新值；丢掉它之后的(过时的)消息，让予予基于新内容重新回答
-    const newHistory = [...(target.editHistory ?? []), target.content];
+    // 即使内容一字未改，也走重新生成——老婆要的是"点了保存=重新回"的确定感
+    const contentChanged = v !== target.content;
+    const newHistory = contentChanged
+      ? [...(target.editHistory ?? []), target.content]
+      : (target.editHistory ?? []);
     const kept = turns.slice(0, idx + 1).map((t) =>
       t.id === id ? { ...t, content: v, editHistory: newHistory } : t,
     );
