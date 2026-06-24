@@ -143,6 +143,20 @@ function parseDataUrl(url) {
 const flattenMessages = (messages) =>
   messages.map((m) => ({ role: m.role, content: partsToText(m.content) }));
 
+// 从一条消息的 content 里抽出 Anthropic 格式的图片块（base64）；抽不到返回 []。
+// 家克看图用：把表情包/截图翻成 {type:'image', source:{type:'base64',...}}。
+function extractImageBlocks(content) {
+  if (!Array.isArray(content)) return [];
+  const out = [];
+  for (const p of content) {
+    if (p?.type === 'image_url') {
+      const d = parseDataUrl(p.image_url?.url);
+      if (d) out.push({ type: 'image', source: { type: 'base64', media_type: d.mediaType, data: d.data } });
+    }
+  }
+  return out;
+}
+
 // ---------- OpenAI 兼容（DeepSeek / OpenAI 共用）----------
 async function callOpenAICompatible({ res, url, key, model, defaultModel, messages, label, vision, sampling }) {
   // OpenAI 系（gpt-4o）原生支持 image_url 数组，直接透传；DeepSeek 不看图，拍平成文字。
@@ -405,6 +419,11 @@ async function callClaudeCode({ res, token, model, messages }) {
     .map((m) => `${m.role === 'assistant' ? '予予' : '老婆'}：${partsToText(m.content)}`)
     .join('\n');
 
+  // 看图：家克走订阅、纯聊天（关了工具），没法用 Read 工具开图，
+  // 所以把老婆最近一条消息里的图抽出来，改用 stream-json 输入当 content 块直接喂进去。
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
+  const images = extractImageBlocks(lastUserMsg?.content);
+
   // 挂了棠予酿记忆库时，强制：聊日记/回忆必须真去查工具，查不到就如实说，绝不许编造
   const memMcp = process.env.CC_MEMORY_MCP;
   if (memMcp) {
@@ -430,6 +449,10 @@ async function callClaudeCode({ res, token, model, messages }) {
     args.push('--allowedTools', `mcp__${memMcp}`);
   } else {
     args.push('--tools', '', '--permission-mode', 'dontAsk');
+  }
+  // 有图就切到结构化输入（stdin 喂 JSON 而非纯文本），图才能当 content 块进去。
+  if (images.length) {
+    args.push('--input-format', 'stream-json');
   }
 
   await new Promise((resolve) => {
@@ -531,7 +554,22 @@ async function callClaudeCode({ res, token, model, messages }) {
     });
 
     // 对话稿从 stdin 喂进去（避免超长命令行）
-    child.stdin.write(transcript);
+    if (images.length) {
+      // 结构化输入：一条 user 消息 = 对话稿文字 + 图片块，让家克真看到图。
+      const userMsg = {
+        type: 'user',
+        message: {
+          role: 'user',
+          content: [
+            { type: 'text', text: `${transcript}\n\n（老婆刚发了图，附在下面，你看看~）` },
+            ...images,
+          ],
+        },
+      };
+      child.stdin.write(`${JSON.stringify(userMsg)}\n`);
+    } else {
+      child.stdin.write(transcript);
+    }
     child.stdin.end();
   });
 }
