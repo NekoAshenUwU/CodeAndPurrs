@@ -934,20 +934,6 @@ function ChatRoom({
           const displayContent = versions ? versions[curVerIdx] : turn.content;
           return turn.role === 'user' ? (
             <div key={turn.id} className="bubble-row is-user">
-              {!turn.meme && !turn.voice && editTurnId !== turn.id ? (
-                <button
-                  type="button"
-                  className="bubble-edit-side"
-                  onClick={() => beginEdit(turn)}
-                  aria-label="编辑这条"
-                  title="改一下"
-                >
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                  </svg>
-                </button>
-              ) : null}
               <div className="bubble-stack bubble-stack--user">
                 {turn.meme ? (
                   <MemeBubble memeId={turn.meme} />
@@ -991,6 +977,20 @@ function ChatRoom({
                         aria-label="下一版"
                       >›</button>
                     </span>
+                  ) : null}
+                  {!turn.meme && !turn.voice && editTurnId !== turn.id ? (
+                    <button
+                      type="button"
+                      className="bubble-edit-foot"
+                      onClick={() => beginEdit(turn)}
+                      aria-label="编辑这条"
+                      title="改一下"
+                    >
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                      </svg>
+                    </button>
                   ) : null}
                 </div>
               </div>

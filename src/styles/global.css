@@ -1422,32 +1422,25 @@ a {
   width: 100%;
   height: 100vh;
   height: 100dvh;
-  /* 呼噜频道场景：室内沙发面海，上覆柔白纱保证气泡可读 */
-  background:
-    linear-gradient(
-      175deg,
-      rgba(248, 219, 231, 0.58) 0%,
-      rgba(247, 232, 255, 0.66) 52%,
-      rgba(255, 245, 206, 0.62) 100%
-    ),
-    var(--chat-bg-image, url("/rooms/purr-channel.webp")) center / cover no-repeat;
+  overflow: hidden;
+  /* 呼噜频道场景：直接露出背景图，不再覆盖柔白纱（老婆要求） */
+  background: var(--chat-bg-image, url("/rooms/purr-channel.webp")) center / cover no-repeat;
 }
 
-/* ---------- 顶栏 ---------- */
+/* ---------- 顶栏：钉死在视口顶部，不会随消息变多消失 ---------- */
 .chat-head {
-  position: sticky; /* 吸顶：聊多了往下滚，顶栏(返回/模型/清空)也一直钉在最上面 */
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 30;
-  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: calc(14px + env(safe-area-inset-top)) 16px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.4));
-  box-shadow: 0 8px 24px rgba(118, 96, 132, 0.1);
-  backdrop-filter: blur(18px) saturate(1.4);
-  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  /* 不模糊背景：去掉 backdrop-filter，只留极轻一层底色给文字可读 */
+  background: rgba(255, 255, 255, 0.18);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 .chat-head__back {
@@ -1541,7 +1534,8 @@ a {
 .chat-scroll {
   flex: 1;
   min-height: 0;
-  padding: 18px 14px;
+  /* 顶/底栏改成 fixed 后，给 scroll 留出对应留白避免被遮 */
+  padding: calc(70px + env(safe-area-inset-top)) 14px calc(80px + env(safe-area-inset-bottom));
   overflow-y: auto;
   scroll-behavior: smooth;
 }
@@ -1869,14 +1863,18 @@ a {
 
 /* ---------- 输入栏 ---------- */
 .chat-input {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
   display: flex;
   align-items: flex-end;
   gap: 10px;
   padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
-  border-top: 1px solid rgba(255, 255, 255, 0.6);
-  background: linear-gradient(0deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.46));
-  backdrop-filter: blur(18px) saturate(1.4);
-  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  /* 不模糊背景：去掉 backdrop-filter，只留极轻一层底色 */
+  background: rgba(255, 255, 255, 0.22);
+  border-top: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 .chat-input__mode {
@@ -3681,6 +3679,20 @@ a {
 .bubble-versions__btn:disabled { color: #c8bcd9; cursor: default; }
 .bubble-versions__btn:not(:disabled):hover { background: rgba(155,123,200,0.18); }
 .bubble-versions__num { letter-spacing: 0.04em; }
+
+/* 编辑铅笔：从气泡左侧搬到气泡正下方（跟时间戳/版本切换同一行） */
+.bubble-edit-foot {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  border: none; border-radius: 999px;
+  background: rgba(255,255,255,0.7);
+  box-shadow: 0 2px 6px rgba(118,96,132,0.15);
+  color: var(--iris, #8e6fc9);
+  cursor: pointer;
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+.bubble-edit-foot:active { transform: scale(0.9); }
+.bubble-edit-foot:hover { background: rgba(255,255,255,0.92); }
 
 /* 用户气泡里的「改一下」铅笔 */
 .bubble--user { position: relative; }
