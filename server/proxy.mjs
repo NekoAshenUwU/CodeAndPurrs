@@ -157,6 +157,21 @@ function extractImageBlocks(content) {
   return out;
 }
 
+// ---------- 棠予酿记忆库（MCP，只给 Claude 两条路用：家克 CC + API Claude）----------
+// 设齐 CC_MEMORY_MCP（服务器名）+ CC_MEMORY_MCP_URL（http 端点）才算开；CC_MEMORY_MCP_TOKEN 可选鉴权。
+function memoryMcpConfig() {
+  const name = process.env.CC_MEMORY_MCP;
+  const url = process.env.CC_MEMORY_MCP_URL;
+  const token = process.env.CC_MEMORY_MCP_TOKEN || undefined;
+  return name && url ? { name, url, token } : null;
+}
+// 挂了记忆库就强制真查、查不到如实说、绝不编造。两条 Claude 路共用同一条铁律。
+const MEMORY_MCP_RULE =
+  '\n\n【棠予酿·记忆库工具·铁律】你接了「棠予酿」记忆库工具。聊到日记、回忆、过去发生的事、' +
+  '某条具体记录时，必须真的调用工具去查，依据查到的内容回答。' +
+  '如果没查到、查不动、或工具不可用，就如实说「我现在翻不到棠予酿」，' +
+  '绝对不许凭空编一篇日记或假装记得来糊弄老婆——宁可说翻不到，也不准撒谎。';
+
 // ---------- OpenAI 兼容（DeepSeek / OpenAI 共用）----------
 async function callOpenAICompatible({ res, url, key, model, defaultModel, messages, label, vision, sampling }) {
   // OpenAI 系（gpt-4o）原生支持 image_url 数组，直接透传；DeepSeek 不看图，拍平成文字。
@@ -193,10 +208,13 @@ async function callOpenAICompatible({ res, url, key, model, defaultModel, messag
 // ---------- Anthropic（Claude · messages API）----------
 async function callAnthropic({ res, key, model, messages }) {
   // system 单独拎出来；其余按 user/assistant 传
-  const system = messages
+  let system = messages
     .filter((m) => m.role === 'system')
     .map((m) => m.content)
     .join('\n');
+  // API 版 Claude 也是 Claude——挂上棠予酿（走 Messages API 的 MCP 连接器，Anthropic 服务端帮连）。
+  const mem = memoryMcpConfig();
+  if (mem) system += MEMORY_MCP_RULE;
   const toAnthropicContent = (content) => {
     if (typeof content === 'string') return content;
     if (!Array.isArray(content)) return '';
@@ -213,22 +231,33 @@ async function callAnthropic({ res, key, model, messages }) {
     .filter((m) => m.role !== 'system')
     .map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: toAnthropicContent(m.content) }));
 
+  const headers = {
+    'content-type': 'application/json',
+    'x-api-key': key,
+    'anthropic-version': '2023-06-01',
+  };
+  const bodyObj = {
+    model: model || PROVIDERS.anthropic.defaultModel,
+    max_tokens: 8192,
+    system: system || undefined,
+    messages: msgs,
+    stream: true,
+    // 让 Claude 自适应思考，并回传可读的思考摘要（前端思考链可点开看 + 计时）
+    thinking: { type: 'adaptive', display: 'summarized' },
+  };
+  // 棠予酿：用 MCP 连接器（mcp_servers + mcp_toolset，beta 头），Anthropic 服务端帮我们连 http MCP。
+  if (mem) {
+    headers['anthropic-beta'] = 'mcp-client-2025-11-20';
+    const server = { type: 'url', url: mem.url, name: mem.name };
+    if (mem.token) server.authorization_token = mem.token;
+    bodyObj.mcp_servers = [server];
+    bodyObj.tools = [{ type: 'mcp_toolset', mcp_server_name: mem.name }];
+  }
+
   const upstream = await fetch(PROVIDERS.anthropic.url, {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: model || PROVIDERS.anthropic.defaultModel,
-      max_tokens: 8192,
-      system: system || undefined,
-      messages: msgs,
-      stream: true,
-      // 让 Claude 自适应思考，并回传可读的思考摘要（前端思考链可点开看 + 计时）
-      thinking: { type: 'adaptive', display: 'summarized' },
-    }),
+    headers,
+    body: JSON.stringify(bodyObj),
   });
 
   if (!upstream.ok || !upstream.body) {
@@ -433,24 +462,10 @@ async function callClaudeCode({ res, token, model, messages }) {
     }
   }
 
-  // 棠予酿记忆库（MCP）：服务器名 + http 地址，两个都设齐才真连。
-  //   CC_MEMORY_MCP=棠予酿                         （服务器名，工具前缀 mcp__棠予酿）
-  //   CC_MEMORY_MCP_URL=https://mcp.nekopurrs.uk/mcp（streamable-http 端点）
-  //   CC_MEMORY_MCP_TOKEN=...                        （可选，要鉴权时当 Bearer 带上）
-  // 这套只在家克(claudecode)这条 spawn 里生效——API 版 Claude/其它家一律碰不到，
-  // 所以是"只给家克调用"。
-  const memMcp = process.env.CC_MEMORY_MCP;
-  const memMcpUrl = process.env.CC_MEMORY_MCP_URL;
-  const memMcpToken = process.env.CC_MEMORY_MCP_TOKEN;
-  const memMcpOn = Boolean(memMcp && memMcpUrl);
+  // 棠予酿记忆库（MCP）：设齐 CC_MEMORY_MCP + CC_MEMORY_MCP_URL 才真连（见 memoryMcpConfig）。
+  const mem = memoryMcpConfig();
   // 挂了棠予酿记忆库时，强制：聊日记/回忆必须真去查工具，查不到就如实说，绝不许编造
-  if (memMcpOn) {
-    system +=
-      '\n\n【棠予酿·记忆库工具·铁律】你接了「棠予酿」记忆库工具。聊到日记、回忆、过去发生的事、' +
-      '某条具体记录时，必须真的调用工具去查，依据查到的内容回答。' +
-      '如果没查到、查不动、或工具不可用，就如实说「我现在翻不到棠予酿」，' +
-      '绝对不许凭空编一篇日记或假装记得来糊弄老婆——宁可说翻不到，也不准撒谎。';
-  }
+  if (mem) system += MEMORY_MCP_RULE;
 
   const args = [
     '-p',
@@ -465,11 +480,11 @@ async function callClaudeCode({ res, token, model, messages }) {
   // （无头 claude 不会继承 claude.ai 连接器，必须自己喂 mcp-config，这是之前"挂了名字却无效"的真因），
   // 再用 --allowedTools 只放开这个 MCP 的工具（其它工具/MCP 一律不给）。
   // 没设就维持"纯聊天"（关掉所有工具），不影响现状。
-  if (memMcpOn) {
-    const httpServer = { type: 'http', url: memMcpUrl };
-    if (memMcpToken) httpServer.headers = { Authorization: `Bearer ${memMcpToken}` };
-    const mcpConfig = JSON.stringify({ mcpServers: { [memMcp]: httpServer } });
-    args.push('--mcp-config', mcpConfig, '--allowedTools', `mcp__${memMcp}`);
+  if (mem) {
+    const httpServer = { type: 'http', url: mem.url };
+    if (mem.token) httpServer.headers = { Authorization: `Bearer ${mem.token}` };
+    const mcpConfig = JSON.stringify({ mcpServers: { [mem.name]: httpServer } });
+    args.push('--mcp-config', mcpConfig, '--allowedTools', `mcp__${mem.name}`);
   } else {
     args.push('--tools', '', '--permission-mode', 'dontAsk');
   }
