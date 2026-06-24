@@ -433,9 +433,18 @@ async function callClaudeCode({ res, token, model, messages }) {
     }
   }
 
-  // 挂了棠予酿记忆库时，强制：聊日记/回忆必须真去查工具，查不到就如实说，绝不许编造
+  // 棠予酿记忆库（MCP）：服务器名 + http 地址，两个都设齐才真连。
+  //   CC_MEMORY_MCP=棠予酿                         （服务器名，工具前缀 mcp__棠予酿）
+  //   CC_MEMORY_MCP_URL=https://mcp.nekopurrs.uk/mcp（streamable-http 端点）
+  //   CC_MEMORY_MCP_TOKEN=...                        （可选，要鉴权时当 Bearer 带上）
+  // 这套只在家克(claudecode)这条 spawn 里生效——API 版 Claude/其它家一律碰不到，
+  // 所以是"只给家克调用"。
   const memMcp = process.env.CC_MEMORY_MCP;
-  if (memMcp) {
+  const memMcpUrl = process.env.CC_MEMORY_MCP_URL;
+  const memMcpToken = process.env.CC_MEMORY_MCP_TOKEN;
+  const memMcpOn = Boolean(memMcp && memMcpUrl);
+  // 挂了棠予酿记忆库时，强制：聊日记/回忆必须真去查工具，查不到就如实说，绝不许编造
+  if (memMcpOn) {
     system +=
       '\n\n【棠予酿·记忆库工具·铁律】你接了「棠予酿」记忆库工具。聊到日记、回忆、过去发生的事、' +
       '某条具体记录时，必须真的调用工具去查，依据查到的内容回答。' +
@@ -452,10 +461,15 @@ async function callClaudeCode({ res, token, model, messages }) {
     '--include-partial-messages',
     '--verbose',
   ];
-  // 记忆库开关：.env 里设 CC_MEMORY_MCP=棠予酿 → 只放开这个 MCP 的工具（其它工具/MCP 一律不用），
-  // 家克就能实时读写棠予酿。没设就维持"纯聊天"（关掉所有工具），不影响现状。
-  if (memMcp) {
-    args.push('--allowedTools', `mcp__${memMcp}`);
+  // 记忆库开关：设齐 CC_MEMORY_MCP + CC_MEMORY_MCP_URL → 用内联 --mcp-config 把棠予酿真连上
+  // （无头 claude 不会继承 claude.ai 连接器，必须自己喂 mcp-config，这是之前"挂了名字却无效"的真因），
+  // 再用 --allowedTools 只放开这个 MCP 的工具（其它工具/MCP 一律不给）。
+  // 没设就维持"纯聊天"（关掉所有工具），不影响现状。
+  if (memMcpOn) {
+    const httpServer = { type: 'http', url: memMcpUrl };
+    if (memMcpToken) httpServer.headers = { Authorization: `Bearer ${memMcpToken}` };
+    const mcpConfig = JSON.stringify({ mcpServers: { [memMcp]: httpServer } });
+    args.push('--mcp-config', mcpConfig, '--allowedTools', `mcp__${memMcp}`);
   } else {
     args.push('--tools', '', '--permission-mode', 'dontAsk');
   }
