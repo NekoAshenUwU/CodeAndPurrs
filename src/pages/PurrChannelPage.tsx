@@ -39,6 +39,7 @@ type Turn = {
   memo?: string; // 这条 AI 回复顺手存进记忆罐头的内容（显示"记住了"小条）
   at?: number; // 消息创建时间戳
   thinkMs?: number; // 思考链耗时（从第一段思考到开始正式回复），用来显示「想了 N 秒」
+  editHistory?: string[]; // 这条消息编辑过的历史版本（按时间顺序，旧→较新），当前展示的是 content
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -552,6 +553,10 @@ function ChatRoom({
   const [memeOpen, setMemeOpen] = useState(false);
   const [editTurnId, setEditTurnId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+  // 编辑历史：每条 user 消息当前显示的是第几个版本（默认最新）；只换显示，不重发。
+  const [versionView, setVersionView] = useState<Record<string, number>>({});
+  const setVersionFor = (id: string, idx: number) =>
+    setVersionView((prev) => ({ ...prev, [id]: idx }));
   const [notice, setNotice] = useState('');
   const [liveCtx, setLiveCtx] = useState(''); // 猫爪足迹+浪哪了的实时背景，进窗口拉一次、之后每5分钟刷
   const abortRef = useRef<AbortController | null>(null);
@@ -613,6 +618,9 @@ function ChatRoom({
   const beginEdit = (turn: Turn) => {
     setEditTurnId(turn.id);
     setEditText(turn.content);
+    // 编辑时跳回最新版本显示，避免在旧版本上输入造成误解
+    const total = (turn.editHistory?.length ?? 0) + 1;
+    setVersionFor(turn.id, total - 1);
   };
   const commitEdit = async () => {
     const v = editText.trim();
@@ -622,9 +630,16 @@ function ChatRoom({
     if (!id || !v || sending) return;
     const idx = turns.findIndex((t) => t.id === id);
     if (idx < 0) return;
-    // 改掉这条，丢掉它之后的(过时的)消息，让予予基于新内容重新回答
-    const kept = turns.slice(0, idx + 1).map((t) => (t.id === id ? { ...t, content: v } : t));
+    const target = turns[idx];
+    if (v === target.content) return; // 没改动就不重发也不留版本
+    // 改掉这条：把旧 content 追加到 editHistory，content 换成新值；丢掉它之后的(过时的)消息，让予予基于新内容重新回答
+    const newHistory = [...(target.editHistory ?? []), target.content];
+    const kept = turns.slice(0, idx + 1).map((t) =>
+      t.id === id ? { ...t, content: v, editHistory: newHistory } : t,
+    );
     setTurns(kept);
+    // 默认显示跳到最新（即新数组里 index = newHistory.length）
+    setVersionFor(id, newHistory.length);
     await runAssistant(await toMessages(kept));
   };
   const cancelEdit = () => {
@@ -904,8 +919,18 @@ function ChatRoom({
           </div>
         ) : null}
 
-        {turns.map((turn) =>
-          turn.role === 'user' ? (
+        {turns.map((turn) => {
+          // 计算这条消息的"版本列表"（旧→新）：历史 + 当前
+          const versions = turn.role === 'user' && turn.editHistory?.length
+            ? [...turn.editHistory, turn.content]
+            : null;
+          const totalVersions = versions ? versions.length : 1;
+          const curVerIdx = Math.min(
+            Math.max(versionView[turn.id] ?? totalVersions - 1, 0),
+            totalVersions - 1,
+          );
+          const displayContent = versions ? versions[curVerIdx] : turn.content;
+          return turn.role === 'user' ? (
             <div key={turn.id} className="bubble-row is-user">
               {!turn.meme && !turn.voice && editTurnId !== turn.id ? (
                 <button
@@ -941,10 +966,31 @@ function ChatRoom({
                   </div>
                 ) : (
                   <div className="bubble bubble--user" onDoubleClick={() => beginEdit(turn)}>
-                    <span className="bubble__text">{turn.content}</span>
+                    <span className="bubble__text">{displayContent}</span>
                   </div>
                 )}
-                {turn.at ? <span className="bubble-time">{fmtStamp(turn.at)}</span> : null}
+                <div className="bubble-foot">
+                  {turn.at ? <span className="bubble-time">{fmtStamp(turn.at)}</span> : null}
+                  {totalVersions > 1 ? (
+                    <span className="bubble-versions" aria-label="编辑历史">
+                      <button
+                        type="button"
+                        className="bubble-versions__btn"
+                        disabled={curVerIdx <= 0}
+                        onClick={() => setVersionFor(turn.id, curVerIdx - 1)}
+                        aria-label="上一版"
+                      >‹</button>
+                      <span className="bubble-versions__num">{curVerIdx + 1}/{totalVersions}</span>
+                      <button
+                        type="button"
+                        className="bubble-versions__btn"
+                        disabled={curVerIdx >= totalVersions - 1}
+                        onClick={() => setVersionFor(turn.id, curVerIdx + 1)}
+                        aria-label="下一版"
+                      >›</button>
+                    </span>
+                  ) : null}
+                </div>
               </div>
               {userAvatar ? (
                 <img className="bubble-avatar bubble-avatar--me" src={userAvatar} alt="我的头像" />
@@ -992,8 +1038,8 @@ function ChatRoom({
                 {turn.at && turn.status === 'done' ? <span className="bubble-time">{fmtStamp(turn.at)}</span> : null}
               </div>
             </div>
-          ),
-        )}
+          );
+        })}
       </div>
 
       <footer className="chat-input">

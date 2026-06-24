@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BRAND_ORDER, MODEL_GROUPS } from '../data/models';
 import { loadMemories } from '../services/memory';
+import { loadDiary as fetchDiary, saveDiary as pushDiary } from '../services/diary';
 import {
   brandOfModel,
   loadChatAvatar,
@@ -66,6 +67,74 @@ export function SwitchCorePage() {
   const [avBusy, setAvBusy] = useState(false);
   const [myAvatar, setMyAvatar] = useState<string>(loadChatUserAvatar);
   const [myAvBusy, setMyAvBusy] = useState(false);
+
+  // 长期记忆·日记本：直接读 / 写 VPS 上的 server/data/diary.md（家版 CC 聊天时会带上）。
+  const [diary, setDiary] = useState<string>('');
+  const [diaryLoaded, setDiaryLoaded] = useState(false);
+  const [diaryServerSize, setDiaryServerSize] = useState(0);
+  const [diaryMtime, setDiaryMtime] = useState(0);
+  const [diaryBusy, setDiaryBusy] = useState<'idle' | 'loading' | 'saving'>('loading');
+  const [diaryMsg, setDiaryMsg] = useState<string>('');
+
+  useEffect(() => {
+    let alive = true;
+    fetchDiary()
+      .then((info) => {
+        if (!alive) return;
+        setDiary(info.content);
+        setDiaryServerSize(info.size);
+        setDiaryMtime(info.mtime);
+        setDiaryLoaded(true);
+        setDiaryBusy('idle');
+      })
+      .catch((err) => {
+        if (!alive) return;
+        setDiaryLoaded(true);
+        setDiaryBusy('idle');
+        setDiaryMsg(`读取失败：${String(err?.message || err)}`);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const onPickDiaryFile = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      const text = await file.text();
+      setDiary(text);
+      setDiaryMsg(`已读入 ${file.name}，记得点「保存到服务器」`);
+    } catch (err) {
+      setDiaryMsg(`读这个文件失败：${String((err as Error)?.message || err)}`);
+    }
+  };
+
+  const onSaveDiary = async () => {
+    setDiaryBusy('saving');
+    setDiaryMsg('');
+    try {
+      const r = await pushDiary(diary);
+      setDiaryServerSize(r.size);
+      setDiaryMtime(r.mtime);
+      setDiaryMsg('已存到服务器 ✓');
+    } catch (err) {
+      setDiaryMsg(`保存失败：${String((err as Error)?.message || err)}`);
+    } finally {
+      setDiaryBusy('idle');
+    }
+  };
+
+  const fmtBytes = (n: number) => {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / 1024 / 1024).toFixed(2)} MB`;
+  };
+  const fmtMtime = (ms: number) => {
+    if (!ms) return '还没存过';
+    const d = new Date(ms);
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
 
   const applyBg = (dataUrl: string) => {
     const root = document.documentElement;
@@ -178,6 +247,44 @@ export function SwitchCorePage() {
             </p>
           </div>
         </Link>
+
+        <section className="switch-card">
+          <h2 className="switch-card__title">长期记忆 · 日记本</h2>
+          <p className="switch-card__hint">
+            把日记整段贴进来或上传 .md / .txt 文件，存到服务器后家版 CC（CC · Opus）聊天时会自动带上当长期记忆。
+            存在 VPS 上的 <code>server/data/diary.md</code>，整站共用一份。
+          </p>
+          <textarea
+            className="switch-textarea"
+            value={diary}
+            onChange={(e) => setDiary(e.target.value)}
+            placeholder={diaryLoaded ? '把日记内容粘进来…' : '正在从服务器读取…'}
+            rows={10}
+          />
+          <div className="diary-row">
+            <label className="switch-bg__btn">
+              上传 .md / .txt
+              <input
+                type="file"
+                accept=".md,.markdown,.txt,text/plain,text/markdown"
+                hidden
+                onChange={(e) => onPickDiaryFile(e.target.files?.[0])}
+              />
+            </label>
+            <button
+              type="button"
+              className="switch-bg__btn is-primary"
+              disabled={diaryBusy !== 'idle'}
+              onClick={onSaveDiary}
+            >
+              {diaryBusy === 'saving' ? '保存中…' : '保存到服务器'}
+            </button>
+            <span className="diary-meta">
+              服务器现存 {fmtBytes(diaryServerSize)}（{fmtMtime(diaryMtime)}）
+            </span>
+          </div>
+          {diaryMsg ? <span className="diary-msg">{diaryMsg}</span> : null}
+        </section>
 
         <section className="switch-card">
           <h2 className="switch-card__title">默认模型</h2>

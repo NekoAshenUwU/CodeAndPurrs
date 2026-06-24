@@ -3655,6 +3655,29 @@ a {
 .bubble-row.is-user .bubble-time { text-align: right; }
 .bubble-row.is-bot .bubble-time { text-align: left; }
 
+/* 用户气泡底下的小脚：时间戳 + 编辑版本翻页（< N/M >），右对齐 */
+.bubble-foot {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  margin: 4px 4px 0;
+}
+.bubble-foot .bubble-time { margin: 0; }
+.bubble-versions {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--round);
+  font-size: 0.78rem;
+  color: #9a8bb0;
+  background: rgba(201,167,245,0.12);
+  padding: 2px 6px; border-radius: 999px;
+}
+.bubble-versions__btn {
+  border: none; background: transparent; cursor: pointer;
+  color: #8e6fc9; padding: 0 4px; font-size: 1rem; line-height: 1;
+  border-radius: 999px;
+}
+.bubble-versions__btn:disabled { color: #c8bcd9; cursor: default; }
+.bubble-versions__btn:not(:disabled):hover { background: rgba(155,123,200,0.18); }
+.bubble-versions__num { letter-spacing: 0.04em; }
+
 /* 用户气泡里的「改一下」铅笔 */
 .bubble--user { position: relative; }
 .bubble__text { white-space: pre-wrap; }
@@ -3748,6 +3771,25 @@ a {
 .switch-bg__btn.is-busy { opacity: 0.7; }
 .switch-bg__btn.is-ghost {
   background: rgba(155,123,200,0.16); color: #6b4a86; box-shadow: none;
+}
+.switch-bg__btn.is-primary {
+  background: linear-gradient(135deg, #c9a7f5, #8e6fc9);
+}
+.switch-bg__btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* 日记本卡片：上传 / 保存按钮 + 服务器状态条 */
+.diary-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  margin-top: 10px;
+}
+.diary-meta {
+  font-size: 0.78rem; color: #806699; opacity: 0.9; flex: 1 1 auto;
+}
+.diary-msg {
+  display: inline-block; margin-top: 8px;
+  font-size: 0.82rem; color: #6b4a86;
+  background: rgba(201,167,245,0.16);
+  padding: 6px 12px; border-radius: 999px;
 }
 
 /* ============================================================

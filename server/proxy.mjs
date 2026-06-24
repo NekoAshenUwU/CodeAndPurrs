@@ -6,7 +6,7 @@
 
 import http from 'node:http';
 import { spawn } from 'node:child_process';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -20,6 +20,18 @@ function loadDiary() {
     /* 读不到就算了 */
   }
   return '';
+}
+function diaryStat() {
+  try {
+    const s = statSync(DIARY_FILE);
+    return { size: s.size, mtime: s.mtimeMs };
+  } catch {
+    return { size: 0, mtime: 0 };
+  }
+}
+function saveDiary(text) {
+  mkdirSync(dirname(DIARY_FILE), { recursive: true });
+  writeFileSync(DIARY_FILE, text, 'utf8');
 }
 
 // 尝试读 .env（Node 20.12+ 自带），没有就算了，用已有的环境变量。
@@ -638,6 +650,42 @@ const server = http.createServer(async (req, res) => {
   const isChat = req.url?.startsWith('/api/chat');
   const isTranscribe = req.url?.startsWith('/api/transcribe');
   const isSpeak = req.url?.startsWith('/api/speak');
+  const isDiary = req.url?.startsWith('/api/diary');
+
+  // ----- 日记（长期记忆文件）：GET 读、POST 写 -----
+  if (isDiary) {
+    if (req.method === 'GET') {
+      const st = diaryStat();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ content: loadDiary(), size: st.size, mtime: st.mtime }));
+      return;
+    }
+    if (req.method === 'POST') {
+      let body;
+      try {
+        body = await readJSON(req);
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: String(err?.message || err) }));
+        return;
+      }
+      const text = typeof body?.content === 'string' ? body.content : '';
+      try {
+        saveDiary(text);
+        const st = diaryStat();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, size: st.size, mtime: st.mtime }));
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: String(err?.message || err) }));
+      }
+      return;
+    }
+    res.writeHead(405, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'method not allowed' }));
+    return;
+  }
+
   if (req.method !== 'POST' || (!isChat && !isTranscribe && !isSpeak)) {
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'not found' }));
