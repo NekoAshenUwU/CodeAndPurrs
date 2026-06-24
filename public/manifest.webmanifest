@@ -1,8 +1,8 @@
 {
-  "name": "猫爪足迹 · Paw Trail",
-  "short_name": "猫爪足迹",
-  "description": "予予与棠棠的猫爪足迹 —— 自愿分享的一天，只看不扰。",
-  "start_url": "/paw-trail",
+  "name": "CodeAndPurrs",
+  "short_name": "CodeAndPurrs",
+  "description": "予予与棠棠的小家——码上撸猫。",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
