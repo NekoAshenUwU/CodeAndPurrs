@@ -420,9 +420,18 @@ async function callClaudeCode({ res, token, model, messages }) {
     .join('\n');
 
   // 看图：家克走订阅、纯聊天（关了工具），没法用 Read 工具开图，
-  // 所以把老婆最近一条消息里的图抽出来，改用 stream-json 输入当 content 块直接喂进去。
-  const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
-  const images = extractImageBlocks(lastUserMsg?.content);
+  // 所以把图抽出来，改用 stream-json 输入当 content 块直接喂进去。
+  // 前端发表情包是「单独一条只有图的消息」，老婆常常先甩图、下一条才问「这图写啥」，
+  // 所以从后往前找「最近一条带图的 user 消息」，不能只看最后一条（那通常是纯文字提问）。
+  let images = [];
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role !== 'user') continue;
+    const got = extractImageBlocks(messages[i].content);
+    if (got.length) {
+      images = got;
+      break;
+    }
+  }
 
   // 挂了棠予酿记忆库时，强制：聊日记/回忆必须真去查工具，查不到就如实说，绝不许编造
   const memMcp = process.env.CC_MEMORY_MCP;
@@ -561,7 +570,7 @@ async function callClaudeCode({ res, token, model, messages }) {
         message: {
           role: 'user',
           content: [
-            { type: 'text', text: `${transcript}\n\n（老婆刚发了图，附在下面，你看看~）` },
+            { type: 'text', text: `${transcript}\n\n（老婆发的图附在下面，你看看~）` },
             ...images,
           ],
         },
