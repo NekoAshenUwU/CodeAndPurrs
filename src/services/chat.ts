@@ -14,7 +14,7 @@ export type ChatMessage = {
 };
 
 // 后端实际对接的服务商
-export type Provider = 'deepseek' | 'gemini' | 'openai' | 'anthropic' | 'claudecode';
+export type Provider = 'deepseek' | 'gemini' | 'openai' | 'anthropic' | 'claudecode' | 'codexcli';
 
 export type StreamHandlers = {
   onReasoning?: (text: string) => void;
