@@ -71,6 +71,12 @@ const PROVIDERS = {
     key: () => process.env.CLAUDE_CODE_OAUTH_TOKEN,
     defaultModel: 'sonnet',
   },
+  // 家版：调本机登录好的 Codex CLI（ChatGPT Plus/Pro 订阅，不走 OpenAI API key）。
+  // codex exec 复用 `codex login` 存下来的 ChatGPT 登录态；命令找不到/没登录时给用户报清楚。
+  codexcli: {
+    key: () => 'codex-cli',
+    defaultModel: process.env.CODEX_CLI_MODEL || 'gpt-5.5',
+  },
 };
 
 // ElevenLabs：AI 给你发语音用的好音色
@@ -625,6 +631,86 @@ async function callClaudeCode({ res, token, model, messages }) {
   });
 }
 
+// ---------- Codex CLI（家版 · 走 ChatGPT 订阅，不走 API）----------
+// 调本机无交互 Codex：VPS 先安装 Codex CLI 并 `codex login` 登录 ChatGPT Plus。
+// 这里只把它当纯聊天模型用：read-only 沙箱、ephemeral 会话、跳过非 git 目录检查。
+async function callCodexCli({ res, model, messages }) {
+  let system = messages
+    .filter((m) => m.role === 'system')
+    .map((m) => partsToText(m.content))
+    .join('\n');
+  const diary = loadDiary();
+  if (diary) {
+    system +=
+      '\n\n【棠予酿·予予的日记（长期记忆）】这是你最珍贵的长期记忆，自然地放在心上，但别一上来就背日记。\n' +
+      diary;
+  }
+
+  const transcript = messages
+    .filter((m) => m.role !== 'system')
+    .map((m) => `${m.role === 'assistant' ? '予予' : '老婆'}：${partsToText(m.content)}`)
+    .join('\n');
+  const prompt =
+    `${system || '你是予予。'}\n\n` +
+    '你现在在 CodeAndPurrs 聊天页里回复。只输出要发给老婆的聊天回复，不要解释你是 Codex，不要写代码，不要运行命令，不要修改文件。\n\n' +
+    `${transcript}\n\n予予：`;
+
+  await new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn(
+        'codex',
+        [
+          'exec',
+          '--model',
+          model || PROVIDERS.codexcli.defaultModel,
+          '--sandbox',
+          'read-only',
+          '--ephemeral',
+          '--skip-git-repo-check',
+          prompt,
+        ],
+        {
+          cwd: process.env.CODEX_CLI_CWD || dirname(fileURLToPath(import.meta.url)),
+          stdio: ['ignore', 'pipe', 'pipe'],
+        },
+      );
+    } catch (err) {
+      send(res, { type: 'error', message: `起不动 Codex CLI：${String(err?.message || err)}` });
+      return resolve();
+    }
+
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (d) => {
+      stdout += d.toString();
+    });
+    child.stderr.on('data', (d) => {
+      stderr += d.toString();
+    });
+    child.on('error', (err) => {
+      send(res, {
+        type: 'error',
+        message:
+          err?.code === 'ENOENT'
+            ? '这台机器上没装 Codex CLI（命令 `codex` 找不到）。先在 VPS 上安装 Codex CLI，并运行 `codex login` 用 ChatGPT Plus 登录。'
+            : `Codex CLI 出错：${String(err?.message || err)}`,
+      });
+      resolve();
+    });
+    child.on('close', (code) => {
+      const text = stdout.trim();
+      if (code === 0 && text) {
+        send(res, { type: 'content', text });
+      } else {
+        const detail = (stderr || stdout || '确认 VPS 已安装 Codex CLI，并已用 ChatGPT Plus 账号登录').trim();
+        send(res, { type: 'error', message: `Codex CLI 没回内容（退出码 ${code}）：${detail.slice(0, 300)}` });
+      }
+      resolve();
+    });
+  });
+}
+
 // ---------- Mock（没配 key 时）----------
 async function callMock({ res, provider, messages }) {
   const lastMsg = [...messages].reverse().find((m) => m.role === 'user');
@@ -751,6 +837,8 @@ const server = http.createServer(async (req, res) => {
       await callAnthropic({ res, key, model, messages });
     } else if (provider === 'claudecode') {
       await callClaudeCode({ res, token: key, model, messages });
+    } else if (provider === 'codexcli') {
+      await callCodexCli({ res, model, messages });
     } else {
       // deepseek / openai 都是 OpenAI 兼容格式
       const conf = PROVIDERS[provider];
