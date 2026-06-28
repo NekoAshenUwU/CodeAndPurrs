@@ -1765,7 +1765,7 @@ a {
 }
 
 /* ---------- 思考链折叠卡片 ---------- */
-/* 思考链：液态玻璃磨砂"沉思云朵"——「装个满怀」字体 + 墨紫 + 真透 */
+/* 思考链：液态玻璃磨砂"沉思云朵"——创小公主体 + 紫色 + 真透到背景图 */
 .think-card {
   position: relative;
   isolation: isolate;
@@ -1774,17 +1774,17 @@ a {
   margin-bottom: 6px;
   border-radius: 18px 18px 18px 6px;
   overflow: hidden;
-  /* 液态玻璃底：极淡左上高光 + 半透磨砂——背景图色彩透得出来 */
+  /* 几乎全透,只靠 backdrop-filter 模糊背景图——能看到背景紫粉云透出来 */
   background:
-    radial-gradient(80% 60% at 22% 8%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 62%),
-    linear-gradient(135deg, rgba(245, 235, 255, 0.18), rgba(220, 208, 245, 0.1));
+    radial-gradient(80% 60% at 22% 8%, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 65%),
+    linear-gradient(135deg, rgba(245, 235, 255, 0.06), rgba(220, 208, 245, 0.04));
   box-shadow:
-    0 10px 22px rgba(118, 96, 160, 0.18),
-    inset 0 1.4px 1.2px rgba(255, 255, 255, 0.7),
-    inset 0 -2.5px 5px rgba(160, 140, 200, 0.1),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.35);
-  -webkit-backdrop-filter: blur(22px) saturate(1.75);
-  backdrop-filter: blur(22px) saturate(1.75);
+    0 8px 18px rgba(118, 96, 160, 0.14),
+    inset 0 1px 1px rgba(255, 255, 255, 0.55),
+    inset 0 -2px 4px rgba(160, 140, 200, 0.08),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  -webkit-backdrop-filter: blur(26px) saturate(1.8);
+  backdrop-filter: blur(26px) saturate(1.8);
 }
 /* 玻璃顶光（湿润反射） */
 .think-card::before {
@@ -1824,11 +1824,11 @@ a {
   gap: 8px;
   width: 100%;
   padding: 9px 14px;
-  color: #3c2b60; /* 墨紫 */
-  font-family: "ManHuai", "ShunFengFull", var(--serif-cn);
+  color: #8e6fc9; /* 亮紫色，跟聊天字色 #5f5877 拉开 */
+  font-family: "GongZhu", "ShunFengFull", var(--serif-cn);
   font-weight: 600;
-  font-size: 0.92rem;
-  letter-spacing: 0.04em;
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
   border: 0;
   background: none;
   cursor: pointer;
@@ -1837,19 +1837,19 @@ a {
 .think-card__chevron {
   margin-left: auto;
   font-size: 0.72rem;
-  color: #6b4a86;
+  color: #a78bd8;
 }
 
 .think-card__body {
   position: relative;
   z-index: 1;
   padding: 2px 15px 12px;
-  border-left: 2px solid rgba(155, 123, 200, 0.45);
+  border-left: 2px solid rgba(155, 123, 200, 0.55);
   margin: 0 0 8px 13px;
-  color: #3c2b60; /* 墨紫 */
-  font-family: "ManHuai", "ShunFengFull", var(--serif-cn);
-  font-size: 0.9rem;
-  line-height: 1.75;
+  color: #7d5fc6; /* 中紫，比标题略深一档；跟正文字色 #5f5877 区分清楚 */
+  font-family: "GongZhu", "ShunFengFull", var(--serif-cn);
+  font-size: 0.92rem;
+  line-height: 1.78;
   letter-spacing: 0.02em;
   white-space: pre-wrap;
   word-break: break-word;
