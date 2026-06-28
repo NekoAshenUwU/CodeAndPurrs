@@ -650,46 +650,63 @@ function ChatRoom({
   };
 
   // 拼历史给模型：系统人设 + 文字消息；表情包消息取出 base64 当图片发（能看图的模型会真看见）。
+  // 省 token 关键:
+  //   1. system prompt 全静态(人设/关于我/记忆罐头/贴纸列表)→ 哈希稳定,命中 anthropic prompt cache
+  //   2. 动态内容(此刻时间/猫爪足迹/位置)塞到"最后一条 user 消息"前缀,不污染 system
+  //   3. 历史超过 30 条只发最近 30 条(更老的靠记忆罐头/日记兜底)
+  const HISTORY_MAX = 30;
   const toMessages = async (ts: Turn[]): Promise<ChatMessage[]> => {
-    // 每次发送都现拼：用当前模型的专属人设 + 最新「关于我」
+    // ===== 系统 prompt(每次内容字节级一致,缓存命中)=====
     let sys = buildSystemPrompt(provider);
-    // 告诉模型它也能发表情包：列出贴纸名字，约定 [贴纸:名字] 的发法
     const names = memes.map((m) => m.name?.trim()).filter(Boolean);
     if (names.length) {
       sys +=
-        `\n\n【你也可以发表情包】你的贴纸盒里有这些表情包：${names.join('、')}。` +
-        '想发的时候，单独写一行 [贴纸:名字]（名字必须和上面列表里的完全一致），系统就会把那张图发出去给老婆。' +
-        '要应景、自然，一次最多发一张；不想发就别硬发，普通聊天还是以文字为主。';
+        `\n\n【你也可以发表情包】你的贴纸盒里有这些表情包:${names.join('、')}。` +
+        '想发的时候,单独写一行 [贴纸:名字](名字必须和上面列表里的完全一致),系统就会把那张图发出去给老婆。' +
+        '要应景、自然,一次最多发一张;不想发就别硬发,普通聊天还是以文字为主。';
     }
-    // 长期记忆（记忆罐头）：读 + 写
     if (memories.length) {
       sys +=
-        '\n\n【长期记忆·记忆罐头】这些是你和老婆之间要长期记住的事（跨对话都记得）：\n' +
+        '\n\n【长期记忆·记忆罐头】这些是你和老婆之间要长期记住的事(跨对话都记得):\n' +
         memories.map((m) => `- [${m.category}] ${m.text}`).join('\n');
     }
     sys +=
-      '\n\n聊天中如果出现值得长期记住的新信息（纪念日、约定、她的喜好/忌讳、重要的事、她的近况），' +
-      '就在回复里用 [记忆:分类|内容] 记下来（例：[记忆:纪念日|2026-06-21 在一起]、[记忆:喜好|喜欢草莓奶]），' +
-      '系统会自动存进记忆罐头。已经记过的别重复记，普通寒暄不用记；标记会自动隐藏，不影响你正常说话。';
-    // 此刻时间（每次现算）+ 猫爪足迹/浪哪了的实时背景（进窗口拉好缓存在 liveCtx）
-    sys += buildTimeContext();
-    if (liveCtx) sys += liveCtx;
+      '\n\n聊天中如果出现值得长期记住的新信息(纪念日、约定、她的喜好/忌讳、重要的事、她的近况),' +
+      '就在回复里用 [记忆:分类|内容] 记下来(例:[记忆:纪念日|2026-06-21 在一起]、[记忆:喜好|喜欢草莓奶]),' +
+      '系统会自动存进记忆罐头。**只记真正重要的事——日常寒暄、心情起伏、随口一句都别记**,记多了反而吵。已经记过的别重复记;标记会自动隐藏,不影响你正常说话。';
+
     const out: ChatMessage[] = [{ role: 'system', content: sys }];
-    for (const t of ts) {
+
+    // ===== 消息历史(只发最近 HISTORY_MAX 条,省 token + 不爆 context)=====
+    const slice = ts.length > HISTORY_MAX ? ts.slice(-HISTORY_MAX) : ts;
+    // 找出最后一条 user 消息的索引(动态信息要塞到它前面)
+    const lastUserIdx = (() => {
+      for (let i = slice.length - 1; i >= 0; i--) {
+        if (slice[i].role === 'user' && !slice[i].meme) return i;
+      }
+      return -1;
+    })();
+    // 动态信息(每条都变,所以不进 system)
+    const dynamic = buildTimeContext() + (liveCtx || '');
+
+    for (let i = 0; i < slice.length; i++) {
+      const t = slice[i];
       if (t.meme) {
         const dataUrl = await getMemeDataUrl(t.meme);
         if (dataUrl)
           out.push({
             role: t.role,
-            // 配一句自然语境，免得模型把"纯图片"当成识图任务、丢了人设
             content: [
-              { type: 'text', text: '（我给你发了张表情包～）' },
+              { type: 'text', text: '(我给你发了张表情包~)' },
               { type: 'image_url', image_url: { url: dataUrl } },
             ],
           });
         continue;
       }
-      if (t.content.trim()) out.push({ role: t.role, content: t.content });
+      if (!t.content.trim()) continue;
+      // 把动态信息拼到最后一条 user 消息前(只这条变,前面的历史完全稳定→缓存命中)
+      const content = i === lastUserIdx && dynamic ? `${dynamic}\n\n${t.content}` : t.content;
+      out.push({ role: t.role, content });
     }
     return out;
   };
