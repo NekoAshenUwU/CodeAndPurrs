@@ -60,6 +60,13 @@
   font-display: swap;
 }
 @font-face {
+  font-family: "GongZhuFull"; /* 创小公主体 全字库(1.85MB) · 思考链；只在用到时浏览器才会拉 */
+  src: url("/fonts/gongzhu-full.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
   font-family: "ShunFengFull"; /* Aa顺风顺水顺财神 子集(GB2312) · 记忆罐头正文 */
   src: url("/fonts/shunfeng-full.woff2") format("woff2");
   font-weight: 400;
@@ -1774,17 +1781,16 @@ a {
   margin-bottom: 6px;
   border-radius: 18px 18px 18px 6px;
   overflow: hidden;
-  /* 几乎全透,只靠 backdrop-filter 模糊背景图——能看到背景紫粉云透出来 */
+  /* 真磨砂——零白底,只一丝冷紫薄膜中和背景图的粉黄,完全靠 backdrop 模糊 */
   background:
-    radial-gradient(80% 60% at 22% 8%, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 65%),
-    linear-gradient(135deg, rgba(245, 235, 255, 0.06), rgba(220, 208, 245, 0.04));
+    linear-gradient(135deg, rgba(200, 195, 245, 0.06), rgba(190, 180, 240, 0.04));
   box-shadow:
-    0 8px 18px rgba(118, 96, 160, 0.14),
-    inset 0 1px 1px rgba(255, 255, 255, 0.55),
-    inset 0 -2px 4px rgba(160, 140, 200, 0.08),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.22);
-  -webkit-backdrop-filter: blur(26px) saturate(1.8);
-  backdrop-filter: blur(26px) saturate(1.8);
+    0 8px 18px rgba(118, 96, 160, 0.12),
+    inset 0 1px 1px rgba(255, 255, 255, 0.32),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  /* saturate(0.9) 把背景的高饱粉黄降一档,blur 加到 30 让透出来的色彩柔成糊状 */
+  -webkit-backdrop-filter: blur(30px) saturate(0.92);
+  backdrop-filter: blur(30px) saturate(0.92);
 }
 /* 玻璃顶光（湿润反射） */
 .think-card::before {
@@ -1825,7 +1831,7 @@ a {
   width: 100%;
   padding: 9px 14px;
   color: #8e6fc9; /* 亮紫色，跟聊天字色 #5f5877 拉开 */
-  font-family: "GongZhu", "ShunFengFull", var(--serif-cn);
+  font-family: "GongZhuFull", "ShunFengFull", var(--serif-cn);
   font-weight: 600;
   font-size: 0.95rem;
   letter-spacing: 0.05em;
@@ -1847,7 +1853,7 @@ a {
   border-left: 2px solid rgba(155, 123, 200, 0.55);
   margin: 0 0 8px 13px;
   color: #7d5fc6; /* 中紫，比标题略深一档；跟正文字色 #5f5877 区分清楚 */
-  font-family: "GongZhu", "ShunFengFull", var(--serif-cn);
+  font-family: "GongZhuFull", "ShunFengFull", var(--serif-cn);
   font-size: 0.92rem;
   line-height: 1.78;
   letter-spacing: 0.02em;
