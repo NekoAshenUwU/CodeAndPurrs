@@ -1765,7 +1765,7 @@ a {
 }
 
 /* ---------- 思考链折叠卡片 ---------- */
-/* 思考链：液态玻璃磨砂"沉思云朵"——顺风顺水墨紫字 */
+/* 思考链：液态玻璃磨砂"沉思云朵"——「装个满怀」字体 + 墨紫 + 真透 */
 .think-card {
   position: relative;
   isolation: isolate;
@@ -1774,17 +1774,17 @@ a {
   margin-bottom: 6px;
   border-radius: 18px 18px 18px 6px;
   overflow: hidden;
-  /* 液态玻璃底：左上高光 + 磨砂渐变 */
+  /* 液态玻璃底：极淡左上高光 + 半透磨砂——背景图色彩透得出来 */
   background:
-    radial-gradient(80% 60% at 24% 10%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 60%),
-    linear-gradient(135deg, rgba(245, 235, 255, 0.55), rgba(228, 220, 248, 0.32));
+    radial-gradient(80% 60% at 22% 8%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 62%),
+    linear-gradient(135deg, rgba(245, 235, 255, 0.18), rgba(220, 208, 245, 0.1));
   box-shadow:
-    0 10px 22px rgba(118, 96, 160, 0.22),
-    inset 0 1.4px 1.2px rgba(255, 255, 255, 0.95),
-    inset 0 -2.5px 5px rgba(160, 140, 200, 0.18),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.55);
-  -webkit-backdrop-filter: blur(14px) saturate(1.55);
-  backdrop-filter: blur(14px) saturate(1.55);
+    0 10px 22px rgba(118, 96, 160, 0.18),
+    inset 0 1.4px 1.2px rgba(255, 255, 255, 0.7),
+    inset 0 -2.5px 5px rgba(160, 140, 200, 0.1),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  -webkit-backdrop-filter: blur(22px) saturate(1.75);
+  backdrop-filter: blur(22px) saturate(1.75);
 }
 /* 玻璃顶光（湿润反射） */
 .think-card::before {
@@ -1825,7 +1825,7 @@ a {
   width: 100%;
   padding: 9px 14px;
   color: #3c2b60; /* 墨紫 */
-  font-family: "ShunFengFull", "ShunFeng", var(--serif-cn);
+  font-family: "ManHuai", "ShunFengFull", var(--serif-cn);
   font-weight: 600;
   font-size: 0.92rem;
   letter-spacing: 0.04em;
@@ -1847,7 +1847,7 @@ a {
   border-left: 2px solid rgba(155, 123, 200, 0.45);
   margin: 0 0 8px 13px;
   color: #3c2b60; /* 墨紫 */
-  font-family: "ShunFengFull", "ShunFeng", var(--serif-cn);
+  font-family: "ManHuai", "ShunFengFull", var(--serif-cn);
   font-size: 0.9rem;
   line-height: 1.75;
   letter-spacing: 0.02em;
