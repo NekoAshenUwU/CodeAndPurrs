@@ -1446,17 +1446,8 @@ a {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  /* Lunar Whisper · 微光夜语：粉→长春花蓝→薄荷青液态玻璃雾感渐变,叠在猫猫背景图上
-     底层猫猫图低 alpha 透出来,上层柔色雾感包住整个聊天界面 */
-  background:
-    linear-gradient(
-      135deg,
-      rgba(238, 208, 242, 0.46) 0%,
-      rgba(196, 200, 245, 0.42) 35%,
-      rgba(158, 186, 235, 0.42) 65%,
-      rgba(150, 223, 245, 0.46) 100%
-    ),
-    var(--chat-bg-image, url("/rooms/purr-channel.webp")) center / cover no-repeat;
+  /* 露原图,不再叠雾感(老婆说这个上次反了——雾感是给气泡的,不是给页面) */
+  background: var(--chat-bg-image, url("/rooms/purr-channel.webp")) center / cover no-repeat;
 }
 
 /* ---------- 顶栏：钉死在视口顶部，不会随消息变多消失 ---------- */
@@ -1656,20 +1647,45 @@ a {
   box-shadow: 0 6px 18px rgba(118, 96, 132, 0.12);
 }
 
+/* 气泡配色:Nebula Mist 星云幻境 (薄荷→浅紫→品紫),液态玻璃半透 */
 .bubble--user {
-  color: #6b4350;
+  position: relative;
+  color: #4a2b6d;
   border-bottom-right-radius: 6px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(243, 191, 208, 0.82));
+  /* 我的气泡:偏粉紫主调 */
+  background: linear-gradient(
+    135deg,
+    rgba(221, 246, 240, 0.5) 0%,
+    rgba(208, 110, 246, 0.32) 55%,
+    rgba(170, 252, 242, 0.4) 100%
+  );
+  box-shadow:
+    0 4px 14px rgba(180, 120, 220, 0.16),
+    inset 0 1px 1px rgba(255, 255, 255, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.32);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
 }
 
 .bubble--bot {
   position: relative;
   max-width: 100%;
   padding: 14px 16px;
-  color: var(--ink);
-  background: linear-gradient(135deg, #fff5fb 0%, #f4eafd 100%);
-  border-radius: 20px 20px 20px 6px; /* 左下角小尖，气泡尾巴感 */
-  box-shadow: 0 3px 12px rgba(200, 170, 220, 0.2);
+  color: #3c2b60;
+  /* 予予的气泡:偏薄荷青主调 */
+  background: linear-gradient(
+    135deg,
+    rgba(170, 252, 242, 0.46) 0%,
+    rgba(221, 246, 240, 0.42) 45%,
+    rgba(208, 110, 246, 0.28) 100%
+  );
+  border-radius: 20px 20px 20px 6px; /* 左下角小尖,气泡尾巴感 */
+  box-shadow:
+    0 4px 14px rgba(140, 110, 200, 0.16),
+    inset 0 1px 1px rgba(255, 255, 255, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.32);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
 }
 
 /* 气泡左上角探出的小猫爪 */
