@@ -1806,15 +1806,20 @@ a {
   margin-bottom: 6px;
   border-radius: 18px 18px 18px 6px;
   overflow: hidden;
-  /* 真·零白底磨砂——完全透明,只 backdrop 模糊一档,猫猫背景直接透过来 */
-  background: transparent;
+  /* Lunar Whisper 微光夜语:#EED0F2 薄粉 → #9EBAEB 长春花蓝 → #96DFF5 薄荷青
+     半透液态玻璃,背后猫猫透得出来 */
+  background: linear-gradient(
+    135deg,
+    rgba(238, 208, 242, 0.42) 0%,
+    rgba(158, 186, 235, 0.36) 55%,
+    rgba(150, 223, 245, 0.42) 100%
+  );
   box-shadow:
-    0 8px 18px rgba(118, 96, 160, 0.1),
-    inset 0 1px 1px rgba(255, 255, 255, 0.28),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.14);
-  /* 只一点点 blur (12px) 让边界柔化,但能清楚看到背后猫猫;不降饱和度 */
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+    0 8px 18px rgba(140, 130, 200, 0.16),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  backdrop-filter: blur(16px) saturate(1.3);
 }
 /* 玻璃顶光（湿润反射） */
 .think-card::before {
