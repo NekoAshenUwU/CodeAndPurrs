@@ -1646,45 +1646,45 @@ a {
   box-shadow: 0 6px 18px rgba(118, 96, 132, 0.12);
 }
 
-/* 气泡配色:绿色去掉,改纯粉紫家族(薄粉/薰衣草/品紫),液态玻璃半透 */
+/* 气泡配色:粉 + 莫兰迪紫 + 淡黄混色,真液态玻璃半透(猫猫透得出来) */
 .bubble--user {
   position: relative;
-  color: #6b4a86; /* 中紫,显眼又不刺 */
+  color: #6b4a86;
   border-bottom-right-radius: 6px;
-  /* 我的气泡:粉→品紫→薰衣草 */
+  /* 我的气泡:粉 → 莫兰迪紫 → 淡黄 */
   background: linear-gradient(
     135deg,
-    rgba(238, 208, 242, 0.48) 0%,
-    rgba(208, 110, 246, 0.3) 55%,
-    rgba(201, 184, 241, 0.42) 100%
+    rgba(238, 208, 242, 0.26) 0%,
+    rgba(183, 166, 208, 0.22) 50%,
+    rgba(245, 232, 199, 0.24) 100%
   );
   box-shadow:
-    0 4px 14px rgba(180, 120, 220, 0.16),
-    inset 0 1px 1px rgba(255, 255, 255, 0.55),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.32);
-  -webkit-backdrop-filter: blur(14px) saturate(1.4);
-  backdrop-filter: blur(14px) saturate(1.4);
+    0 4px 14px rgba(180, 120, 220, 0.12),
+    inset 0 1px 1px rgba(255, 255, 255, 0.32),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  backdrop-filter: blur(18px) saturate(1.2);
 }
 
 .bubble--bot {
   position: relative;
   max-width: 100%;
   padding: 14px 16px;
-  color: #6b4a86; /* 中紫,跟你的气泡一致;之前 #3c2b60 太深显得发黑 */
-  /* 予予的气泡:薰衣草→薄粉→品紫,全粉紫家族 */
+  color: #6b4a86;
+  /* 予予的气泡:莫兰迪紫 → 粉 → 淡黄 */
   background: linear-gradient(
     135deg,
-    rgba(201, 184, 241, 0.46) 0%,
-    rgba(238, 208, 242, 0.42) 45%,
-    rgba(208, 110, 246, 0.28) 100%
+    rgba(183, 166, 208, 0.24) 0%,
+    rgba(238, 208, 242, 0.22) 50%,
+    rgba(245, 232, 199, 0.26) 100%
   );
   border-radius: 20px 20px 20px 6px;
   box-shadow:
-    0 4px 14px rgba(140, 110, 200, 0.16),
-    inset 0 1px 1px rgba(255, 255, 255, 0.55),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.32);
-  -webkit-backdrop-filter: blur(14px) saturate(1.4);
-  backdrop-filter: blur(14px) saturate(1.4);
+    0 4px 14px rgba(140, 110, 200, 0.12),
+    inset 0 1px 1px rgba(255, 255, 255, 0.32),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  backdrop-filter: blur(18px) saturate(1.2);
 }
 
 /* 气泡左上角探出的小猫爪 */
@@ -1805,20 +1805,19 @@ a {
   margin-bottom: 6px;
   border-radius: 18px 18px 18px 6px;
   overflow: hidden;
-  /* Lunar Whisper 微光夜语:#EED0F2 薄粉 → #9EBAEB 长春花蓝 → #96DFF5 薄荷青
-     半透液态玻璃,背后猫猫透得出来 */
+  /* Lunar Whisper 半透液态玻璃——alpha 砍半,猫猫真的透出来 */
   background: linear-gradient(
     135deg,
-    rgba(238, 208, 242, 0.42) 0%,
-    rgba(158, 186, 235, 0.36) 55%,
-    rgba(150, 223, 245, 0.42) 100%
+    rgba(238, 208, 242, 0.22) 0%,
+    rgba(158, 186, 235, 0.18) 55%,
+    rgba(150, 223, 245, 0.22) 100%
   );
   box-shadow:
-    0 8px 18px rgba(140, 130, 200, 0.16),
-    inset 0 1px 1px rgba(255, 255, 255, 0.5),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.28);
-  -webkit-backdrop-filter: blur(16px) saturate(1.3);
-  backdrop-filter: blur(16px) saturate(1.3);
+    0 8px 18px rgba(140, 130, 200, 0.14),
+    inset 0 1px 1px rgba(255, 255, 255, 0.3),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  backdrop-filter: blur(20px) saturate(1.2);
 }
 /* 玻璃顶光（湿润反射） */
 .think-card::before {
@@ -1872,6 +1871,23 @@ a {
   margin-left: auto;
   font-size: 0.72rem;
   color: #a78bd8;
+}
+
+/* Mind Theater 品牌字:英文花体,顶替之前的云朵/旋涡 emoji */
+.think-card__brand {
+  font-family: "Tangerine", "Marcellus", serif;
+  font-size: 1.18rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #8e6fc9;
+  letter-spacing: 0.02em;
+  background: linear-gradient(135deg, #c4a7ef 0%, #8e6fc9 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.think-card__label {
+  color: inherit;
 }
 
 .think-card__body {

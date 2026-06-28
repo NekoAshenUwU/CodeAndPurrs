@@ -68,8 +68,8 @@ function ThinkingCard({ text, streaming, ms }: { text: string; streaming: boolea
   return (
     <div className={`think-card${open ? ' is-open' : ''}`}>
       <button type="button" className="think-card__toggle" onClick={() => setOpen((v) => !v)}>
-        <span className="think-card__spark">{streaming ? '🌀' : '💭'}</span>
-        <span>{label}</span>
+        <span className="think-card__brand">Mind Theater</span>
+        <span className="think-card__label">{label}</span>
         <span className="think-card__chevron" aria-hidden="true">
           {open ? '▾' : '▸'}
         </span>
