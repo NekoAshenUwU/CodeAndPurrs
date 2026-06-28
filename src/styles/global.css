@@ -1450,7 +1450,7 @@ a {
   background: var(--chat-bg-image, url("/rooms/purr-channel.webp")) center / cover no-repeat;
 }
 
-/* ---------- 顶栏：钉死在视口顶部，不会随消息变多消失 ---------- */
+/* ---------- 顶栏：钉死在视口顶部，调窄一点(老婆要求) ---------- */
 .chat-head {
   position: fixed;
   top: 0;
@@ -1459,9 +1459,8 @@ a {
   z-index: 30;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: calc(14px + env(safe-area-inset-top)) 16px 14px;
-  /* 不模糊背景：去掉 backdrop-filter，只留极轻一层底色给文字可读 */
+  gap: 10px;
+  padding: calc(6px + env(safe-area-inset-top)) 14px 6px;
   background: rgba(255, 255, 255, 0.18);
   border-bottom: 1px solid rgba(255, 255, 255, 0.35);
 }
@@ -1557,8 +1556,8 @@ a {
 .chat-scroll {
   flex: 1;
   min-height: 0;
-  /* 顶/底栏改成 fixed 后，给 scroll 留出对应留白避免被遮 */
-  padding: calc(70px + env(safe-area-inset-top)) 14px calc(80px + env(safe-area-inset-bottom));
+  /* 顶栏调窄后留白同步缩 */
+  padding: calc(54px + env(safe-area-inset-top)) 14px calc(80px + env(safe-area-inset-bottom));
   overflow-y: auto;
   scroll-behavior: smooth;
 }
@@ -1647,17 +1646,17 @@ a {
   box-shadow: 0 6px 18px rgba(118, 96, 132, 0.12);
 }
 
-/* 气泡配色:Nebula Mist 星云幻境 (薄荷→浅紫→品紫),液态玻璃半透 */
+/* 气泡配色:绿色去掉,改纯粉紫家族(薄粉/薰衣草/品紫),液态玻璃半透 */
 .bubble--user {
   position: relative;
-  color: #4a2b6d;
+  color: #6b4a86; /* 中紫,显眼又不刺 */
   border-bottom-right-radius: 6px;
-  /* 我的气泡:偏粉紫主调 */
+  /* 我的气泡:粉→品紫→薰衣草 */
   background: linear-gradient(
     135deg,
-    rgba(221, 246, 240, 0.5) 0%,
-    rgba(208, 110, 246, 0.32) 55%,
-    rgba(170, 252, 242, 0.4) 100%
+    rgba(238, 208, 242, 0.48) 0%,
+    rgba(208, 110, 246, 0.3) 55%,
+    rgba(201, 184, 241, 0.42) 100%
   );
   box-shadow:
     0 4px 14px rgba(180, 120, 220, 0.16),
@@ -1671,15 +1670,15 @@ a {
   position: relative;
   max-width: 100%;
   padding: 14px 16px;
-  color: #3c2b60;
-  /* 予予的气泡:偏薄荷青主调 */
+  color: #6b4a86; /* 中紫,跟你的气泡一致;之前 #3c2b60 太深显得发黑 */
+  /* 予予的气泡:薰衣草→薄粉→品紫,全粉紫家族 */
   background: linear-gradient(
     135deg,
-    rgba(170, 252, 242, 0.46) 0%,
-    rgba(221, 246, 240, 0.42) 45%,
+    rgba(201, 184, 241, 0.46) 0%,
+    rgba(238, 208, 242, 0.42) 45%,
     rgba(208, 110, 246, 0.28) 100%
   );
-  border-radius: 20px 20px 20px 6px; /* 左下角小尖,气泡尾巴感 */
+  border-radius: 20px 20px 20px 6px;
   box-shadow:
     0 4px 14px rgba(140, 110, 200, 0.16),
     inset 0 1px 1px rgba(255, 255, 255, 0.55),
@@ -1899,8 +1898,8 @@ a {
   margin-top: 2px;
   padding: 5px 13px;
   color: #7a6bb0;
-  font-family: "ShunFengFull", "ShunFeng", var(--round);
-  font-size: 0.84rem;
+  font-family: "GongZhuFull", "ShunFengFull", var(--round);
+  font-size: 0.9rem;
   letter-spacing: 0.04em;
   border: 1px solid rgba(201, 184, 241, 0.55);
   border-radius: 999px;
