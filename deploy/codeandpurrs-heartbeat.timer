@@ -1,0 +1,17 @@
+[Unit]
+Description=CodeAndPurrs · Trigger cache keepalive every 55 minutes
+Documentation=https://github.com/NekoAshenUwU/CodeAndPurrs/blob/main/docs/HEARTBEAT-INSTALL.md
+
+[Timer]
+# 开机 5 分钟后首次跑（让 PM2 先起来、网络稳定）
+OnBootSec=5min
+# 之后每 55 分钟跑一次（Anthropic 1h TTL 留 5 分钟安全余量）
+OnUnitActiveSec=55min
+# 误差 1 分钟内浮动（避免和别的整点任务挤）
+AccuracySec=1min
+# 重启后如果错过了上次触发时间，立刻补一次
+Persistent=true
+Unit=codeandpurrs-heartbeat.service
+
+[Install]
+WantedBy=timers.target
