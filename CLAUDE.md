@@ -64,3 +64,31 @@ cd /var/www/codeandpurrs && git pull origin claude/codepurrs-progress-docs-7tcqk
 - 端口 8787 被占就用 `pm2 restart`，不要 `pkill`／`fuser`，PM2 会立刻 respawn 跟你打架
 - 日记文件路径 `server/data/diary.md`，前端 `/api/diary` GET/POST 接口，调频页有上传 UI
 - 棠予酿 MCP（实时记忆库）走 OAuth，无头 CC 加载不了；目前用静态 diary.md 替代
+
+## PM2 灾难恢复（codeandpurrs 被误删时）
+
+老婆的 VPS 上 PM2 还跑着别的进程（telegram bot 之类，可能再被加回来）。**如果哪天发现 `pm2 list` 里没了 codeandpurrs**（或者聊天又走 mock 了），一句话从 `ecosystem.config.cjs` 恢复：
+
+```
+cd /var/www/codeandpurrs && pm2 start ecosystem.config.cjs && pm2 save
+```
+
+⚠️ **重启 codeandpurrs 千万不要直接 `pm2 start node server/proxy.mjs`** —— 那样跳过 npm 脚本，**node 不会读 `--env-file-if-exists=.env`，proxy 拿不到 `CLAUDE_CODE_OAUTH_TOKEN`，永远走 mock 模式**。必须走 `npm run proxy:start`（package.json 里那条），或者用 ecosystem 文件（它已经写死了正确的 script + args）。
+
+如果是别的 session 帮她删 telegram 那仨进程（`purr-bot` / `purr-chat` / `purr-reminder`），**提醒它绝对不要动 codeandpurrs**——这俩职责完全分开。
+
+## OAuth token 失效时（约一个月或被清）
+
+聊天回 mock + proxy 日志没看到 `claudecode:已配置` → token 过期。重生成：
+
+1. VPS `claude setup-token` → 它打印一个 URL（终端宽度会换行，从截图重构 URL 要**逐行末→行首拼接逐字校验**，不要省）
+2. 浏览器粘 URL → Authorize → 拿到一段 code（中间可能有 `#`，整段都要）
+3. 回 VPS 终端粘 code → 回车
+4. 提取写入 .env + 重启：
+   ```
+   TOKEN=$(grep -oE '"accessToken"[[:space:]]*:[[:space:]]*"[^"]+"' ~/.claude/.credentials.json | head -1 | sed -E 's/.*"([^"]+)"$/\1/')
+   sed -i '/^CLAUDE_CODE_OAUTH_TOKEN=/d' /var/www/codeandpurrs/.env
+   echo "CLAUDE_CODE_OAUTH_TOKEN=$TOKEN" >> /var/www/codeandpurrs/.env
+   pm2 restart codeandpurrs --update-env
+   ```
+5. 验证：`pm2 logs codeandpurrs --lines 5 --nostream` 应该看到 `claudecode:已配置`
