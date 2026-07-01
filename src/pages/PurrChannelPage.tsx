@@ -4,6 +4,7 @@ import { streamChat, type ChatMessage } from '../services/chat';
 import { getModel, MODEL_GROUPS } from '../data/models';
 import { buildSystemPrompt, loadDefaultModel, loadChatBg, loadChatAvatar, loadChatUserAvatar } from '../services/purrConfig';
 import { addMemory, loadMemories, type Memory } from '../services/memory';
+import { loadRollingSummary, saveRollingSummary, type RollingSummary } from '../services/rollingSummary';
 import { clearLocal, loadLocal, saveLocal } from '../services/storage';
 import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
 import { getMemeURL, getMemeDataUrl, listMemes, type MemeItem } from '../services/memes';
@@ -537,6 +538,13 @@ function ChatRoom({
       voice: t.voice ? { duration: t.voice.duration } : undefined,
     })),
   );
+  // 滚动摘要：HISTORY_MAX 窗口之外的老消息不再直接丢，异步压成摘要兜底（见下方 compressOldHistory）
+  const [rollingSummary, setRollingSummary] = useState<RollingSummary>(() => loadRollingSummary(win.id));
+  const summarizingRef = useRef(false);
+  const mountedRef = useRef(true);
+  useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
   const [input, setInput] = useState('');
   // 模型每个窗口各记一份（存在窗口元信息里）；切换只影响当前窗口
   const [provider, setProvider] = useState<string>(win.provider ?? 'deepseek');
@@ -575,6 +583,17 @@ function ChatRoom({
     // onTouch 每次渲染都是新引用，故意不进依赖，避免回环
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turns, sending, win.id]);
+
+  useEffect(() => {
+    saveRollingSummary(win.id, rollingSummary);
+  }, [win.id, rollingSummary]);
+
+  // 一轮回复结束后顺手检查一下：老消息攒够了就异步压一批摘要，不打断聊天
+  useEffect(() => {
+    if (sending) return;
+    void compressOldHistory(turns);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turns, sending]);
 
   // 小提示自动消失
   useEffect(() => {
@@ -653,8 +672,11 @@ function ChatRoom({
   // 省 token 关键:
   //   1. system prompt 全静态(人设/关于我/记忆罐头/贴纸列表)→ 哈希稳定,命中 anthropic prompt cache
   //   2. 动态内容(此刻时间/猫爪足迹/位置)塞到"最后一条 user 消息"前缀,不污染 system
-  //   3. 历史超过 30 条只发最近 30 条(更老的靠记忆罐头/日记兜底)
+  //   3. 历史超过 30 条只发最近 30 条(更老的靠记忆罐头/日记/滚动摘要兜底)
   const HISTORY_MAX = 30;
+  // 滚动摘要:未压缩消息攒够 SUMMARY_TRIGGER 条就异步压最老的 SUMMARY_BATCH 条(用便宜的 DeepSeek)
+  const SUMMARY_TRIGGER = 20;
+  const SUMMARY_BATCH = 12;
   const toMessages = async (ts: Turn[]): Promise<ChatMessage[]> => {
     // ===== 系统 prompt(每次内容字节级一致,缓存命中)=====
     let sys = buildSystemPrompt(provider);
@@ -669,6 +691,9 @@ function ChatRoom({
       sys +=
         '\n\n【长期记忆·记忆罐头】这些是你和老婆之间要长期记住的事(跨对话都记得):\n' +
         memories.map((m) => `- [${m.category}] ${m.text}`).join('\n');
+    }
+    if (rollingSummary.summary) {
+      sys += '\n\n【更早的聊天摘要(自动压缩,可能不完全准确)】\n' + rollingSummary.summary;
     }
     sys +=
       '\n\n聊天中如果出现值得长期记住的新信息(纪念日、约定、她的喜好/忌讳、重要的事、她的近况),' +
@@ -709,6 +734,52 @@ function ChatRoom({
       out.push({ role: t.role, content });
     }
     return out;
+  };
+
+  // 把一批老消息喂给 DeepSeek,压成一句 100~150 字的中文摘要(DeepSeek 不聪明,做这种简单活够用)
+  const summarizeBatch = async (batchText: string): Promise<string> => {
+    let out = '';
+    await streamChat(
+      {
+        provider: 'deepseek',
+        messages: [
+          {
+            role: 'system',
+            content:
+              '你是一个做文字摘要的工具。把下面这段对话压缩成一句100到150字的中文摘要,只保留重要信息:' +
+              '约定的事、喜好或忌讳、重要事件、情绪变化。不要复述细节,不要加称呼语和多余寒暄,只输出摘要本身。',
+          },
+          { role: 'user', content: batchText },
+        ],
+      },
+      { onContent: (chunk) => (out += chunk) },
+    );
+    return out.trim();
+  };
+
+  // 老消息攒够 SUMMARY_TRIGGER 条就异步压最老的 SUMMARY_BATCH 条,不打断聊天;失败就跳过,下次再试
+  const compressOldHistory = async (allTurns: Turn[]) => {
+    if (summarizingRef.current) return;
+    if (allTurns.length - rollingSummary.summarizedCount < SUMMARY_TRIGGER) return;
+    summarizingRef.current = true;
+    try {
+      const from = rollingSummary.summarizedCount;
+      const batch = allTurns.slice(from, from + SUMMARY_BATCH);
+      if (!batch.length) return;
+      const label = (t: Turn) => (t.role === 'user' ? '老婆' : '予予');
+      const textOf = (t: Turn) => (t.meme ? '(发了一张表情包)' : t.content.trim() || '(空消息)');
+      const batchText = batch.map((t) => `${label(t)}:${textOf(t)}`).join('\n');
+      const gist = await summarizeBatch(batchText);
+      if (!gist || !mountedRef.current) return;
+      setRollingSummary((prev) => ({
+        summary: prev.summary ? `${prev.summary}\n- ${gist}` : `- ${gist}`,
+        summarizedCount: from + batch.length,
+      }));
+    } catch {
+      // 滚动摘要是省 token 的兜底优化,失败不影响正常聊天,下次触发再重试这批
+    } finally {
+      summarizingRef.current = false;
+    }
   };
 
   // 让猫咪基于给定历史回一条
