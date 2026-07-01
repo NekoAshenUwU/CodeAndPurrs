@@ -877,7 +877,10 @@ function ChatRoom({
     const out: ChatMessage[] = [{ role: 'system', content: sys }];
 
     // ===== 消息历史(只发最近 HISTORY_MAX 条,省 token + 不爆 context)=====
-    const slice = ts.length > HISTORY_MAX ? ts.slice(-HISTORY_MAX) : ts;
+    // 已经被滚动摘要折进 system prompt 的老消息不能再原样发一遍——
+    // 不然摘要和原文同时喂给模型,同一个话题它会看到两遍,反而像"失忆"一样反复重提。
+    const startIdx = Math.max(rollingSummary.summarizedCount, ts.length - HISTORY_MAX);
+    const slice = ts.slice(startIdx);
     // 找出最后一条 user 消息的索引(动态信息要塞到它前面)
     const lastUserIdx = (() => {
       for (let i = slice.length - 1; i >= 0; i--) {
