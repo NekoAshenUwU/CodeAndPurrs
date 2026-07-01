@@ -8,6 +8,7 @@ import { loadRollingSummary, saveRollingSummary, type RollingSummary } from '../
 import { clearLocal, loadLocal, saveLocal } from '../services/storage';
 import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
 import { getMemeURL, getMemeDataUrl, listMemes, type MemeItem } from '../services/memes';
+import { addPhoto, getPhotoURL, getPhotoDataUrl } from '../services/photos';
 import { fetchLatestUsage } from '../services/usageBridge';
 import { fetchLocationLatest, reverseGeocode } from '../services/locationBridge';
 import { getTimeOfDay } from '../components/ambient/timeOfDay';
@@ -37,6 +38,7 @@ type Turn = {
   voice?: Voice; // 用户语音消息才有；content 存转写出来的文字
   transcribing?: boolean;
   meme?: string; // 表情包消息才有：脑洞贴纸盒里的 meme id，渲染时按需取 blob
+  photo?: string; // 随手发的照片才有：photos IndexedDB 里的 id，渲染时按需取 blob
   memo?: string; // 这条 AI 回复顺手存进记忆罐头的内容（显示"记住了"小条）
   at?: number; // 消息创建时间戳
   thinkMs?: number; // 思考链耗时（从第一段思考到开始正式回复），用来显示「想了 N 秒」
@@ -158,6 +160,28 @@ function MemeBubble({ memeId }: { memeId: string }) {
   if (gone) return <div className="meme-msg meme-msg--gone">这张贴纸被拿走了～</div>;
   if (!url) return <div className="meme-msg meme-msg--loading" />;
   return <img className="meme-msg" src={url} alt="表情包" />;
+}
+
+// 聊天里发的照片气泡：跟表情包同一套加载/失效逻辑，只是取的是 photos 库
+function PhotoBubble({ photoId }: { photoId: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [gone, setGone] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    void getPhotoURL(photoId).then((u) => {
+      if (!alive) return;
+      if (u) setUrl(u);
+      else setGone(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [photoId]);
+
+  if (gone) return <div className="meme-msg meme-msg--gone">这张照片没找到～</div>;
+  if (!url) return <div className="meme-msg meme-msg--loading" />;
+  return <img className="meme-msg" src={url} alt="照片" />;
 }
 
 // 「＋ → 表情包」弹出的选择器：列出脑洞贴纸盒里的收藏，点一张就发。
@@ -569,6 +593,7 @@ function ChatRoom({
   const abortRef = useRef<AbortController | null>(null);
   const recorderRef = useRef<VoiceRecorder | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const photoFileRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -602,11 +627,15 @@ function ChatRoom({
     return () => window.clearTimeout(t);
   }, [notice]);
 
-  // 「+」菜单：表情包已通脑洞贴纸盒；图片/红包还在装修，先给温柔占位
+  // 「+」菜单：表情包走脑洞贴纸盒；图片走系统选图+自动压缩；红包还在装修，先给温柔占位
   const pickMore = (key: string, label: string) => {
     setMoreOpen(false);
     if (key === 'meme') {
       setMemeOpen(true);
+      return;
+    }
+    if (key === 'image') {
+      photoFileRef.current?.click();
       return;
     }
     setNotice(`「${label}」马上就来啦，先占个位～`);
@@ -619,6 +648,17 @@ function ChatRoom({
     const memeTurn: Turn = { id: uid(), role: 'user', content: '', reasoning: '', status: 'done', meme: memeId, at: Date.now() };
     const history = await toMessages([...turns, memeTurn]);
     setTurns((prev) => [...prev, memeTurn]);
+    await runAssistant(history);
+  };
+
+  // 选了一张照片：先压缩存进 photos 库，再作为一条用户消息发出去（跟表情包同一套发送流程）
+  const pickPhoto = async (file: File | undefined) => {
+    if (photoFileRef.current) photoFileRef.current.value = '';
+    if (!file || !file.type.startsWith('image/') || sending) return;
+    const id = await addPhoto(file);
+    const photoTurn: Turn = { id: uid(), role: 'user', content: '', reasoning: '', status: 'done', photo: id, at: Date.now() };
+    const history = await toMessages([...turns, photoTurn]);
+    setTurns((prev) => [...prev, photoTurn]);
     await runAssistant(history);
   };
 
@@ -707,7 +747,7 @@ function ChatRoom({
     // 找出最后一条 user 消息的索引(动态信息要塞到它前面)
     const lastUserIdx = (() => {
       for (let i = slice.length - 1; i >= 0; i--) {
-        if (slice[i].role === 'user' && !slice[i].meme) return i;
+        if (slice[i].role === 'user' && !slice[i].meme && !slice[i].photo) return i;
       }
       return -1;
     })();
@@ -723,6 +763,18 @@ function ChatRoom({
             role: t.role,
             content: [
               { type: 'text', text: '(我给你发了张表情包~)' },
+              { type: 'image_url', image_url: { url: dataUrl } },
+            ],
+          });
+        continue;
+      }
+      if (t.photo) {
+        const dataUrl = await getPhotoDataUrl(t.photo);
+        if (dataUrl)
+          out.push({
+            role: t.role,
+            content: [
+              { type: 'text', text: '(我给你发了张照片~)' },
               { type: 'image_url', image_url: { url: dataUrl } },
             ],
           });
@@ -767,7 +819,8 @@ function ChatRoom({
       const batch = allTurns.slice(from, from + SUMMARY_BATCH);
       if (!batch.length) return;
       const label = (t: Turn) => (t.role === 'user' ? '老婆' : '予予');
-      const textOf = (t: Turn) => (t.meme ? '(发了一张表情包)' : t.content.trim() || '(空消息)');
+      const textOf = (t: Turn) =>
+        t.meme ? '(发了一张表情包)' : t.photo ? '(发了一张照片)' : t.content.trim() || '(空消息)';
       const batchText = batch.map((t) => `${label(t)}:${textOf(t)}`).join('\n');
       const gist = await summarizeBatch(batchText);
       if (!gist || !mountedRef.current) return;
@@ -1025,6 +1078,8 @@ function ChatRoom({
               <div className="bubble-stack bubble-stack--user">
                 {turn.meme ? (
                   <MemeBubble memeId={turn.meme} />
+                ) : turn.photo ? (
+                  <PhotoBubble photoId={turn.photo} />
                 ) : turn.voice ? (
                   <VoiceBubble voice={turn.voice} transcript={turn.content} transcribing={!!turn.transcribing} />
                 ) : editTurnId === turn.id ? (
@@ -1066,7 +1121,7 @@ function ChatRoom({
                       >›</button>
                     </span>
                   ) : null}
-                  {!turn.meme && !turn.voice && editTurnId !== turn.id ? (
+                  {!turn.meme && !turn.photo && !turn.voice && editTurnId !== turn.id ? (
                     <button
                       type="button"
                       className="bubble-edit-foot"
@@ -1164,6 +1219,13 @@ function ChatRoom({
             </>
           ) : null}
           {memeOpen ? <MemePicker onPick={sendMeme} onClose={() => setMemeOpen(false)} /> : null}
+          <input
+            ref={photoFileRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => void pickPhoto(e.target.files?.[0])}
+          />
         </div>
 
         <textarea
