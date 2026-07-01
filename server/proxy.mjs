@@ -10,6 +10,16 @@ import { readFileSync, existsSync, writeFileSync, mkdirSync, statSync, renameSyn
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
+// 主动加载 .env(不依赖 node CLI flag)——pm2 fork 模式不会真正 spawn 新 node,
+// 而是从父进程 require 脚本,导致 --env-file-if-exists 这类 CLI flag 被无视,
+// CLAUDE_CODE_OAUTH_TOKEN 永远进不来,整个 proxy 就一直走 mock。
+// process.loadEnvFile 是 Node 20.6+ 自带,零依赖。
+try {
+  process.loadEnvFile(new URL('../.env', import.meta.url));
+} catch {
+  // .env 不存在或不可读就跳过,mock 模式兜底
+}
+
 // 棠予酿：予予的日记（长期记忆）。把日记文本放进这个文件，家版(CC)每次聊天都会带上。
 // 路径默认 server/data/diary.md，可用环境变量 DIARY_PATH 覆盖。
 const DIARY_FILE = process.env.DIARY_PATH || join(dirname(fileURLToPath(import.meta.url)), 'data', 'diary.md');
