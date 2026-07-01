@@ -6,7 +6,7 @@
 
 import http from 'node:http';
 import { spawn } from 'node:child_process';
-import { readFileSync, existsSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync, statSync, renameSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -32,6 +32,22 @@ function diaryStat() {
 function saveDiary(text) {
   mkdirSync(dirname(DIARY_FILE), { recursive: true });
   writeFileSync(DIARY_FILE, text, 'utf8');
+}
+
+// 嗅探：每次真聊天成功后把"请求前缀"写到磁盘，供心跳脚本读，让 Anthropic 端
+// 的 prompt cache 不会因为超 TTL 而过期。只对真会命中缓存的 provider 写
+// （claudecode / anthropic）；mock 模式或其它家不写。
+const LAST_PREFIX_FILE = process.env.LAST_PREFIX_PATH ||
+  join(dirname(fileURLToPath(import.meta.url)), 'data', 'last-prefix.json');
+function saveLastPrefix(snapshot) {
+  try {
+    mkdirSync(dirname(LAST_PREFIX_FILE), { recursive: true });
+    const tmp = `${LAST_PREFIX_FILE}.tmp`;
+    writeFileSync(tmp, JSON.stringify(snapshot), 'utf8');
+    renameSync(tmp, LAST_PREFIX_FILE); // 原子替换，心跳读到的总是完整文件
+  } catch {
+    /* 写不进就算了，心跳错过这一轮无所谓，不能影响正常聊天 */
+  }
 }
 
 // 尝试读 .env（Node 20.12+ 自带），没有就算了，用已有的环境变量。
@@ -256,7 +272,13 @@ async function callAnthropic({ res, key, model, messages }) {
   const bodyObj = {
     model: model || PROVIDERS.anthropic.defaultModel,
     max_tokens: 8192,
-    system: system || undefined,
+    // system 写成 array + cache_control（1h TTL）：
+    // Anthropic 会把"人设+长期记忆"这段稳定前缀缓存 1 小时，配合心跳脚本预热，
+    // 用户超 1h 没说话回来时 system 不会冷重建，省 token。改成 array 后字节
+    // 内容不变，旧的 5min 默认缓存也仍然命中。
+    system: system
+      ? [{ type: 'text', text: system, cache_control: { type: 'ephemeral', ttl: '1h' } }]
+      : undefined,
     messages: msgs,
     stream: true,
     // 让 Claude 自适应思考，并回传可读的思考摘要（前端思考链可点开看 + 计时）
@@ -858,6 +880,12 @@ const server = http.createServer(async (req, res) => {
       });
     }
     send(res, { type: 'done' });
+    // 嗅探：把这次的请求前缀快照存下来，让 systemd timer 每 55 分钟用同一份
+    // 前缀打一次 Anthropic，避免缓存超 TTL 失效。
+    // 只对真会命中缓存的 provider 写；mock / DeepSeek / Gemini / Codex 不写。
+    if (key && (provider === 'claudecode' || provider === 'anthropic')) {
+      saveLastPrefix({ provider, model: model || null, messages, capturedAt: Date.now() });
+    }
   } catch (err) {
     send(res, { type: 'error', message: String(err?.message || err) });
   } finally {
