@@ -903,3 +903,14 @@ server.listen(PORT, () => {
     .join('  ');
   console.log(`🐾 呼噜代理已启动 http://localhost:${PORT}  [${keys}]`);
 });
+
+// pm2 重启/停止发的是 SIGTERM——不主动关监听 socket 的话，端口释放全靠进程退出的默认行为，
+// 遇到还有请求在流式传输时可能不够快，新进程抢着 listen 就撞上 EADDRINUSE。
+// 收到信号主动 server.close()，3 秒兜底超时强制退出，让端口尽快真正让出来。
+function shutdown(signal) {
+  console.log(`收到 ${signal}，关闭监听...`);
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 3000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
