@@ -491,9 +491,13 @@ async function callClaudeCode({ res, token, model, messages }) {
   // 所以把图抽出来，改用 stream-json 输入当 content 块直接喂进去。
   // 前端发表情包是「单独一条只有图的消息」，老婆常常先甩图、下一条才问「这图写啥」，
   // 所以从后往前找「最近一条带图的 user 消息」，不能只看最后一条（那通常是纯文字提问）。
+  // 但只往前看最近两条 user 消息（当前 + 上一条）——不然图会被一直重新塞进去，
+  // 明明已经聊过去好几轮了，家克还老是重新"看到"那张旧图、反复提起。
   let images = [];
-  for (let i = messages.length - 1; i >= 0; i--) {
+  let checkedUserTurns = 0;
+  for (let i = messages.length - 1; i >= 0 && checkedUserTurns < 2; i--) {
     if (messages[i].role !== 'user') continue;
+    checkedUserTurns++;
     const got = extractImageBlocks(messages[i].content);
     if (got.length) {
       images = got;
