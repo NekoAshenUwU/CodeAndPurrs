@@ -54,6 +54,10 @@ export function HomePage() {
       navigate('/memory-jar');
       return;
     }
+    if (room.id === 'sweetie-pocket') {
+      navigate('/sweetie-pocket');
+      return;
+    }
     setSelectedRoom(room);
   };
 

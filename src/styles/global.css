@@ -4353,6 +4353,205 @@ a {
   .meme-picker { animation: none; }
 }
 
+/* 「＋ → 红包」发红包表单（浮在输入框上方，跟表情包选择器同一个位置） */
+.redpacket-composer {
+  position: absolute;
+  bottom: 56px;
+  left: 0;
+  z-index: 20;
+  width: min(80vw, 280px);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 14px 32px rgba(118, 96, 160, 0.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  animation: chatMorePop 0.16s ease;
+}
+.redpacket-composer__title {
+  font-family: var(--round);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #b8493f;
+  text-align: center;
+}
+.redpacket-composer__amount,
+.redpacket-composer__note {
+  padding: 9px 12px;
+  border: 1px solid rgba(216, 138, 118, 0.3);
+  border-radius: 12px;
+  background: rgba(255, 248, 244, 0.9);
+  font-family: var(--round);
+  font-size: 0.9rem;
+  color: #7a4a3e;
+}
+.redpacket-composer__amount {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.redpacket-composer__ops {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 2px;
+}
+.redpacket-composer__ops button {
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(216, 138, 118, 0.14);
+  color: #b8493f;
+  font-family: var(--round);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.redpacket-composer__ops button.is-primary {
+  background: linear-gradient(135deg, #f2a97a, #e57373);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 8px 16px -7px rgba(229, 115, 115, 0.6);
+}
+.redpacket-composer__ops button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* 聊天里的红包气泡 */
+.redpacket {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 16px;
+  font-family: var(--round);
+  cursor: pointer;
+  box-shadow: 0 8px 18px -10px rgba(229, 115, 115, 0.55);
+}
+.redpacket--closed {
+  background: linear-gradient(135deg, #f2a97a, #e57373);
+  color: #fff;
+}
+.redpacket--closed .redpacket__hint {
+  font-size: 0.85rem;
+}
+.redpacket--opened {
+  background: linear-gradient(135deg, #fff1ea, #ffe3d6);
+  color: #a94a3c;
+  cursor: default;
+}
+.redpacket__icon {
+  font-size: 1.2rem;
+}
+.redpacket__amount {
+  font-size: 1rem;
+  font-weight: 700;
+}
+.redpacket__note {
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+
+/* 甜甜口袋页面 */
+.sweetie-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  background:
+    linear-gradient(170deg, rgba(255, 240, 232, 0.85) 0%, rgba(253, 234, 244, 0.8) 55%, rgba(244, 234, 253, 0.78) 100%),
+    radial-gradient(130% 90% at 50% 0%, #ffe8dd 0%, #fdeaf4 55%, #efe2fb 100%) fixed;
+}
+.sweetie-balances {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.sweetie-balance-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #fff5fb 0%, #fff0e8 100%);
+  box-shadow: 0 3px 12px rgba(200, 170, 220, 0.2);
+}
+.sweetie-balance-card__who {
+  font-family: var(--round);
+  font-size: 0.8rem;
+  color: #8c79ac;
+}
+.sweetie-balance-card__amount {
+  font-family: var(--round);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #b8493f;
+}
+.sweetie-hint {
+  margin: 12px 2px 16px;
+  color: #9a7fc0;
+  font-family: var(--round);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+.sweetie-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sweetie-item {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fff5fb 0%, #f4eafd 100%);
+  box-shadow: 0 3px 12px rgba(200, 170, 220, 0.2);
+  border-left: 3px solid rgba(229, 115, 115, 0.4);
+}
+.sweetie-item--ai {
+  border-left-color: rgba(201, 167, 245, 0.55);
+}
+.sweetie-item__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sweetie-item__from {
+  font-family: var(--round);
+  font-size: 0.82rem;
+  color: #8c79ac;
+}
+.sweetie-item__amount {
+  font-family: var(--round);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #b8493f;
+}
+.sweetie-item__note {
+  margin: 6px 0 0;
+  color: #5d4a7e;
+  font-family: var(--round);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.sweetie-item__time {
+  display: block;
+  margin-top: 6px;
+  color: #a894c9;
+  font-family: var(--round);
+  font-size: 0.72rem;
+}
+
 /* ===== 自定义字体的最终应用（放最后，确保不被更具体的旧规则按源序覆盖） ===== */
 /* 各房间顶栏整条 → 汉仪花仙子 */
 .chat-head,

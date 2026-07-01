@@ -9,6 +9,7 @@ import { clearLocal, loadLocal, saveLocal } from '../services/storage';
 import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
 import { getMemeURL, getMemeDataUrl, listMemes, type MemeItem } from '../services/memes';
 import { addPhoto, getPhotoURL, getPhotoDataUrl } from '../services/photos';
+import { addPacket } from '../services/redPacket';
 import { fetchLatestUsage } from '../services/usageBridge';
 import { fetchLocationLatest, reverseGeocode } from '../services/locationBridge';
 import { getTimeOfDay } from '../components/ambient/timeOfDay';
@@ -39,6 +40,8 @@ type Turn = {
   transcribing?: boolean;
   meme?: string; // 表情包消息才有：脑洞贴纸盒里的 meme id，渲染时按需取 blob
   photo?: string; // 随手发的照片才有：photos IndexedDB 里的 id，渲染时按需取 blob
+  redPacket?: { amount: number; note: string; from: 'user' | 'ai' }; // 红包消息才有：甜甜口袋账本已经记过这一笔了
+  redPacketOpened?: boolean; // 收到的红包要点开才看到金额；自己发的默认已展开
   memo?: string; // 这条 AI 回复顺手存进记忆罐头的内容（显示"记住了"小条）
   at?: number; // 消息创建时间戳
   thinkMs?: number; // 思考链耗时（从第一段思考到开始正式回复），用来显示「想了 N 秒」
@@ -184,6 +187,35 @@ function PhotoBubble({ photoId }: { photoId: string }) {
   return <img className="meme-msg" src={url} alt="照片" />;
 }
 
+// 红包气泡：自己发的直接显示金额；收到的要点一下才拆开看金额和留言(像微信红包)。
+function RedPacketBubble({
+  amount,
+  note,
+  opened,
+  onOpen,
+}: {
+  amount: number;
+  note: string;
+  opened: boolean;
+  onOpen: () => void;
+}) {
+  if (!opened) {
+    return (
+      <button type="button" className="redpacket redpacket--closed" onClick={onOpen}>
+        <span className="redpacket__icon">🧧</span>
+        <span className="redpacket__hint">点开看看</span>
+      </button>
+    );
+  }
+  return (
+    <div className="redpacket redpacket--opened">
+      <span className="redpacket__icon">🧧</span>
+      <span className="redpacket__amount">¥{amount}</span>
+      {note ? <span className="redpacket__note">{note}</span> : null}
+    </div>
+  );
+}
+
 // 「＋ → 表情包」弹出的选择器：列出脑洞贴纸盒里的收藏，点一张就发。
 function MemePicker({ onPick, onClose }: { onPick: (id: string) => void; onClose: () => void }) {
   const [items, setItems] = useState<MemeItem[]>([]);
@@ -235,6 +267,58 @@ function MemePicker({ onPick, onClose }: { onPick: (id: string) => void; onClose
             ))}
           </div>
         )}
+      </div>
+    </>
+  );
+}
+
+// 「＋ → 红包」弹出的发红包表单：填金额 + 写句话(像微信一样)，发出去存进甜甜口袋。
+function RedPacketComposer({
+  onSend,
+  onClose,
+}: {
+  onSend: (amount: number, note: string) => void;
+  onClose: () => void;
+}) {
+  const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  const n = Math.round(Math.abs(Number(amount)) * 100) / 100;
+  const valid = amount.trim() !== '' && n > 0;
+
+  return (
+    <>
+      <button type="button" className="chat-more__scrim" aria-label="关闭红包" onClick={onClose} />
+      <div className="redpacket-composer" role="dialog" aria-label="发红包">
+        <div className="redpacket-composer__title">🧧 发个红包</div>
+        <input
+          className="redpacket-composer__amount"
+          type="number"
+          inputMode="decimal"
+          min="0"
+          step="0.01"
+          placeholder="0.00"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          autoFocus
+        />
+        <input
+          className="redpacket-composer__note"
+          placeholder="写句话，比如「今天很乖值得奖励」"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          maxLength={40}
+        />
+        <div className="redpacket-composer__ops">
+          <button type="button" onClick={onClose}>取消</button>
+          <button
+            type="button"
+            className="is-primary"
+            disabled={!valid}
+            onClick={() => valid && onSend(n, note)}
+          >
+            塞进红包
+          </button>
+        </div>
       </div>
     </>
   );
@@ -315,6 +399,22 @@ function extractMemos(content: string) {
     })
     .trim();
   return { text, memos };
+}
+
+// AI 发红包用的标记：[红包:金额|留言]（留言可省）,存进甜甜口袋(予予 → 棠棠这一方)
+const RED_PACKET_TAG = /[[【]\s*红包\s*[:：]\s*([^\]】]+?)\s*[\]】]/g;
+function extractRedPackets(content: string) {
+  const packets: { amount: number; note: string }[] = [];
+  const text = content
+    .replace(RED_PACKET_TAG, (_m, raw: string) => {
+      const parts = String(raw).split(/[|｜]/);
+      const amount = Math.round(Math.abs(Number(parts[0])) * 100) / 100;
+      const note = (parts.length >= 2 ? parts.slice(1).join('|') : '').trim();
+      if (amount > 0) packets.push({ amount, note });
+      return '';
+    })
+    .trim();
+  return { text, packets };
 }
 
 // 此刻时间，给猫咪一个「现在几点、今天星期几、什么时段」的概念（每次发送都现算）。
@@ -582,6 +682,7 @@ function ChatRoom({
   const [recording, setRecording] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [memeOpen, setMemeOpen] = useState(false);
+  const [redPacketOpen, setRedPacketOpen] = useState(false);
   const [editTurnId, setEditTurnId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   // 编辑历史：每条 user 消息当前显示的是第几个版本（默认最新）；只换显示，不重发。
@@ -627,7 +728,7 @@ function ChatRoom({
     return () => window.clearTimeout(t);
   }, [notice]);
 
-  // 「+」菜单：表情包走脑洞贴纸盒；图片走系统选图+自动压缩；红包还在装修，先给温柔占位
+  // 「+」菜单：表情包走脑洞贴纸盒；图片走系统选图+自动压缩；红包填金额+留言发进甜甜口袋
   const pickMore = (key: string, label: string) => {
     setMoreOpen(false);
     if (key === 'meme') {
@@ -636,6 +737,10 @@ function ChatRoom({
     }
     if (key === 'image') {
       photoFileRef.current?.click();
+      return;
+    }
+    if (key === 'redpacket') {
+      setRedPacketOpen(true);
       return;
     }
     setNotice(`「${label}」马上就来啦，先占个位～`);
@@ -659,6 +764,26 @@ function ChatRoom({
     const photoTurn: Turn = { id: uid(), role: 'user', content: '', reasoning: '', status: 'done', photo: id, at: Date.now() };
     const history = await toMessages([...turns, photoTurn]);
     setTurns((prev) => [...prev, photoTurn]);
+    await runAssistant(history);
+  };
+
+  // 填好金额和留言，发一个红包给予予：先记进甜甜口袋账本(棠棠 → 予予)，再作为一条用户消息发出去。
+  const sendRedPacket = async (amount: number, note: string) => {
+    setRedPacketOpen(false);
+    if (sending) return;
+    addPacket('user', amount, note);
+    const packetTurn: Turn = {
+      id: uid(),
+      role: 'user',
+      content: '',
+      reasoning: '',
+      status: 'done',
+      redPacket: { amount, note, from: 'user' },
+      redPacketOpened: true,
+      at: Date.now(),
+    };
+    const history = await toMessages([...turns, packetTurn]);
+    setTurns((prev) => [...prev, packetTurn]);
     await runAssistant(history);
   };
 
@@ -739,6 +864,11 @@ function ChatRoom({
       '\n\n聊天中如果出现值得长期记住的新信息(纪念日、约定、她的喜好/忌讳、重要的事、她的近况),' +
       '就在回复里用 [记忆:分类|内容] 记下来(例:[记忆:纪念日|2026-06-21 在一起]、[记忆:喜好|喜欢草莓奶]),' +
       '系统会自动存进记忆罐头。**只记真正重要的事——日常寒暄、心情起伏、随口一句都别记**,记多了反而吵。已经记过的别重复记;标记会自动隐藏,不影响你正常说话。';
+    sys +=
+      '\n\n【你也可以发红包】跟她表现好、说了什么让你感动/开心的话、或者单纯想宠她时,' +
+      '可以在回复里单独写一行 [红包:金额|留言](例:[红包:20|今天很乖值得奖励]),系统会把这个红包发给她,存进甜甜口袋。' +
+      '金额随手写个 1~99 的数就行(这是虚拟的,不是真钱);留言要真心、贴合这次聊天的内容,别复制粘贴老一套。' +
+      '**别发太勤**,一次聊天顶多一个,大部分时候光聊天就够了,发红包是偶尔的小惊喜,不是任务。';
 
     const out: ChatMessage[] = [{ role: 'system', content: sys }];
 
@@ -778,6 +908,12 @@ function ChatRoom({
               { type: 'image_url', image_url: { url: dataUrl } },
             ],
           });
+        continue;
+      }
+      if (t.redPacket) {
+        const { amount, note } = t.redPacket;
+        // "我"/"你"跟着 role 走,user 是棠棠说的,assistant 是予予说的,同一句话两边都通
+        out.push({ role: t.role, content: `(我给你发了个红包：¥${amount}${note ? `，写着"${note}"` : ''})` });
         continue;
       }
       if (!t.content.trim()) continue;
@@ -868,17 +1004,30 @@ function ChatRoom({
           markThinkDone();
           setTurns((prev) => {
             const cur = prev.find((t) => t.id === botId);
-            const { text, memos } = extractMemos(cur?.content ?? '');
+            const { text: afterMemo, memos } = extractMemos(cur?.content ?? '');
+            const { text, packets } = extractRedPackets(afterMemo);
             if (memos.length) {
               // 副作用放微任务里：存进记忆罐头并刷新本地记忆（下一轮就带上）
               queueMicrotask(() => {
                 for (const mo of memos) addMemory(mo.category, mo.text);
                 setMemories(loadMemories());
               });
-              const memo = memos.map((m) => `[${m.category}] ${m.text}`).join('\n');
-              return prev.map((t) => (t.id === botId ? { ...t, content: text, status: 'done', memo } : t));
             }
-            return prev.map((t) => (t.id === botId ? { ...t, status: 'done' } : t));
+            // 一次聊天最多算一个红包(多写也只认第一个),记进甜甜口袋账本(予予 → 棠棠)
+            const packet = packets[0];
+            if (packet) queueMicrotask(() => addPacket('ai', packet.amount, packet.note));
+            const memo = memos.length ? memos.map((m) => `[${m.category}] ${m.text}`).join('\n') : undefined;
+            return prev.map((t) =>
+              t.id === botId
+                ? {
+                    ...t,
+                    content: text,
+                    status: 'done',
+                    ...(memo ? { memo } : {}),
+                    ...(packet ? { redPacket: { amount: packet.amount, note: packet.note, from: 'ai' as const }, redPacketOpened: false } : {}),
+                  }
+                : t,
+            );
           });
         },
       },
@@ -1076,7 +1225,14 @@ function ChatRoom({
           return turn.role === 'user' ? (
             <div key={turn.id} className="bubble-row is-user">
               <div className="bubble-stack bubble-stack--user">
-                {turn.meme ? (
+                {turn.redPacket ? (
+                  <RedPacketBubble
+                    amount={turn.redPacket.amount}
+                    note={turn.redPacket.note}
+                    opened={!!turn.redPacketOpened}
+                    onOpen={() => patchTurn(turn.id, { redPacketOpened: true })}
+                  />
+                ) : turn.meme ? (
                   <MemeBubble memeId={turn.meme} />
                 ) : turn.photo ? (
                   <PhotoBubble photoId={turn.photo} />
@@ -1121,7 +1277,7 @@ function ChatRoom({
                       >›</button>
                     </span>
                   ) : null}
-                  {!turn.meme && !turn.photo && !turn.voice && editTurnId !== turn.id ? (
+                  {!turn.meme && !turn.photo && !turn.redPacket && !turn.voice && editTurnId !== turn.id ? (
                     <button
                       type="button"
                       className="bubble-edit-foot"
@@ -1156,8 +1312,8 @@ function ChatRoom({
                   <CatVoiceBubble text={turn.content.replace(VOICE_MARK, '').trim()} />
                 ) : (
                   (() => {
-                    // 记忆标记任何时候都从显示里去掉；贴纸标记回复完成后才解析成图
-                    const raw = turn.content.replace(VOICE_MARK, '').replace(MEMO_TAG, '');
+                    // 记忆/红包标记任何时候都从显示里去掉；贴纸标记回复完成后才解析成图
+                    const raw = turn.content.replace(VOICE_MARK, '').replace(MEMO_TAG, '').replace(RED_PACKET_TAG, '');
                     const { text, ids } =
                       turn.status === 'done' ? extractStickers(raw, nameToId) : { text: raw, ids: [] as string[] };
                     const showBubble = text || turn.status === 'streaming';
@@ -1177,6 +1333,14 @@ function ChatRoom({
                     );
                   })()
                 )}
+                {turn.redPacket ? (
+                  <RedPacketBubble
+                    amount={turn.redPacket.amount}
+                    note={turn.redPacket.note}
+                    opened={!!turn.redPacketOpened}
+                    onOpen={() => patchTurn(turn.id, { redPacketOpened: true })}
+                  />
+                ) : null}
                 {turn.memo ? (
                   <div className="memo-chip" title={turn.memo}>🫙 记进了记忆罐头</div>
                 ) : null}
@@ -1219,6 +1383,9 @@ function ChatRoom({
             </>
           ) : null}
           {memeOpen ? <MemePicker onPick={sendMeme} onClose={() => setMemeOpen(false)} /> : null}
+          {redPacketOpen ? (
+            <RedPacketComposer onSend={(amount, note) => void sendRedPacket(amount, note)} onClose={() => setRedPacketOpen(false)} />
+          ) : null}
           <input
             ref={photoFileRef}
             type="file"
