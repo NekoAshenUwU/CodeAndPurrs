@@ -39,6 +39,64 @@ function tx(db: IDBDatabase, mode: IDBTransactionMode): IDBObjectStore {
 
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
+// 存进盒子前的压缩上限：超过这个尺寸/体积才压，已经很小的图不瞎折腾。
+const STORE_MAX_DIM = 1440;
+const STORE_SKIP_UNDER_BYTES = 600 * 1024;
+const STORE_JPEG_QUALITY = 0.85;
+
+function loadImage(blob: Blob): Promise<HTMLImageElement> {
+  const url = URL.createObjectURL(blob);
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('图片解码失败'));
+    };
+    img.src = url;
+  });
+}
+
+// 存进贴纸盒前压一压：动图（gif/webp 可能带动画）原样保留，
+// 静态图超过 STORE_MAX_DIM 或 STORE_SKIP_UNDER_BYTES 才重新编码——
+// 带透明通道的 png 压完还是 png（不然透明贴纸会被垫成黑/白底）。
+async function compressForStore(file: File): Promise<File> {
+  if (file.type === 'image/gif' || file.type === 'image/webp') return file;
+  if (!file.type.startsWith('image/')) return file;
+
+  let img: HTMLImageElement;
+  try {
+    img = await loadImage(file);
+  } catch {
+    return file; // 解码不了就存原图，别拦着用户
+  }
+
+  const longest = Math.max(img.width, img.height);
+  if (longest <= STORE_MAX_DIM && file.size <= STORE_SKIP_UNDER_BYTES) return file;
+
+  const scale = Math.min(1, STORE_MAX_DIM / longest || 1);
+  const w = Math.max(1, Math.round(img.width * scale));
+  const h = Math.max(1, Math.round(img.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return file;
+  ctx.drawImage(img, 0, 0, w, h);
+
+  const keepsAlpha = file.type === 'image/png';
+  const outType = keepsAlpha ? 'image/png' : 'image/jpeg';
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, outType, keepsAlpha ? undefined : STORE_JPEG_QUALITY);
+  });
+  if (!blob || blob.size >= file.size) return file; // 压完反而更大就别用了
+
+  return new File([blob], file.name, { type: outType, lastModified: file.lastModified });
+}
+
 // 列出所有贴纸（按加入时间新→旧），不含 blob，给网格用 getMemeURL 取图。
 export async function listMemes(): Promise<MemeItem[]> {
   const db = await openDB();
@@ -53,15 +111,16 @@ export async function listMemes(): Promise<MemeItem[]> {
   });
 }
 
-// 存一张贴纸（从文件选择器拿到的 File）。
+// 存一张贴纸（从文件选择器拿到的 File）。存之前先压一压，省 IndexedDB 空间。
 export async function addMeme(file: File): Promise<MemeItem> {
+  const stored = await compressForStore(file);
   const db = await openDB();
   const record: MemeRecord = {
     id: uid(),
     name: file.name || '贴纸',
-    type: file.type || 'image/png',
+    type: stored.type || file.type || 'image/png',
     createdAt: Date.now(),
-    blob: file,
+    blob: stored,
   };
   return new Promise((resolve, reject) => {
     const req = tx(db, 'readwrite').add(record);
