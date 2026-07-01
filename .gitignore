@@ -6,3 +6,19 @@ build/
 !.env.example
 .DS_Store
 *.log
+
+# Python
+__pycache__/
+*.pyc
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# screenshots (本地预览用，不入库)
+shots/
+
+# Usage Bridge 运行时存储（落盘数据不入库）
+server/data/
+
+# 登录锁口令明文（DEPLOY 第 7 步生成，VPS 本地用，绝不入库）
+.access-token.txt
