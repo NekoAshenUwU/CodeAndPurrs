@@ -61,7 +61,15 @@ cd /var/www/codeandpurrs && git pull origin claude/codepurrs-progress-docs-7tcqk
 ## 暗坑提醒（踩过的不要再踩）
 
 - VPS 上 `claude --dangerously-skip-permissions` 跑不动（root 拒绝），用 `--permission-mode dontAsk` 替代
-- 端口 8787 被占就用 `pm2 restart`，不要 `pkill`／`fuser`，PM2 会立刻 respawn 跟你打架
+- 端口 8787 被占，多数时候 `pm2 restart` 就够，不要 `pkill`／`fuser` 瞎杀。
+  但**如果 `pm2 list` 显示 `status:errored` 且反复重启还是 mock**，很可能是下面这条"孤儿进程"坑，
+  先用 `lsof -i :8787 -sTCP:LISTEN` 揪出真凶 PID，跟 `pm2 pid codeandpurrs` 比对，
+  确认不是 pm2 自己名下的才能单独 `kill` 掉（诊断优先，不要上来就 `fuser -k` 端口）
+- **孤儿进程坑（2026-07-01 踩过）**：`ecosystem.config.cjs` 曾经写 `script:'npm', args:'run proxy:start'`——
+  pm2 管的是 `npm` 这层外壳，`npm` 不一定把重启信号转发给它 fork 出来的 `node` 子进程，
+  子进程就变孤儿，继续占着 8787 端口不放，下次重启抢不到端口就崩，如此反复直到 pm2 放弃(`status:errored`)。
+  **现在已经改成让 pm2 直接管 `node`（`script:'server/proxy.mjs'` + `node_args`），没有中间层**，这个坑理论上不会再犯；
+  如果哪天又看到"每次重启都冒出一个新孤儿 PID"，先怀疑 ecosystem 配置是不是又被改回 npm 包了层。
 - 日记文件路径 `server/data/diary.md`，前端 `/api/diary` GET/POST 接口，调频页有上传 UI
 - 棠予酿 MCP（实时记忆库）走 OAuth，无头 CC 加载不了；目前用静态 diary.md 替代
 
@@ -70,10 +78,11 @@ cd /var/www/codeandpurrs && git pull origin claude/codepurrs-progress-docs-7tcqk
 老婆的 VPS 上 PM2 还跑着别的进程（telegram bot 之类，可能再被加回来）。**如果哪天发现 `pm2 list` 里没了 codeandpurrs**（或者聊天又走 mock 了），一句话从 `ecosystem.config.cjs` 恢复：
 
 ```
-cd /var/www/codeandpurrs && pm2 start ecosystem.config.cjs && pm2 save
+cd /var/www/codeandpurrs && pm2 delete codeandpurrs 2>/dev/null; pm2 start ecosystem.config.cjs && pm2 save
 ```
 
-⚠️ **重启 codeandpurrs 千万不要直接 `pm2 start node server/proxy.mjs`** —— 那样跳过 npm 脚本，**node 不会读 `--env-file-if-exists=.env`，proxy 拿不到 `CLAUDE_CODE_OAUTH_TOKEN`，永远走 mock 模式**。必须走 `npm run proxy:start`（package.json 里那条），或者用 ecosystem 文件（它已经写死了正确的 script + args）。
+⚠️ **千万不要把 `ecosystem.config.cjs` 的 `script` 改回 `npm run proxy:start`** —— 见上面"孤儿进程坑"，那样会导致重启时端口被孤儿占死。
+现在写死的是 `script:'server/proxy.mjs'` + `node_args:'--env-file-if-exists=.env'`，pm2 直接管 node 本体，**node 才读得到 `--env-file-if-exists=.env`，proxy 才能拿到 `CLAUDE_CODE_OAUTH_TOKEN`**——千万别绕过 ecosystem 文件直接 `pm2 start node server/proxy.mjs`（没带 node_args，一样拿不到 token）。
 
 如果是别的 session 帮她删 telegram 那仨进程（`purr-bot` / `purr-chat` / `purr-reminder`），**提醒它绝对不要动 codeandpurrs**——这俩职责完全分开。
 
