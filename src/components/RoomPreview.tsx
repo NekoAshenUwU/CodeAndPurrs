@@ -7,12 +7,25 @@ type RoomPreviewProps = {
 
 export function RoomPreview({ room, onClose }: RoomPreviewProps) {
   const isReady = room.status === 'ready';
+  const sceneSrc = room.scene ? `${import.meta.env.BASE_URL}rooms/${room.id}.webp` : null;
 
   return (
-    <section className="room-preview" aria-live="polite" aria-labelledby="room-preview-title">
+    <section
+      className={sceneSrc ? 'room-preview room-preview--scene' : 'room-preview'}
+      aria-live="polite"
+      aria-labelledby="room-preview-title"
+    >
       <button className="room-preview__close" type="button" onClick={onClose} aria-label="关闭房间预览">
         ×
       </button>
+      {sceneSrc && (
+        <div
+          className="room-preview__hero"
+          style={{ backgroundImage: `url(${sceneSrc})` }}
+          role="img"
+          aria-label={`${room.name} 房间场景`}
+        />
+      )}
       <div className="room-preview__icon" aria-hidden="true">
         {room.emoji}
       </div>

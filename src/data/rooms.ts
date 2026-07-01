@@ -8,6 +8,8 @@ export type Room = {
   status: RoomStatus;
   summary: string;
   actionLabel: string;
+  /** 预览层场景背景图（public/rooms/{id}.webp），有则在房间预览顶部铺满 */
+  scene?: boolean;
 };
 
 export const rooms: Room[] = [
@@ -17,26 +19,59 @@ export const rooms: Room[] = [
     englishName: 'Purr Channel',
     emoji: '💬',
     status: 'ready',
-    summary: '先从这里开始聊天，之后接 DeepSeek 和 Gemini。',
+    summary: '在这里跟猫咪聊天，已接 DeepSeek 和 Gemini，带思考链。',
     actionLabel: '进入呼噜',
+    scene: true,
   },
   {
-    id: 'whisperline',
-    name: '耳边话',
-    englishName: 'Whisperline',
-    emoji: '🎧',
-    status: 'soon',
-    summary: '语音气泡、播放、下载和以后接 ElevenLabs 的低音炮。',
-    actionLabel: '听一声',
+    id: 'switchcore',
+    name: '调频',
+    englishName: 'SwitchCore',
+    emoji: '🎚️',
+    status: 'ready',
+    summary: '设默认模型，写「关于我 / 猫咪人设」，上传头像，新窗口聊天前自动读取。',
+    actionLabel: '去调频',
+    scene: true,
+  },
+  {
+    id: 'memory-jar',
+    name: '记忆罐头',
+    englishName: 'Memory Jar',
+    emoji: '🫙',
+    status: 'ready',
+    summary: '独立记忆库：予予把重要的事存进来，可分类、可搜索，跨对话长期记得。',
+    actionLabel: '开罐头',
+    scene: true,
   },
   {
     id: 'meme-box',
     name: '脑洞贴纸盒',
     englishName: 'Meme Box',
     emoji: '✨',
-    status: 'soon',
+    status: 'ready',
     summary: '放表情包、贴纸和那些奇奇怪怪但超可爱的脑洞。',
     actionLabel: '打开盒子',
+    scene: true,
+  },
+  {
+    id: 'catch-purring',
+    name: '浪哪了',
+    englishName: 'Catch Purring',
+    emoji: '📍',
+    status: 'ready',
+    summary: '只做主动打卡和报平安，不做偷偷定位。',
+    actionLabel: '报平安',
+    scene: true,
+  },
+  {
+    id: 'paw-trail',
+    name: '猫爪足迹',
+    englishName: 'Paw Trail',
+    emoji: '🐾',
+    status: 'ready',
+    summary: 'ta 自愿分享的一天：手机用了多久、在哪些 App 留下爪印。',
+    actionLabel: '看足迹',
+    scene: true,
   },
   {
     id: 'sweetie-pocket',
@@ -46,6 +81,7 @@ export const rooms: Room[] = [
     status: 'soon',
     summary: '虚拟红包、奖励券和被偏爱的小惊喜。',
     actionLabel: '拆甜甜',
+    scene: true,
   },
   {
     id: 'furever-fund',
@@ -55,6 +91,7 @@ export const rooms: Room[] = [
     status: 'soon',
     summary: '收藏红包记录、语音、贴纸和以后攒下来的小纪念。',
     actionLabel: '看金库',
+    scene: true,
   },
   {
     id: 'little-star-notes',
@@ -64,24 +101,7 @@ export const rooms: Room[] = [
     status: 'soon',
     summary: '绑定日、纪念日、第一次和每一个想记住的星星。',
     actionLabel: '看星星',
-  },
-  {
-    id: 'catch-purring',
-    name: '浪哪了',
-    englishName: 'Catch Purring',
-    emoji: '📍',
-    status: 'soon',
-    summary: '只做主动打卡和报平安，不做偷偷定位。',
-    actionLabel: '报平安',
-  },
-  {
-    id: 'paw-trail',
-    name: '猫爪足迹',
-    englishName: 'Paw Trail',
-    emoji: '🐾',
-    status: 'soon',
-    summary: '以后接手机使用记录，先预留足迹入口。',
-    actionLabel: '看足迹',
+    scene: true,
   },
   {
     id: 'purr-todos',
@@ -91,15 +111,7 @@ export const rooms: Room[] = [
     status: 'soon',
     summary: '任务、笔记、小提醒，完成后还能联动甜甜口袋。',
     actionLabel: '写待办',
-  },
-  {
-    id: 'switchcore',
-    name: '调频',
-    englishName: 'SwitchCore',
-    emoji: '🎚️',
-    status: 'soon',
-    summary: '切换 DeepSeek、Gemini 和以后接进来的更多模型。',
-    actionLabel: '去调频',
+    scene: true,
   },
   {
     id: 'hidey-hole',
@@ -109,6 +121,7 @@ export const rooms: Room[] = [
     status: 'soon',
     summary: '聊天记录先睡在这台设备里，安全、私密、可导出。',
     actionLabel: '看暗格',
+    scene: true,
   },
   {
     id: 'export-pod',
@@ -118,5 +131,6 @@ export const rooms: Room[] = [
     status: 'soon',
     summary: '把小暗格打包，换手机时带去下一台设备。',
     actionLabel: '准备导出',
+    scene: true,
   },
 ];
