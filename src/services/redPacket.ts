@@ -32,3 +32,17 @@ export function balanceOf(who: Sender, list: RedPacket[] = loadPackets()): numbe
   const senderOfOther: Sender = who === 'user' ? 'ai' : 'user';
   return list.filter((p) => p.from === senderOfOther).reduce((sum, p) => sum + p.amount, 0);
 }
+
+// 开局给两边口袋各塞 500，只在这台设备第一次打开时补一次(账本已经有记录/已经塞过就不再塞)
+const SEEDED_KEY = 'sweetie-pocket:seeded-starter';
+export function ensureStarterPackets(): void {
+  if (loadLocal<boolean>(SEEDED_KEY, false)) return;
+  if (loadPackets().length === 0) {
+    const now = Date.now();
+    saveLocal(KEY, [
+      { id: uid(), from: 'user' as Sender, amount: 500, note: '开局塞给你的', createdAt: now },
+      { id: uid(), from: 'ai' as Sender, amount: 500, note: '开局塞给你的', createdAt: now + 1 },
+    ]);
+  }
+  saveLocal(SEEDED_KEY, true);
+}
