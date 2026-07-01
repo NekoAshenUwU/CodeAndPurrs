@@ -4373,11 +4373,20 @@ a {
   animation: chatMorePop 0.16s ease;
 }
 .redpacket-composer__title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-family: var(--round);
   font-size: 0.95rem;
   font-weight: 600;
-  color: #b8493f;
+  color: #8c5a8c;
   text-align: center;
+}
+.redpacket-composer__title-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
 }
 .redpacket-composer__amount,
 .redpacket-composer__note {
@@ -4411,10 +4420,10 @@ a {
   cursor: pointer;
 }
 .redpacket-composer__ops button.is-primary {
-  background: linear-gradient(135deg, #f2a97a, #e57373);
+  background: linear-gradient(135deg, #d59ab0, #a98fd0);
   color: #fff;
   font-weight: 600;
-  box-shadow: 0 8px 16px -7px rgba(229, 115, 115, 0.6);
+  box-shadow: 0 8px 16px -7px rgba(169, 143, 208, 0.6);
 }
 .redpacket-composer__ops button:disabled {
   opacity: 0.5;
@@ -4431,22 +4440,28 @@ a {
   border-radius: 16px;
   font-family: var(--round);
   cursor: pointer;
-  box-shadow: 0 8px 18px -10px rgba(229, 115, 115, 0.55);
+  box-shadow: 0 8px 18px -10px rgba(169, 143, 208, 0.55);
 }
 .redpacket--closed {
-  background: linear-gradient(135deg, #f2a97a, #e57373);
+  background: linear-gradient(135deg, #d59ab0, #a98fd0);
   color: #fff;
 }
 .redpacket--closed .redpacket__hint {
   font-size: 0.85rem;
 }
 .redpacket--opened {
-  background: linear-gradient(135deg, #fff1ea, #ffe3d6);
-  color: #a94a3c;
+  background: linear-gradient(135deg, #fff0f5 0%, #f3ecfd 100%);
+  color: #8c5a8c;
   cursor: default;
 }
+.redpacket--opened .redpacket__amount {
+  color: #b8493f;
+}
 .redpacket__icon {
-  font-size: 1.2rem;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 .redpacket__amount {
   font-size: 1rem;

@@ -199,17 +199,18 @@ function RedPacketBubble({
   opened: boolean;
   onOpen: () => void;
 }) {
+  const icon = <img className="redpacket__icon" src={`${import.meta.env.BASE_URL}assets/icons/red-packet.png`} alt="" />;
   if (!opened) {
     return (
       <button type="button" className="redpacket redpacket--closed" onClick={onOpen}>
-        <span className="redpacket__icon">🧧</span>
+        {icon}
         <span className="redpacket__hint">点开看看</span>
       </button>
     );
   }
   return (
     <div className="redpacket redpacket--opened">
-      <span className="redpacket__icon">🧧</span>
+      {icon}
       <span className="redpacket__amount">¥{amount}</span>
       {note ? <span className="redpacket__note">{note}</span> : null}
     </div>
@@ -289,7 +290,10 @@ function RedPacketComposer({
     <>
       <button type="button" className="chat-more__scrim" aria-label="关闭红包" onClick={onClose} />
       <div className="redpacket-composer" role="dialog" aria-label="发红包">
-        <div className="redpacket-composer__title">🧧 发个红包</div>
+        <div className="redpacket-composer__title">
+          <img className="redpacket-composer__title-icon" src={`${import.meta.env.BASE_URL}assets/icons/red-packet.png`} alt="" />
+          发个红包
+        </div>
         <input
           className="redpacket-composer__amount"
           type="number"
