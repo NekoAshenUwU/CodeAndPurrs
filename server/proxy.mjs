@@ -569,14 +569,19 @@ async function callClaudeCode({ res, token, model, messages }) {
     new Promise((resolve) => {
       let child;
       try {
+        // 显式把 token 透传进子进程 env（不只是继承 process.env，万一 spawn 的
+        // env 合并顺序哪天被改也不受影响）；同时摘掉 ANTHROPIC_API_KEY /
+        // ANTHROPIC_AUTH_TOKEN——这两个如果碰巧也在 proxy 自己的环境里，
+        // CLI 可能会跟 CLAUDE_CODE_OAUTH_TOKEN 抢优先级，摘掉保证家版订阅token说了算。
+        const childEnv = { ...process.env };
+        delete childEnv.ANTHROPIC_API_KEY;
+        delete childEnv.ANTHROPIC_AUTH_TOKEN;
+        childEnv.CLAUDE_CODE_OAUTH_TOKEN = token;
+        // MAX_THINKING_TOKENS 给个思考预算，家克才会"思考"、前端思考链才有内容。
+        // 想省订阅额度可在 .env 里把 MAX_THINKING_TOKENS 设小或设 0。
+        childEnv.MAX_THINKING_TOKENS = process.env.MAX_THINKING_TOKENS || '2048';
         child = spawn('claude', args, {
-          // MAX_THINKING_TOKENS 给个思考预算，家克才会"思考"、前端思考链才有内容。
-          // 想省订阅额度可在 .env 里把 MAX_THINKING_TOKENS 设小或设 0。
-          env: {
-            ...process.env,
-            CLAUDE_CODE_OAUTH_TOKEN: token,
-            MAX_THINKING_TOKENS: process.env.MAX_THINKING_TOKENS || '2048',
-          },
+          env: childEnv,
           stdio: ['pipe', 'pipe', 'pipe'],
         });
       } catch (err) {
