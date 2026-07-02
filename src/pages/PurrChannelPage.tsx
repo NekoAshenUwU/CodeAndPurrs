@@ -317,7 +317,7 @@ function SystemErrorNotice({ detail }: { detail?: string }) {
   const [showDetail, setShowDetail] = useState(false);
   return (
     <div className="system-notice">
-      <div className="system-notice__pill">连接出了点问题，请稍后重试或重新登录</div>
+      <div className="system-notice__pill">连接出了点问题，请稍后重试</div>
       {detail ? (
         <button
           type="button"
