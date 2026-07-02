@@ -549,11 +549,19 @@ async function callClaudeCode({ res, token, model, messages }) {
   }
 
   // 令牌被 Anthropic 收回了才会长这样：不是普通过期，是账号那边直接撤销了这个 OAuth 授权。
-  // 这种情况下 CLI 自己内置的"401 就失效 token 缓存重试一次"逻辑（SDK 自带，不用我们操心）
-  // 也救不回来——重试只会原样再失败一遍，白白多等一轮，所以命中这个特征就不重试，直接把
-  // 人话报错甩给前端，省得又要花几小时排查才发现"其实是要人肉换票"（见 CLAUDE.md 那节血泪史）。
+  // 这种情况下 CLI 自己内置的鉴权重试（实测会先 401 重试 ~10 次、耗时能到 2 分钟才死心，
+  // SDK 自带，不用我们操心）已经试过了——我们这层再重试只会原样等它再失败一遍，纯浪费，
+  // 所以命中这个特征就不重试，直接把人话报错甩给前端。
   const AUTH_REVOKED_RE =
-    /OAuth token has been revoked|Session expired\.?\s*Please run \/login|invalid_grant|OAuth authentication is currently not allowed/i;
+    /OAuth token has been revoked|Session expired\.?\s*Please run \/login|invalid_grant|OAuth authentication is currently not allowed|authentication_failed|Failed to authenticate|Authentication error/i;
+
+  // 判断是不是"认证死局"：可能来自 stderr 文本，也可能来自 stdout 里 apiError
+  // (401/403 状态码，或错误文案命中同一批关键词)——两条信号都得看，见上面的踩坑记录。
+  const isAuthFailure = (result) =>
+    AUTH_REVOKED_RE.test(result.stderr || '') ||
+    result.apiError?.status === 401 ||
+    result.apiError?.status === 403 ||
+    AUTH_REVOKED_RE.test(result.apiError?.message || '');
 
   // 跑一次 claude CLI 子进程，把结果（有没有收到文字/思考、stderr、退出码）交回来，
   // 不在这里直接对 res 报错——是不是要重试、报什么错，留给外层 callClaudeCode 决定。
@@ -579,6 +587,13 @@ async function callClaudeCode({ res, token, model, messages }) {
       let gotThinking = false;
       let stderr = '';
       let buf = '';
+      // 认证失败时 CLI 退出码是 0、什么都不报到 stderr——错误裹在一条看起来正常的
+      // assistant 消息(model:"<synthetic>",error:"authentication_failed")和/或最终
+      // result(is_error:true,api_error_status:401)里，文案长得跟模型真回复一模一样
+      // （亲手拿假 token 跑一遍 `claude -p ... --output-format stream-json` 验证过的，
+      // 不是猜的）。之前只判断 stderr/退出码，这俩兜底分支会把这段报错文本当成
+      // 予予的真实回复直接发出去——这就是老婆截图里"401 顶着头像发出来"的真凶。
+      let apiError = null;
 
       const handleLine = (line) => {
         const s = line.trim();
@@ -603,8 +618,15 @@ async function callClaudeCode({ res, token, model, messages }) {
           }
           return;
         }
-        // 兜底：有些版本不流式吐思考/正文，就从完整 assistant 消息里取
+        // 兜底：有些版本不流式吐思考/正文，就从完整 assistant 消息里取——
+        // 但认证失败也会包装成一条 assistant 消息(model:"<synthetic>" 或带 error 字段)，
+        // 那是人话报错，不是模型真回复，不能当内容发出去。
         if (obj.type === 'assistant' && Array.isArray(obj.message?.content)) {
+          if (obj.message?.model === '<synthetic>' || obj.error) {
+            const text = obj.message.content.find((b) => b?.type === 'text')?.text;
+            apiError = { message: text || obj.error, source: obj.error };
+            return;
+          }
           for (const blk of obj.message.content) {
             if (blk?.type === 'thinking' && blk.thinking && !gotThinking) {
               gotThinking = true;
@@ -616,10 +638,17 @@ async function callClaudeCode({ res, token, model, messages }) {
           }
           return;
         }
-        // 最后兜底：用 result 文本
-        if (obj.type === 'result' && !gotText && typeof obj.result === 'string' && obj.result) {
-          gotText = true;
-          send(res, { type: 'content', text: obj.result });
+        // 最后兜底：用 result 文本——同样要排除 is_error，不然认证失败的报错文案
+        // 会被当成正文发出去（subtype 这里仍然是 "success"，不能靠它判断，得看 is_error）。
+        if (obj.type === 'result') {
+          if (obj.is_error) {
+            apiError = { message: typeof obj.result === 'string' ? obj.result : '', status: obj.api_error_status };
+            return;
+          }
+          if (!gotText && typeof obj.result === 'string' && obj.result) {
+            gotText = true;
+            send(res, { type: 'content', text: obj.result });
+          }
         }
       };
 
@@ -637,7 +666,7 @@ async function callClaudeCode({ res, token, model, messages }) {
       child.on('error', (err) => resolve({ spawnError: err }));
       child.on('close', (code) => {
         if (buf.trim()) handleLine(buf); // 收尾最后一行
-        resolve({ gotText, gotThinking, stderr, code });
+        resolve({ gotText, gotThinking, stderr, code, apiError });
       });
 
       // 对话稿从 stdin 喂进去（避免超长命令行）
@@ -676,7 +705,7 @@ async function callClaudeCode({ res, token, model, messages }) {
   // 一个字都没吐、也不像是"令牌被收回"这种重试也没用的死局 → 自动重试一次，
   // 应付偶发的子进程/网络抖动，省得每次抖一下就要老婆手动重发。
   // 已经吐了字/思考链再重试会导致前端拿到两段拼在一起的内容，所以只在完全没输出时才重试。
-  if (!result.gotText && !result.gotThinking && !AUTH_REVOKED_RE.test(result.stderr)) {
+  if (!result.gotText && !result.gotThinking && !isAuthFailure(result)) {
     await new Promise((r) => setTimeout(r, 400));
     result = await runAttempt();
     if (result.spawnError) {
@@ -692,17 +721,20 @@ async function callClaudeCode({ res, token, model, messages }) {
   }
 
   if (!result.gotText) {
-    if (AUTH_REVOKED_RE.test(result.stderr)) {
+    if (isAuthFailure(result)) {
       send(res, {
         type: 'error',
         message:
           '家版 Claude Code 的登录令牌被 Anthropic 那边收回了（不是普通过期，重试/刷新都没用）。' +
-          '得重新走一遍 `claude setup-token` 换票——步骤看 CLAUDE.md「OAuth token 失效时」那节。',
+          '得重新走一遍 `claude setup-token` 换票——步骤看 CLAUDE.md「OAuth token 失效时」那节。' +
+          (result.apiError?.message ? `（原始报错：${result.apiError.message}）` : ''),
       });
     } else {
       send(res, {
         type: 'error',
-        message: `Claude Code 没回内容（退出码 ${result.code}）：${result.stderr.slice(0, 300) || '检查令牌是否有效/额度是否用尽'}`,
+        message:
+          `Claude Code 没回内容（退出码 ${result.code}）：` +
+          (result.apiError?.message || result.stderr.slice(0, 300) || '检查令牌是否有效/额度是否用尽'),
       });
     }
   }
