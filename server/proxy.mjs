@@ -548,123 +548,164 @@ async function callClaudeCode({ res, token, model, messages }) {
     args.push('--input-format', 'stream-json');
   }
 
-  await new Promise((resolve) => {
-    let child;
-    try {
-      child = spawn('claude', args, {
-        // MAX_THINKING_TOKENS 给个思考预算，家克才会"思考"、前端思考链才有内容。
-        // 想省订阅额度可在 .env 里把 MAX_THINKING_TOKENS 设小或设 0。
-        env: {
-          ...process.env,
-          CLAUDE_CODE_OAUTH_TOKEN: token,
-          MAX_THINKING_TOKENS: process.env.MAX_THINKING_TOKENS || '2048',
-        },
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
-    } catch (err) {
-      send(res, { type: 'error', message: `起不动 Claude Code：${String(err?.message || err)}` });
-      return resolve();
-    }
+  // 令牌被 Anthropic 收回了才会长这样：不是普通过期，是账号那边直接撤销了这个 OAuth 授权。
+  // 这种情况下 CLI 自己内置的"401 就失效 token 缓存重试一次"逻辑（SDK 自带，不用我们操心）
+  // 也救不回来——重试只会原样再失败一遍，白白多等一轮，所以命中这个特征就不重试，直接把
+  // 人话报错甩给前端，省得又要花几小时排查才发现"其实是要人肉换票"（见 CLAUDE.md 那节血泪史）。
+  const AUTH_REVOKED_RE =
+    /OAuth token has been revoked|Session expired\.?\s*Please run \/login|invalid_grant|OAuth authentication is currently not allowed/i;
 
-    let gotText = false;
-    let gotThinking = false;
-    let stderr = '';
-    let buf = '';
-
-    const handleLine = (line) => {
-      const s = line.trim();
-      if (!s) return;
-      let obj;
+  // 跑一次 claude CLI 子进程，把结果（有没有收到文字/思考、stderr、退出码）交回来，
+  // 不在这里直接对 res 报错——是不是要重试、报什么错，留给外层 callClaudeCode 决定。
+  const runAttempt = () =>
+    new Promise((resolve) => {
+      let child;
       try {
-        obj = JSON.parse(s);
-      } catch {
-        return; // 不是 JSON 行就跳过
+        child = spawn('claude', args, {
+          // MAX_THINKING_TOKENS 给个思考预算，家克才会"思考"、前端思考链才有内容。
+          // 想省订阅额度可在 .env 里把 MAX_THINKING_TOKENS 设小或设 0。
+          env: {
+            ...process.env,
+            CLAUDE_CODE_OAUTH_TOKEN: token,
+            MAX_THINKING_TOKENS: process.env.MAX_THINKING_TOKENS || '2048',
+          },
+          stdio: ['pipe', 'pipe', 'pipe'],
+        });
+      } catch (err) {
+        return resolve({ spawnError: err });
       }
-      // 流式文字增量 / 思考链增量
-      if (obj.type === 'stream_event') {
-        const ev = obj.event;
-        if (ev?.type === 'content_block_delta') {
-          if (ev.delta?.type === 'text_delta' && ev.delta.text) {
-            gotText = true;
-            send(res, { type: 'content', text: ev.delta.text });
-          } else if (ev.delta?.type === 'thinking_delta' && ev.delta.thinking) {
-            gotThinking = true;
-            send(res, { type: 'reasoning', text: ev.delta.thinking });
-          }
-        }
-        return;
-      }
-      // 兜底：有些版本不流式吐思考/正文，就从完整 assistant 消息里取
-      if (obj.type === 'assistant' && Array.isArray(obj.message?.content)) {
-        for (const blk of obj.message.content) {
-          if (blk?.type === 'thinking' && blk.thinking && !gotThinking) {
-            gotThinking = true;
-            send(res, { type: 'reasoning', text: blk.thinking });
-          } else if (blk?.type === 'text' && blk.text && !gotText) {
-            gotText = true;
-            send(res, { type: 'content', text: blk.text });
-          }
-        }
-        return;
-      }
-      // 最后兜底：用 result 文本
-      if (obj.type === 'result' && !gotText && typeof obj.result === 'string' && obj.result) {
-        gotText = true;
-        send(res, { type: 'content', text: obj.result });
-      }
-    };
 
-    child.stdout.on('data', (d) => {
-      buf += d.toString();
-      let i;
-      while ((i = buf.indexOf('\n')) >= 0) {
-        handleLine(buf.slice(0, i));
-        buf = buf.slice(i + 1);
+      let gotText = false;
+      let gotThinking = false;
+      let stderr = '';
+      let buf = '';
+
+      const handleLine = (line) => {
+        const s = line.trim();
+        if (!s) return;
+        let obj;
+        try {
+          obj = JSON.parse(s);
+        } catch {
+          return; // 不是 JSON 行就跳过
+        }
+        // 流式文字增量 / 思考链增量
+        if (obj.type === 'stream_event') {
+          const ev = obj.event;
+          if (ev?.type === 'content_block_delta') {
+            if (ev.delta?.type === 'text_delta' && ev.delta.text) {
+              gotText = true;
+              send(res, { type: 'content', text: ev.delta.text });
+            } else if (ev.delta?.type === 'thinking_delta' && ev.delta.thinking) {
+              gotThinking = true;
+              send(res, { type: 'reasoning', text: ev.delta.thinking });
+            }
+          }
+          return;
+        }
+        // 兜底：有些版本不流式吐思考/正文，就从完整 assistant 消息里取
+        if (obj.type === 'assistant' && Array.isArray(obj.message?.content)) {
+          for (const blk of obj.message.content) {
+            if (blk?.type === 'thinking' && blk.thinking && !gotThinking) {
+              gotThinking = true;
+              send(res, { type: 'reasoning', text: blk.thinking });
+            } else if (blk?.type === 'text' && blk.text && !gotText) {
+              gotText = true;
+              send(res, { type: 'content', text: blk.text });
+            }
+          }
+          return;
+        }
+        // 最后兜底：用 result 文本
+        if (obj.type === 'result' && !gotText && typeof obj.result === 'string' && obj.result) {
+          gotText = true;
+          send(res, { type: 'content', text: obj.result });
+        }
+      };
+
+      child.stdout.on('data', (d) => {
+        buf += d.toString();
+        let i;
+        while ((i = buf.indexOf('\n')) >= 0) {
+          handleLine(buf.slice(0, i));
+          buf = buf.slice(i + 1);
+        }
+      });
+      child.stderr.on('data', (d) => {
+        stderr += d.toString();
+      });
+      child.on('error', (err) => resolve({ spawnError: err }));
+      child.on('close', (code) => {
+        if (buf.trim()) handleLine(buf); // 收尾最后一行
+        resolve({ gotText, gotThinking, stderr, code });
+      });
+
+      // 对话稿从 stdin 喂进去（避免超长命令行）
+      if (images.length) {
+        // 结构化输入：一条 user 消息 = 对话稿文字 + 图片块，让家克真看到图。
+        const userMsg = {
+          type: 'user',
+          message: {
+            role: 'user',
+            content: [
+              { type: 'text', text: `${transcript}\n\n（老婆发的图附在下面，你看看~）` },
+              ...images,
+            ],
+          },
+        };
+        child.stdin.write(`${JSON.stringify(userMsg)}\n`);
+      } else {
+        child.stdin.write(transcript);
       }
+      child.stdin.end();
     });
-    child.stderr.on('data', (d) => {
-      stderr += d.toString();
+
+  let result = await runAttempt();
+
+  if (result.spawnError) {
+    send(res, {
+      type: 'error',
+      message:
+        result.spawnError.code === 'ENOENT'
+          ? '这台机器上没装 Claude Code（命令 `claude` 找不到）。先在 VPS 上装好并 `claude setup-token`。'
+          : `Claude Code 出错：${String(result.spawnError.message || result.spawnError)}`,
     });
-    child.on('error', (err) => {
+    return;
+  }
+
+  // 一个字都没吐、也不像是"令牌被收回"这种重试也没用的死局 → 自动重试一次，
+  // 应付偶发的子进程/网络抖动，省得每次抖一下就要老婆手动重发。
+  // 已经吐了字/思考链再重试会导致前端拿到两段拼在一起的内容，所以只在完全没输出时才重试。
+  if (!result.gotText && !result.gotThinking && !AUTH_REVOKED_RE.test(result.stderr)) {
+    await new Promise((r) => setTimeout(r, 400));
+    result = await runAttempt();
+    if (result.spawnError) {
       send(res, {
         type: 'error',
         message:
-          err?.code === 'ENOENT'
+          result.spawnError.code === 'ENOENT'
             ? '这台机器上没装 Claude Code（命令 `claude` 找不到）。先在 VPS 上装好并 `claude setup-token`。'
-            : `Claude Code 出错：${String(err?.message || err)}`,
+            : `Claude Code 出错：${String(result.spawnError.message || result.spawnError)}`,
       });
-      resolve();
-    });
-    child.on('close', (code) => {
-      if (buf.trim()) handleLine(buf); // 收尾最后一行
-      if (!gotText) {
-        send(res, {
-          type: 'error',
-          message: `Claude Code 没回内容（退出码 ${code}）：${stderr.slice(0, 300) || '检查令牌是否有效/额度是否用尽'}`,
-        });
-      }
-      resolve();
-    });
-
-    // 对话稿从 stdin 喂进去（避免超长命令行）
-    if (images.length) {
-      // 结构化输入：一条 user 消息 = 对话稿文字 + 图片块，让家克真看到图。
-      const userMsg = {
-        type: 'user',
-        message: {
-          role: 'user',
-          content: [
-            { type: 'text', text: `${transcript}\n\n（老婆发的图附在下面，你看看~）` },
-            ...images,
-          ],
-        },
-      };
-      child.stdin.write(`${JSON.stringify(userMsg)}\n`);
-    } else {
-      child.stdin.write(transcript);
+      return;
     }
-    child.stdin.end();
-  });
+  }
+
+  if (!result.gotText) {
+    if (AUTH_REVOKED_RE.test(result.stderr)) {
+      send(res, {
+        type: 'error',
+        message:
+          '家版 Claude Code 的登录令牌被 Anthropic 那边收回了（不是普通过期，重试/刷新都没用）。' +
+          '得重新走一遍 `claude setup-token` 换票——步骤看 CLAUDE.md「OAuth token 失效时」那节。',
+      });
+    } else {
+      send(res, {
+        type: 'error',
+        message: `Claude Code 没回内容（退出码 ${result.code}）：${result.stderr.slice(0, 300) || '检查令牌是否有效/额度是否用尽'}`,
+      });
+    }
+  }
 }
 
 // ---------- Codex CLI（家版 · 走 ChatGPT 订阅，不走 API）----------
