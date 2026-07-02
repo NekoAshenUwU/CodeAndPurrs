@@ -1702,11 +1702,6 @@ a {
   pointer-events: none;
 }
 
-.bubble--bot.is-error {
-  color: #9a5b5b;
-  background: rgba(243, 191, 208, 0.3);
-}
-
 /* ---------- 语音气泡（微信式）---------- */
 .voice-wrap {
   display: flex;
@@ -4169,6 +4164,48 @@ a {
   color: #8c79ac;
   font-family: var(--round);
   font-size: 0.72rem;
+}
+
+/* 系统级报错提示条：不冒充予予说话，居中一颗灰色小胶囊，原始报错要点开才看到 */
+.system-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 10px auto;
+}
+.system-notice__pill {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(120, 110, 130, 0.14);
+  color: var(--muted);
+  font-family: var(--round);
+  font-size: 0.76rem;
+  text-align: center;
+}
+.system-notice__toggle {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--muted);
+  font-family: var(--round);
+  font-size: 0.68rem;
+  text-decoration: underline;
+  opacity: 0.75;
+  cursor: pointer;
+}
+.system-notice__detail {
+  max-width: 78vw;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: rgba(120, 110, 130, 0.1);
+  color: var(--muted);
+  font-family: var(--chat);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-align: left;
 }
 
 .meme-add-btn {

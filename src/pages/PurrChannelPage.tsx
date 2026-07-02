@@ -44,6 +44,7 @@ type Turn = {
   redPacket?: { amount: number; note: string; from: 'user' | 'ai' }; // 红包消息才有：甜甜口袋账本已经记过这一笔了
   redPacketOpened?: boolean; // 不管自己发的还是收到的都要点开才展开(才有拆红包动效)，默认 false
   memo?: string; // 这条 AI 回复顺手存进记忆罐头的内容（显示"记住了"小条）
+  errorDetail?: string; // status 为 error 时的原始报错文本；渲染成系统提示条，点"详情"才展开看这个
   at?: number; // 消息创建时间戳
   thinkMs?: number; // 思考链耗时（从第一段思考到开始正式回复），用来显示「想了 N 秒」
   editHistory?: string[]; // 这条消息编辑过的历史版本（按时间顺序，旧→较新），当前展示的是 content
@@ -302,6 +303,26 @@ function RedPacketBubble({
         <span className="redpacket__amount">¥{amount}</span>
       </span>
       <span className="redpacket__claimed">已领取</span>
+    </div>
+  );
+}
+
+// 系统级报错（后端 401 之类）：不冒充予予说话，居中一条灰色小胶囊，原始报错收进可展开详情。
+function SystemErrorNotice({ detail }: { detail?: string }) {
+  const [showDetail, setShowDetail] = useState(false);
+  return (
+    <div className="system-notice">
+      <div className="system-notice__pill">连接出了点问题，请稍后重试或重新登录</div>
+      {detail ? (
+        <button
+          type="button"
+          className="system-notice__toggle"
+          onClick={() => setShowDetail((v) => !v)}
+        >
+          {showDetail ? '收起详情' : '查看详情'}
+        </button>
+      ) : null}
+      {showDetail && detail ? <div className="system-notice__detail">{detail}</div> : null}
     </div>
   );
 }
@@ -1095,7 +1116,9 @@ function ChatRoom({
           markThinkDone(); // 开始正式回复 = 思考结束，定格耗时
           setTurns((prev) => prev.map((t) => (t.id === botId ? { ...t, content: t.content + chunk } : t)));
         },
-        onError: (message) => patchTurn(botId, { status: 'error', content: `(｡•́︿•̀｡) 出错了：${message}` }),
+        // 报错不再塞进 content 冒充予予说的话（会顶着她头像渲成聊天气泡）；
+        // 原始错误存进 errorDetail，渲染层改成居中的系统提示条，详情要点开才看到。
+        onError: (message) => patchTurn(botId, { status: 'error', content: '', errorDetail: message }),
         onDone: () => {
           markThinkDone();
           setTurns((prev) => {
@@ -1318,6 +1341,9 @@ function ChatRoom({
             totalVersions - 1,
           );
           const displayContent = versions ? versions[curVerIdx] : turn.content;
+          if (turn.status === 'error') {
+            return <SystemErrorNotice key={turn.id} detail={turn.errorDetail} />;
+          }
           return turn.role === 'user' ? (
             <div key={turn.id} className="bubble-row is-user">
               <div className="bubble-stack bubble-stack--user">
@@ -1416,7 +1442,7 @@ function ChatRoom({
                     return (
                       <>
                         {showBubble ? (
-                          <div className={`bubble bubble--bot${turn.status === 'error' ? ' is-error' : ''}`}>
+                          <div className="bubble bubble--bot">
                             {text ||
                               (turn.status === 'streaming' ? <span className="typing-dots"><i /><i /><i /></span> : '')}
                           </div>
