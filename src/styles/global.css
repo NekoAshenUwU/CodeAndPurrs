@@ -4472,6 +4472,93 @@ a {
   opacity: 0.85;
 }
 
+/* 拆红包动效：闭合图 crossfade + 弹跳成打开图，再冒几颗爱心粒子 */
+.redpacket__icon-wrap {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+.redpacket__icon-wrap .redpacket__icon {
+  position: absolute;
+  inset: 0;
+  width: 28px;
+  height: 28px;
+}
+.redpacket__icon--under {
+  animation: redpacketFadeOut 110ms ease-out forwards;
+}
+.redpacket__icon-wrap.is-opening .redpacket__icon--open {
+  animation:
+    redpacketBounceIn 250ms ease-out,
+    redpacketFadeIn 110ms ease-out;
+}
+@keyframes redpacketFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes redpacketFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes redpacketBounceIn {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.redpacket__heart {
+  position: absolute;
+  left: 50%;
+  top: 32%;
+  transform: translate(-50%, -50%);
+  font-size: 0.8rem;
+  line-height: 1;
+  pointer-events: none;
+  animation-name: redpacketHeartFloat;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+  will-change: transform, opacity;
+}
+@keyframes redpacketHeartFloat {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) rotate(0deg) scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(calc(var(--dx) * 0.3), calc(var(--dy) * 0.2)) rotate(calc(var(--rot) * 0.4)) scale(1);
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.85);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .redpacket__icon-wrap.is-opening .redpacket__icon--open {
+    animation: none;
+    opacity: 1;
+  }
+  .redpacket__icon--under,
+  .redpacket__heart {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 /* 甜甜口袋页面 */
 .sweetie-page {
   position: relative;

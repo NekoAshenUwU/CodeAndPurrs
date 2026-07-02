@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { streamChat, type ChatMessage } from '../services/chat';
 import { getModel, MODEL_GROUPS } from '../data/models';
@@ -10,6 +10,7 @@ import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../servic
 import { getMemeURL, getMemeDataUrl, listMemes, type MemeItem } from '../services/memes';
 import { addPhoto, getPhotoURL, getPhotoDataUrl } from '../services/photos';
 import { addPacket } from '../services/redPacket';
+import { playHongbaoChime } from '../services/hongbaoSound';
 import { fetchLatestUsage } from '../services/usageBridge';
 import { fetchLocationLatest, reverseGeocode } from '../services/locationBridge';
 import { getTimeOfDay } from '../components/ambient/timeOfDay';
@@ -187,30 +188,108 @@ function PhotoBubble({ photoId }: { photoId: string }) {
   return <img className="meme-msg" src={url} alt="照片" />;
 }
 
+// 红包配色主题：图片路径 + 粒子颜色都做成参数，以后接紫色款只要在这加一条配置
+// （两张图路径 + 粒子色）就行，不用碰 RedPacketBubble 组件本身。
+type HongbaoTheme = { closed: string; open: string; heartColors: string[] };
+const HONGBAO_THEMES: Record<string, HongbaoTheme> = {
+  pink: {
+    closed: `${import.meta.env.BASE_URL}assets/icons/hongbao_pink_closed.png`,
+    open: `${import.meta.env.BASE_URL}assets/icons/hongbao_pink_open.png`,
+    heartColors: ['#FFB6D9', '#FF9EC7', '#FFC9E3'],
+  },
+};
+const DEFAULT_HONGBAO_THEME = 'pink';
+
+type HeartParticle = { id: number; dx: number; dy: number; rot: number; delay: number; duration: number; color: string };
+
+// 拆红包那一下冒出来的爱心粒子：3颗，位置/角度/时长都随机一点，错开出场不齐刷刷。
+function makeHeartBurst(colors: string[]): HeartParticle[] {
+  const now = Date.now();
+  return Array.from({ length: 3 }, (_, i) => ({
+    id: now + i,
+    dx: Math.round((Math.random() - 0.5) * 40), // 水平 ±20px
+    dy: -(60 + Math.round(Math.random() * 40)), // 向上飘 60~100px
+    rot: Math.round((Math.random() - 0.5) * 30), // 旋转 ±15deg
+    delay: i * (100 + Math.round(Math.random() * 50)), // 错开 100~150ms
+    duration: 900 + Math.round(Math.random() * 300), // 900~1200ms
+    color: colors[i % colors.length],
+  }));
+}
+
 // 红包气泡：自己发的直接显示金额；收到的要点一下才拆开看金额和留言(像微信红包)。
+// 拆的瞬间：叮一声 + 图标弹跳crossfade + 冒几颗爱心粒子，纯 CSS transform/opacity 动画。
 function RedPacketBubble({
   amount,
   note,
   opened,
   onOpen,
+  theme = DEFAULT_HONGBAO_THEME,
 }: {
   amount: number;
   note: string;
   opened: boolean;
   onOpen: () => void;
+  theme?: string;
 }) {
-  const icon = <img className="redpacket__icon" src={`${import.meta.env.BASE_URL}assets/icons/red-packet.png`} alt="" />;
+  const cfg = HONGBAO_THEMES[theme] ?? HONGBAO_THEMES[DEFAULT_HONGBAO_THEME];
+  // justOpened 只在"这一次点击拆开"时为 true，用来触发一次性动效；
+  // 已经拆过、刷新页面后直接渲染成 opened=true 的历史红包不会走这条路，不会重放动画。
+  const [justOpened, setJustOpened] = useState(false);
+  const [hearts, setHearts] = useState<HeartParticle[]>([]);
+
+  // 两个计时器分开挂两个 effect：justOpened 280ms 后自己翻回 false，
+  // 这个状态变化不能连带把 hearts 的清理计时器也一起清掉，所以不能共用一个 effect。
+  useEffect(() => {
+    if (!justOpened) return;
+    const t = setTimeout(() => setJustOpened(false), 280);
+    return () => clearTimeout(t);
+  }, [justOpened]);
+
+  useEffect(() => {
+    if (hearts.length === 0) return;
+    const t = setTimeout(() => setHearts([]), 1500); // 动效放完就把粒子从 DOM 里清掉，不留垃圾节点
+    return () => clearTimeout(t);
+  }, [hearts]);
+
+  const handleOpen = () => {
+    playHongbaoChime(); // 点击回调里同步调用，满足 iOS Safari 要在用户手势里 resume AudioContext 的要求
+    setJustOpened(true);
+    setHearts(makeHeartBurst(cfg.heartColors));
+    onOpen();
+  };
+
   if (!opened) {
     return (
-      <button type="button" className="redpacket redpacket--closed" onClick={onOpen}>
-        {icon}
+      <button type="button" className="redpacket redpacket--closed" onClick={handleOpen}>
+        <img className="redpacket__icon" src={cfg.closed} alt="" />
         <span className="redpacket__hint">点开看看</span>
       </button>
     );
   }
   return (
     <div className="redpacket redpacket--opened">
-      {icon}
+      <span className={`redpacket__icon-wrap${justOpened ? ' is-opening' : ''}`}>
+        {justOpened && <img className="redpacket__icon redpacket__icon--under" src={cfg.closed} alt="" />}
+        <img className="redpacket__icon redpacket__icon--open" src={cfg.open} alt="" />
+        {hearts.map((h) => (
+          <span
+            key={h.id}
+            className="redpacket__heart"
+            style={
+              {
+                '--dx': `${h.dx}px`,
+                '--dy': `${h.dy}px`,
+                '--rot': `${h.rot}deg`,
+                color: h.color,
+                animationDelay: `${h.delay}ms`,
+                animationDuration: `${h.duration}ms`,
+              } as CSSProperties
+            }
+          >
+            ♥
+          </span>
+        ))}
+      </span>
       <span className="redpacket__amount">¥{amount}</span>
       {note ? <span className="redpacket__note">{note}</span> : null}
     </div>
@@ -291,7 +370,7 @@ function RedPacketComposer({
       <button type="button" className="chat-more__scrim" aria-label="关闭红包" onClick={onClose} />
       <div className="redpacket-composer" role="dialog" aria-label="发红包">
         <div className="redpacket-composer__title">
-          <img className="redpacket-composer__title-icon" src={`${import.meta.env.BASE_URL}assets/icons/red-packet.png`} alt="" />
+          <img className="redpacket-composer__title-icon" src={HONGBAO_THEMES[DEFAULT_HONGBAO_THEME].closed} alt="" />
           发个红包
         </div>
         <input
