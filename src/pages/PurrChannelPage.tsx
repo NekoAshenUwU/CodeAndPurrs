@@ -42,7 +42,7 @@ type Turn = {
   meme?: string; // 表情包消息才有：脑洞贴纸盒里的 meme id，渲染时按需取 blob
   photo?: string; // 随手发的照片才有：photos IndexedDB 里的 id，渲染时按需取 blob
   redPacket?: { amount: number; note: string; from: 'user' | 'ai' }; // 红包消息才有：甜甜口袋账本已经记过这一笔了
-  redPacketOpened?: boolean; // 收到的红包要点开才看到金额；自己发的默认已展开
+  redPacketOpened?: boolean; // 不管自己发的还是收到的都要点开才展开(才有拆红包动效)，默认 false
   memo?: string; // 这条 AI 回复顺手存进记忆罐头的内容（显示"记住了"小条）
   at?: number; // 消息创建时间戳
   thinkMs?: number; // 思考链耗时（从第一段思考到开始正式回复），用来显示「想了 N 秒」
@@ -253,6 +253,13 @@ function RedPacketBubble({
 
   const handleOpen = () => {
     playHongbaoChime(); // 点击回调里同步调用，满足 iOS Safari 要在用户手势里 resume AudioContext 的要求
+    if ('vibrate' in navigator) {
+      try {
+        navigator.vibrate(15); // 支持的设备(主要是安卓)拆红包那一下顺手来点触感反馈；iOS Safari 没这个 API，静默跳过
+      } catch {
+        // 忽略
+      }
+    }
     setJustOpened(true);
     setHearts(makeHeartBurst(cfg.heartColors));
     onOpen();
@@ -267,7 +274,7 @@ function RedPacketBubble({
     );
   }
   return (
-    <div className="redpacket redpacket--opened">
+    <div className={`redpacket redpacket--opened${justOpened ? ' is-justOpened' : ''}`}>
       <span className={`redpacket__icon-wrap${justOpened ? ' is-opening' : ''}`}>
         {justOpened && <img className="redpacket__icon redpacket__icon--under" src={cfg.closed} alt="" />}
         <img className="redpacket__icon redpacket__icon--open" src={cfg.open} alt="" />
@@ -862,7 +869,7 @@ function ChatRoom({
       reasoning: '',
       status: 'done',
       redPacket: { amount, note, from: 'user' },
-      redPacketOpened: true,
+      redPacketOpened: false, // 自己发的也要点开才有动效，跟收到的一视同仁
       at: Date.now(),
     };
     const history = await toMessages([...turns, packetTurn]);

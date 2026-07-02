@@ -4454,6 +4454,27 @@ a {
   color: #8c5a8c;
   cursor: default;
 }
+.redpacket--opened.is-justOpened {
+  animation: redpacketShake 260ms ease-in-out;
+}
+@keyframes redpacketShake {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  20% {
+    transform: translateX(-2px) rotate(-2deg);
+  }
+  40% {
+    transform: translateX(2px) rotate(2deg);
+  }
+  60% {
+    transform: translateX(-1.5px) rotate(-1.5deg);
+  }
+  80% {
+    transform: translateX(1.5px) rotate(1.5deg);
+  }
+}
 .redpacket--opened .redpacket__amount {
   color: #b8493f;
 }
@@ -4556,6 +4577,9 @@ a {
   .redpacket__heart {
     animation: none;
     opacity: 0;
+  }
+  .redpacket--opened.is-justOpened {
+    animation: none;
   }
 }
 
