@@ -4432,12 +4432,15 @@ a {
 
 /* 聊天里的红包气泡 */
 .redpacket {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
+  gap: 12px;
+  width: clamp(220px, 65vw, 340px);
+  box-sizing: border-box;
+  padding: 16px 20px;
   border: 0;
-  border-radius: 16px;
+  border-radius: 22px;
   font-family: var(--round);
   cursor: pointer;
   box-shadow: 0 8px 18px -10px rgba(169, 143, 208, 0.55);
@@ -4447,12 +4450,15 @@ a {
   color: #fff;
 }
 .redpacket--closed .redpacket__hint {
-  font-size: 0.85rem;
+  font-size: 0.92rem;
+  font-weight: 600;
 }
 .redpacket--opened {
   background: linear-gradient(135deg, #fff0f5 0%, #f3ecfd 100%);
   color: #8c5a8c;
   cursor: default;
+  filter: saturate(0.6);
+  opacity: 0.92;
 }
 .redpacket--opened.is-justOpened {
   animation: redpacketShake 260ms ease-in-out;
@@ -4479,32 +4485,52 @@ a {
   color: #b8493f;
 }
 .redpacket__icon {
-  width: 28px;
-  height: 28px;
+  width: 60px;
+  height: 60px;
   object-fit: contain;
   flex-shrink: 0;
 }
+/* 已拆卡片右侧：上下两行，第一行留言（加粗），第二行金额 */
+.redpacket__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
 .redpacket__amount {
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
 }
 .redpacket__note {
-  font-size: 0.82rem;
-  opacity: 0.85;
+  font-size: 0.95rem;
+  font-weight: 700;
+  opacity: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.redpacket__claimed {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  opacity: 0.55;
 }
 
 /* 拆红包动效：闭合图 crossfade + 弹跳成打开图，再冒几颗爱心粒子 */
 .redpacket__icon-wrap {
   position: relative;
-  width: 28px;
-  height: 28px;
+  width: 60px;
+  height: 60px;
   flex-shrink: 0;
 }
 .redpacket__icon-wrap .redpacket__icon {
   position: absolute;
   inset: 0;
-  width: 28px;
-  height: 28px;
+  width: 60px;
+  height: 60px;
 }
 .redpacket__icon--under {
   animation: redpacketFadeOut 110ms ease-out forwards;
@@ -4546,7 +4572,7 @@ a {
   left: 50%;
   top: 32%;
   transform: translate(-50%, -50%);
-  font-size: 0.8rem;
+  font-size: 1rem;
   line-height: 1;
   pointer-events: none;
   animation-name: redpacketHeartFloat;

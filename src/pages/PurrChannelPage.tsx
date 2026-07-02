@@ -297,8 +297,11 @@ function RedPacketBubble({
           </span>
         ))}
       </span>
-      <span className="redpacket__amount">¥{amount}</span>
-      {note ? <span className="redpacket__note">{note}</span> : null}
+      <span className="redpacket__body">
+        <span className="redpacket__note">{note || '甜甜红包'}</span>
+        <span className="redpacket__amount">¥{amount}</span>
+      </span>
+      <span className="redpacket__claimed">已领取</span>
     </div>
   );
 }
