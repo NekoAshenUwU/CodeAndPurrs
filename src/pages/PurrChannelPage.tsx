@@ -198,6 +198,11 @@ const HONGBAO_THEMES: Record<string, HongbaoTheme> = {
     open: `${import.meta.env.BASE_URL}assets/icons/hongbao_pink_open.png`,
     heartColors: ['#FFB6D9', '#FF9EC7', '#FFC9E3'],
   },
+  purple: {
+    closed: `${import.meta.env.BASE_URL}assets/icons/hongbao_purple_closed.png`,
+    open: `${import.meta.env.BASE_URL}assets/icons/hongbao_purple_open.png`,
+    heartColors: ['#C4A5E7', '#B891DD', '#D6BEF0'],
+  },
 };
 const DEFAULT_HONGBAO_THEME = 'pink';
 
@@ -1353,6 +1358,7 @@ function ChatRoom({
                     note={turn.redPacket.note}
                     opened={!!turn.redPacketOpened}
                     onOpen={() => patchTurn(turn.id, { redPacketOpened: true })}
+                    theme={turn.redPacket.from === 'ai' ? 'purple' : 'pink'}
                   />
                 ) : turn.meme ? (
                   <MemeBubble memeId={turn.meme} />
@@ -1461,6 +1467,7 @@ function ChatRoom({
                     note={turn.redPacket.note}
                     opened={!!turn.redPacketOpened}
                     onOpen={() => patchTurn(turn.id, { redPacketOpened: true })}
+                    theme={turn.redPacket.from === 'ai' ? 'purple' : 'pink'}
                   />
                 ) : null}
                 {turn.memo ? (
