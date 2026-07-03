@@ -201,7 +201,9 @@ const HONGBAO_THEMES: Record<string, HongbaoTheme> = {
   purple: {
     closed: `${import.meta.env.BASE_URL}assets/icons/hongbao_purple_closed.png`,
     open: `${import.meta.env.BASE_URL}assets/icons/hongbao_purple_open.png`,
-    heartColors: ['#C4A5E7', '#B891DD', '#D6BEF0'],
+    // 上一版 #C4A5E7 那批饱和度只有 ~58%（粉色那批是 ~100%），淡是淡但显灰。
+    // 换成同样"高饱和 + 高明度"的淡紫，饱和度拉到跟粉色一个量级，别再靠调低饱和度做"淡"。
+    heartColors: ['#D896F0', '#C67AEA', '#E3B3F5'],
   },
 };
 const DEFAULT_HONGBAO_THEME = 'pink';
