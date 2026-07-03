@@ -4654,31 +4654,6 @@ a {
      var(--chat-bg-image) 是调频页那个全局自定义背景开关，设了就跟其它房间一样共用。 */
   background: var(--chat-bg-image, url("/rooms/sweetie-pocket-bg.webp")) center / cover no-repeat;
 }
-.sweetie-balances {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.sweetie-balance-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 16px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #fff5fb 0%, #fff0e8 100%);
-  box-shadow: 0 3px 12px rgba(200, 170, 220, 0.2);
-}
-.sweetie-balance-card__who {
-  font-family: var(--round);
-  font-size: 0.8rem;
-  color: #8c79ac;
-}
-.sweetie-balance-card__amount {
-  font-family: var(--round);
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: #b8493f;
-}
 .sweetie-hint {
   margin: 12px 2px 16px;
   color: #9a7fc0;
@@ -4686,55 +4661,172 @@ a {
   font-size: 0.82rem;
   line-height: 1.6;
 }
-.sweetie-list {
-  list-style: none;
+
+/* ---------- 余额浮岛面板：图是完整场景(人物+雪豹/小猫坐在浮岛上，
+   头顶糖霜云中心留白)，数字绝对定位叠在云心那块空白区域 ---------- */
+.balance-island {
+  position: fixed;
+  top: calc(56px + env(safe-area-inset-top));
+  z-index: 20;
+  width: 108px;
+  pointer-events: none; /* 纯展示，别挡住底下的点击 */
+}
+.balance-island--left {
+  left: 6px;
+}
+.balance-island--right {
+  right: 6px;
+}
+.balance-island__art {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 6px 14px rgba(90, 50, 130, 0.25));
+}
+.balance-island__amount {
+  position: absolute;
+  top: 25%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--round);
+  font-weight: 700;
+  font-size: 1rem;
+  color: #b8493f;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+.balance-island__who {
+  position: absolute;
+  top: 35%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--round);
+  font-size: 0.56rem;
+  color: #8c6a9e;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+}
+
+/* ---------- 浮岛海面：每条红包记录是一个漂浮物，纵向位置=时间(越下越早)，
+   横向散布靠 id hash 定，深度感靠外层静态 scale+saturate ---------- */
+/* 108px 宽 * (1448/1086) 图片本身比例 ≈ 144px 高，留够净空提示语才不会被面板挡住 */
+.sweetie-sea-scroll {
+  padding-top: calc(56px + env(safe-area-inset-top) + 156px);
+}
+.sweetie-sea {
+  position: relative;
+}
+.sweetie-sea::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent 0%, rgba(40, 20, 70, 0.32) 100%);
+}
+.floatvic {
+  position: absolute;
+  width: 74px;
+  height: 74px;
   margin: 0;
+  border: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  background: none;
+  cursor: pointer;
+  transform-origin: center;
 }
-.sweetie-item {
-  padding: 12px 14px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #fff5fb 0%, #f4eafd 100%);
-  box-shadow: 0 3px 12px rgba(200, 170, 220, 0.2);
-  border-left: 3px solid rgba(229, 115, 115, 0.4);
+.floatvic__inner {
+  width: 100%;
+  height: 100%;
+  animation-name: floatvicBob;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
 }
-.sweetie-item--ai {
-  border-left-color: rgba(201, 167, 245, 0.55);
+.floatvic__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 5px 10px rgba(60, 30, 90, 0.28));
 }
-.sweetie-item__head {
+@keyframes floatvicBob {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(calc(var(--fdx) * 0.6), calc(var(--fdy) * -1)) rotate(calc(var(--frot) * 0.5));
+  }
+  50% {
+    transform: translate(var(--fdx), calc(var(--fdy) * -0.3)) rotate(var(--frot));
+  }
+  75% {
+    transform: translate(calc(var(--fdx) * 0.3), var(--fdy)) rotate(calc(var(--frot) * -0.6));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .floatvic__inner {
+    animation: none;
+  }
+}
+
+/* ---------- 点开漂浮物看详情 ---------- */
+.sweetie-detail-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(60, 30, 80, 0.35);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
 }
-.sweetie-item__from {
+.sweetie-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+  padding: 20px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #fff5fb 0%, #f4eafd 100%);
+  box-shadow: 0 10px 30px rgba(90, 50, 120, 0.3);
+}
+.sweetie-detail__from {
   font-family: var(--round);
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   color: #8c79ac;
 }
-.sweetie-item__amount {
+.sweetie-detail__amount {
   font-family: var(--round);
-  font-size: 1.05rem;
+  font-size: 1.8rem;
   font-weight: 700;
   color: #b8493f;
 }
-.sweetie-item__note {
-  margin: 6px 0 0;
-  color: #5d4a7e;
+.sweetie-detail__note {
+  margin: 0;
   font-family: var(--round);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   line-height: 1.5;
+  color: #5d4a7e;
   white-space: pre-wrap;
   word-break: break-word;
 }
-.sweetie-item__time {
-  display: block;
-  margin-top: 6px;
-  color: #a894c9;
+.sweetie-detail__time {
   font-family: var(--round);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
+  color: #a894c9;
+}
+.sweetie-detail__close {
+  align-self: flex-end;
+  margin-top: 8px;
+  padding: 6px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #c9a7f5, #f2a9c4);
+  color: #fff;
+  font-family: var(--round);
+  font-size: 0.85rem;
+  cursor: pointer;
 }
 
 /* ===== 自定义字体的最终应用（放最后，确保不被更具体的旧规则按源序覆盖） ===== */

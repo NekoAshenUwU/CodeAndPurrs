@@ -46,3 +46,77 @@ export function ensureStarterPackets(): void {
   }
   saveLocal(SEEDED_KEY, true);
 }
+
+// ---------- 浮岛：每笔红包记录随机领一个载具（瓶子/贝壳/纸船/海星）----------
+// 必须是"确定性随机"：同一笔红包每次打开页面都要是同一个载具，不能用 Math.random()
+// （那样今天是瓶子明天变海星，记忆的载体得稳定）。用红包 id 做字符串 hash 取模来选。
+// 简单 djb2 变种，不需要密码学强度，只要"同输入同输出、分布够散"就行。
+function hashString(s: string): number {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) {
+    h = (h * 33) ^ s.charCodeAt(i);
+  }
+  return h >>> 0; // 转成无符号，避免负数取模的坑
+}
+
+export type VehicleCategory = 'bottle' | 'shell' | 'boat' | 'starfish';
+const VEHICLE_CATEGORIES: VehicleCategory[] = ['bottle', 'shell', 'boat', 'starfish'];
+
+// 贝壳/纸船/海星：类别内部具体挑哪个也按 hash 定，不掺 Math.random()。
+// 瓶子例外——粉/紫两款分别是棠棠/予予专属（她说的"紫色是予予的，这粉色是我的"），
+// 挑到 bottle 类别时直接按发送方定色，不再二次随机。
+const VEHICLE_POOLS: Record<Exclude<VehicleCategory, 'bottle'>, string[]> = {
+  shell: [
+    'shell_scallop_1.png',
+    'shell_scallop_2.png',
+    'shell_conch_1.png',
+    'shell_conch_4.png',
+    'shell_nautilus.png',
+    'shell_oyster_1.png',
+    'shell_clam.png',
+  ],
+  boat: [
+    'boat_pink_foryou.png',
+    'boat_purple_starry.png',
+    'sailboat_purple_anchor.png',
+    'sailboat_pink_dots.png',
+    'sailboat_pink_bunny.png',
+    'boat_blue_bear.png',
+    'boat_pink_gingham.png',
+    'boat_pink_floral.png',
+  ],
+  starfish: [
+    'starfish_purple.webp',
+    'starfish_clear_gold.webp',
+    'starfish_peach.webp',
+    'starfish_pink_shell.png',
+    'starfish_blue_beaded.webp',
+    'starfish_sand_shell.webp',
+  ],
+};
+
+export type Vehicle = { category: VehicleCategory; src: string };
+
+export function pickVehicle(packet: Pick<RedPacket, 'id' | 'from'>): Vehicle {
+  const base = import.meta.env.BASE_URL;
+  const category = VEHICLE_CATEGORIES[hashString(packet.id) % VEHICLE_CATEGORIES.length];
+  if (category === 'bottle') {
+    const file = packet.from === 'user' ? 'bottle_tangtang.png' : 'bottle_yuyu.webp';
+    return { category, src: `${base}assets/icons/${file}` };
+  }
+  const pool = VEHICLE_POOLS[category];
+  const file = pool[hashString(`${packet.id}:variant`) % pool.length];
+  return { category, src: `${base}assets/icons/${file}` };
+}
+
+// 浮岛横向散布位置：同样按 id hash 定，保证稳定（不跟着载具变，两者用不同的
+// hash 输入，避免"同一个 id 算出来的横向位置总跟载具选择相关联"这种视觉规律）。
+export function pickHorizontalPercent(id: string): number {
+  // 留边距，别贴到左右边缘：10% ~ 80%
+  return 10 + (hashString(`${id}:x`) % 71);
+}
+
+// 纵向散布用的小抖动（±px），避免每条记录严格对齐成一条直线，看起来太规整。
+export function pickVerticalJitter(id: string, maxPx: number): number {
+  return (hashString(`${id}:y`) % (maxPx * 2 + 1)) - maxPx;
+}
