@@ -85,8 +85,8 @@
   font-display: swap;
 }
 @font-face {
-  font-family: "RoughOwl"; /* Rough Owl · 甜甜口袋余额数额专用（纯拉丁数字/符号） */
-  src: url("/fonts/rough-owl.woff2") format("woff2");
+  font-family: "TianTianQuanAmount"; /* 字魂甜甜圈 子集(仅 $0-9.) · 甜甜口袋余额数额专用 */
+  src: url("/fonts/tiantianquan-amount.woff2") format("woff2");
   font-weight: 400;
   font-display: swap;
 }
@@ -4660,21 +4660,13 @@ a {
      var(--chat-bg-image) 是调频页那个全局自定义背景开关，设了就跟其它房间一样共用。 */
   background: var(--chat-bg-image, url("/rooms/sweetie-pocket-bg.webp")) center / cover no-repeat;
 }
-.sweetie-hint {
-  margin: 12px 2px 16px;
-  color: #9a7fc0;
-  font-family: var(--round);
-  font-size: 0.82rem;
-  line-height: 1.6;
-}
-
 /* ---------- 余额浮岛面板：新图是完整水晶浮岛场景(男孩+雪豹/女孩+小猫)，
    头顶一圈项链状云环，环心是真透明抠图(不是实心云)，数字叠在环心那块空地上 ---------- */
 .balance-island {
   position: fixed;
   top: calc(56px + env(safe-area-inset-top));
   z-index: 20;
-  width: 200px;
+  width: 150px; /* 200px 在窄屏上左右两块会在中间叠起来，正好把背景图的太阳挡住，缩回来留出中间空隙 */
   pointer-events: none; /* 纯展示，别挡住底下的点击 */
 }
 .balance-island--left {
@@ -4694,17 +4686,18 @@ a {
   top: 23%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-family: "RoughOwl", var(--round);
+  font-family: "TianTianQuanAmount", var(--round);
   font-weight: 700;
   font-size: 1.45rem;
   color: #9c3fa0;
+  -webkit-text-fill-color: #9c3fa0;
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 /* ---------- 浮岛海面：三条车道各自叠行，同一行常并排 2~3 个载具，
    纵向行号=时间(越下越早)，深度感靠外层静态 scale+saturate ---------- */
-/* 200px 宽 * (1536/1024) 图片本身比例 = 300px 高，留够净空提示语才不会被面板挡住 */
+/* 150px 宽 * (1536/1024) 图片本身比例 ≈ 225px 高，留够净空才不会被面板挡住 */
 .sweetie-sea-scroll {
-  padding-top: calc(56px + env(safe-area-inset-top) + 316px);
+  padding-top: calc(56px + env(safe-area-inset-top) + 240px);
 }
 .sweetie-sea {
   position: relative;
@@ -4811,10 +4804,11 @@ a {
   color: #cbb6ec;
 }
 .sweetie-detail__amount {
-  font-family: "RoughOwl", var(--round);
+  font-family: "TianTianQuanAmount", var(--round);
   font-size: 1.6rem;
   font-weight: 700;
   color: #e0a3f0;
+  -webkit-text-fill-color: #e0a3f0;
 }
 .sweetie-detail__note {
   margin: 0;

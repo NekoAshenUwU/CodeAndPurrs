@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import {
+  assignVehicles,
   balanceOf,
   loadPackets,
   pickHorizontalPercent,
   pickLane,
-  pickVehicle,
   pickVerticalJitter,
   type RedPacket,
+  type Vehicle,
 } from '../services/redPacket';
 
 const fmtStamp = (at: number): string => {
@@ -54,11 +55,13 @@ function BalanceIsland({ who, amount, side }: { who: string; amount: number; sid
 // 两层拆开是因为同一个元素上 transform 只能生效一份，静态缩放跟动画位移写在一起会互相覆盖。
 function FloatingVehicle({
   packet,
+  vehicle,
   row,
   maxRow,
   onOpen,
 }: {
   packet: RedPacket;
+  vehicle: Vehicle;
   row: number;
   maxRow: number;
   onOpen: (p: RedPacket) => void;
@@ -96,7 +99,6 @@ function FloatingVehicle({
     return () => io.disconnect();
   }, []);
 
-  const vehicle = useMemo(() => pickVehicle(packet), [packet.id, packet.from]);
   const leftPct = useMemo(() => pickHorizontalPercent(packet.id), [packet.id]);
   const jitter = useMemo(() => pickVerticalJitter(packet.id, JITTER_MAX), [packet.id]);
 
@@ -151,6 +153,7 @@ export function SweetiePocketPage() {
   const aiBalance = useMemo(() => balanceOf('ai', packets), [packets]);
 
   const { rows, maxRow } = useMemo(() => assignRows(packets), [packets]);
+  const vehicles = useMemo(() => assignVehicles(packets), [packets]);
   const seaHeight = (maxRow + 1) * SLOT_HEIGHT + SLOT_HEIGHT;
 
   return (
@@ -169,8 +172,6 @@ export function SweetiePocketPage() {
       <BalanceIsland who="予予的口袋" amount={aiBalance} side="right" />
 
       <div className="memory-scroll sweetie-sea-scroll">
-        <p className="sweetie-hint">去呼噜频道点「＋ → 红包」就能发一个，写句话给对方，像微信一样～</p>
-
         {packets.length === 0 ? (
           <div className="chat-empty">
             <div className="chat-empty__paw">🧧</div>
@@ -180,7 +181,14 @@ export function SweetiePocketPage() {
         ) : (
           <div className="sweetie-sea" style={{ height: seaHeight }}>
             {packets.map((p, i) => (
-              <FloatingVehicle key={p.id} packet={p} row={rows[i]} maxRow={maxRow} onOpen={setSelected} />
+              <FloatingVehicle
+                key={p.id}
+                packet={p}
+                vehicle={vehicles.get(p.id)!}
+                row={rows[i]}
+                maxRow={maxRow}
+                onOpen={setSelected}
+              />
             ))}
           </div>
         )}

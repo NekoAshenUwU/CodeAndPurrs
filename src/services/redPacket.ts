@@ -97,16 +97,29 @@ const VEHICLE_POOLS: Record<Exclude<VehicleCategory, 'bottle'>, string[]> = {
 
 export type Vehicle = { category: VehicleCategory; src: string };
 
-export function pickVehicle(packet: Pick<RedPacket, 'id' | 'from'>): Vehicle {
+// 载具分配改成"轮着来"：按 id 哈希取模会出现同类扎堆(比如连续好几个都分到
+// bottle，而瓶子颜色又是按发送方写死的，同一人连续几笔看着像是同一个图重复)。
+// 改成按列表顺序轮流发牌——类别轮流 bottle→shell→boat→starfish→bottle...，
+// 类别内部的具体图案也各自轮流过一遍图池再回头，最大程度避免相邻重复。
+// 只要传入的列表顺序不变(localStorage 数组本来就稳定累加)，同一笔红包
+// 算出来的还是同一个载具，符合"同一条记录不能一天一个样"的要求。
+export function assignVehicles(list: Pick<RedPacket, 'id' | 'from'>[]): Map<string, Vehicle> {
   const base = import.meta.env.BASE_URL;
-  const category = VEHICLE_CATEGORIES[hashString(packet.id) % VEHICLE_CATEGORIES.length];
-  if (category === 'bottle') {
-    const file = packet.from === 'user' ? 'bottle_tangtang.png' : 'bottle_yuyu.webp';
-    return { category, src: `${base}assets/icons/${file}` };
-  }
-  const pool = VEHICLE_POOLS[category];
-  const file = pool[hashString(`${packet.id}:variant`) % pool.length];
-  return { category, src: `${base}assets/icons/${file}` };
+  const counters: Record<Exclude<VehicleCategory, 'bottle'>, number> = { shell: 0, boat: 0, starfish: 0 };
+  const map = new Map<string, Vehicle>();
+  list.forEach((packet, i) => {
+    const category = VEHICLE_CATEGORIES[i % VEHICLE_CATEGORIES.length];
+    if (category === 'bottle') {
+      const file = packet.from === 'user' ? 'bottle_tangtang.png' : 'bottle_yuyu.webp';
+      map.set(packet.id, { category, src: `${base}assets/icons/${file}` });
+      return;
+    }
+    const pool = VEHICLE_POOLS[category];
+    const idx = counters[category] % pool.length;
+    counters[category] += 1;
+    map.set(packet.id, { category, src: `${base}assets/icons/${pool[idx]}` });
+  });
+  return map;
 }
 
 // 一行摆两三个载具：把横向分成 3 条车道，用 id hash 定死属于哪条道
