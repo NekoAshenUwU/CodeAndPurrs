@@ -1252,13 +1252,6 @@ function ChatRoom({
     setTurns((prev) => prev.map((t) => (t.status === 'streaming' ? { ...t, status: 'done' } : t)));
   };
 
-  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      void send();
-    }
-  };
-
   return (
     <main className="chat-page">
       <header className="chat-head">
@@ -1529,8 +1522,7 @@ function ChatRoom({
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder="发消息…（Enter 发送 / Shift+Enter 换行）"
+          placeholder="发消息…（点右边发送）"
           rows={1}
         />
 
