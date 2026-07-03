@@ -84,6 +84,12 @@
   font-weight: 400;
   font-display: swap;
 }
+@font-face {
+  font-family: "RoughOwl"; /* Rough Owl · 甜甜口袋余额数额专用（纯拉丁数字/符号） */
+  src: url("/fonts/rough-owl.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
 
 :root {
   color: #5f5877;
@@ -4662,13 +4668,13 @@ a {
   line-height: 1.6;
 }
 
-/* ---------- 余额浮岛面板：图是完整场景(人物+雪豹/小猫坐在浮岛上，
-   头顶糖霜云中心留白)，数字绝对定位叠在云心那块空白区域 ---------- */
+/* ---------- 余额浮岛面板：新图是完整水晶浮岛场景(男孩+雪豹/女孩+小猫)，
+   头顶一圈项链状云环，环心是真透明抠图(不是实心云)，数字叠在环心那块空地上 ---------- */
 .balance-island {
   position: fixed;
   top: calc(56px + env(safe-area-inset-top));
   z-index: 20;
-  width: 150px;
+  width: 165px;
   pointer-events: none; /* 纯展示，别挡住底下的点击 */
 }
 .balance-island--left {
@@ -4685,20 +4691,20 @@ a {
 }
 .balance-island__amount {
   position: absolute;
-  top: 25%;
+  top: 23%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-family: var(--round);
+  font-family: "RoughOwl", var(--round);
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 1.45rem;
   color: #9c3fa0;
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 /* ---------- 浮岛海面：每条红包记录是一个漂浮物，纵向位置=时间(越下越早)，
    横向散布靠 id hash 定，深度感靠外层静态 scale+saturate ---------- */
-/* 150px 宽 * (1448/1086) 图片本身比例 ≈ 200px 高，留够净空提示语才不会被面板挡住 */
+/* 165px 宽 * (1536/1024) 图片本身比例 ≈ 248px 高，留够净空提示语才不会被面板挡住 */
 .sweetie-sea-scroll {
-  padding-top: calc(56px + env(safe-area-inset-top) + 212px);
+  padding-top: calc(56px + env(safe-area-inset-top) + 264px);
 }
 .sweetie-sea {
   position: relative;
@@ -4772,37 +4778,38 @@ a {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 100%;
-  max-width: 320px;
+  width: fit-content;
+  min-width: 200px;
+  max-width: min(85vw, 320px);
   padding: 20px;
   border-radius: 20px;
-  background: linear-gradient(135deg, #fff5fb 0%, #f4eafd 100%);
-  box-shadow: 0 10px 30px rgba(90, 50, 120, 0.3);
+  background: linear-gradient(160deg, #241640 0%, #3b2266 55%, #2a1850 100%);
+  box-shadow: 0 10px 30px rgba(30, 10, 50, 0.45);
 }
 .sweetie-detail__from {
   font-family: var(--round);
   font-size: 0.85rem;
-  color: #8c79ac;
+  color: #cbb6ec;
 }
 .sweetie-detail__amount {
-  font-family: var(--round);
+  font-family: "RoughOwl", var(--round);
   font-size: 1.8rem;
   font-weight: 700;
-  color: #9c3fa0;
+  color: #e0a3f0;
 }
 .sweetie-detail__note {
   margin: 0;
   font-family: var(--round);
   font-size: 0.95rem;
   line-height: 1.5;
-  color: #5d4a7e;
+  color: #d8c9ef;
   white-space: pre-wrap;
   word-break: break-word;
 }
 .sweetie-detail__time {
   font-family: var(--round);
   font-size: 0.75rem;
-  color: #a894c9;
+  color: #9c86c4;
 }
 .sweetie-detail__close {
   align-self: flex-end;
