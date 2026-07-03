@@ -4616,6 +4616,10 @@ a {
   animation-timing-function: ease-out;
   animation-fill-mode: forwards;
   will-change: transform, opacity;
+  /* 抵消 .redpacket--opened 的 saturate(0.6)：那个滤镜会连带糊到这里，
+     淡紫色系（heartColors 里 #C4A5E7 那批，本来饱和度就比粉色低）被再打 0.6 折
+     之后会明显发灰。1/0.6 精确抵消，让粒子保持配置里的原色，不管哪个主题。 */
+  filter: saturate(1.6667);
 }
 @keyframes redpacketHeartFloat {
   0% {
