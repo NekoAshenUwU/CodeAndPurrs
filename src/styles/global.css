@@ -1650,22 +1650,14 @@ a {
   box-shadow: 0 6px 18px rgba(118, 96, 132, 0.12);
 }
 
-/* 气泡:粉 + 莫兰迪紫 + 淡黄 + 角落一点淡绿,真液态玻璃半透 */
+/* 气泡:粉紫渐变淡绿,真液态玻璃半透——参照"星云幻境"配色卡，两色干净对角渐变，
+   不叠第三个色相进去,叠多层半透明色块才是之前显脏的根源。 */
 .bubble--user {
   position: relative;
   color: #6b4a86;
   border-bottom-right-radius: 6px;
-  /* 我的气泡:左下角淡绿角标 + 主调雾蓝/莫兰迪紫/淡黄——原来中间那档是粉色，
-     跟莫兰迪紫、淡黄色相太近，透明度调高后三层叠在一起显灰显脏（老婆反馈"混了灰"）。
-     换成雾蓝，跟紫/黄/绿四个色相拉开距离，不再用粉。 */
-  background:
-    radial-gradient(70% 55% at 8% 95%, rgba(170, 252, 242, 0.42), transparent 65%),
-    linear-gradient(
-      135deg,
-      rgba(196, 214, 250, 0.34) 0%,
-      rgba(183, 166, 208, 0.3) 50%,
-      rgba(245, 232, 199, 0.32) 100%
-    );
+  /* 我的气泡:左下角淡绿(#AAF6F1)→右上角粉紫(#D66EF6)，两色对角渐变。 */
+  background: linear-gradient(to top right, rgba(170, 246, 241, 0.4), rgba(214, 110, 246, 0.32));
   box-shadow:
     0 4px 14px rgba(180, 120, 220, 0.1),
     inset 0 1px 1px rgba(255, 255, 255, 0.24),
@@ -1679,16 +1671,9 @@ a {
   max-width: 100%;
   padding: 14px 16px;
   color: #6b4a86;
-  /* 予予的气泡:右下角一点点淡绿 + 主调莫兰迪紫/雾蓝/淡黄——中间那档原来是粉色，
-     跟用户气泡同款问题，换成雾蓝，两个气泡统一不用粉。 */
-  background:
-    radial-gradient(70% 55% at 92% 95%, rgba(170, 252, 242, 0.22), transparent 65%),
-    linear-gradient(
-      135deg,
-      rgba(183, 166, 208, 0.16) 0%,
-      rgba(196, 214, 250, 0.15) 50%,
-      rgba(245, 232, 199, 0.18) 100%
-    );
+  /* 予予的气泡:右下角淡绿(#AAF6F1)→左上角粉紫(#D66EF6)，跟用户气泡镜像对称，
+     整体比用户气泡略淡一点做区分。 */
+  background: linear-gradient(to top left, rgba(170, 246, 241, 0.3), rgba(214, 110, 246, 0.24));
   border-radius: 20px 20px 20px 6px;
   box-shadow:
     0 4px 14px rgba(140, 110, 200, 0.1),
