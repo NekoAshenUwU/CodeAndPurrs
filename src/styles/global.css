@@ -1461,8 +1461,12 @@ a {
   align-items: center;
   gap: 10px;
   padding: calc(6px + env(safe-area-inset-top)) 14px 6px;
-  background: rgba(255, 255, 255, 0.18);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+  /* 原来只有 18% 白 + 没有 backdrop-filter，滚动到顶的消息文字会从头顶清清楚楚透出来，
+     跟标题糊成一片。加够透明度 + 模糊，压住底下滚动内容，标题才能一直看得清。 */
+  background: rgba(255, 255, 255, 0.55);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  backdrop-filter: blur(14px) saturate(1.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .chat-head__back {
@@ -1651,14 +1655,16 @@ a {
   position: relative;
   color: #6b4a86;
   border-bottom-right-radius: 6px;
-  /* 我的气泡:左下角一点点淡绿 + 主调粉/莫兰迪/淡黄 */
+  /* 我的气泡:左下角淡绿角标 + 主调粉/莫兰迪/淡黄——原来这几个透明度都在 25% 以下，
+     加上 20px 的 backdrop-filter 模糊，实际效果几乎就是背景图本身的模糊色块，
+     跟背景糊成一片。整体调高到能在背景图上读出清楚的气泡形状。 */
   background:
-    radial-gradient(70% 55% at 8% 95%, rgba(170, 252, 242, 0.22), transparent 65%),
+    radial-gradient(70% 55% at 8% 95%, rgba(170, 252, 242, 0.42), transparent 65%),
     linear-gradient(
       135deg,
-      rgba(238, 208, 242, 0.18) 0%,
-      rgba(183, 166, 208, 0.15) 50%,
-      rgba(245, 232, 199, 0.18) 100%
+      rgba(238, 208, 242, 0.34) 0%,
+      rgba(183, 166, 208, 0.3) 50%,
+      rgba(245, 232, 199, 0.32) 100%
     );
   box-shadow:
     0 4px 14px rgba(180, 120, 220, 0.1),
