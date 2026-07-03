@@ -103,12 +103,7 @@
   --cream: #fff5ce;
   --shadow: rgba(118, 96, 132, 0.18);
   --display: "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif;
-  /* Fredoka 是纯拉丁字体，不带中文字形——原来这串后面接的 ui-rounded/Segoe UI 也都
-     不认中文，中文字符会一路 fallback 到系统默认无衬线体，跟同一段里的英文/数字
-     （走 Fredoka 花体）风格对不上，就是"有的有花体有的没有"的真凶。塞一个已经在
-     加载的中文花体 ZCOOL KuaiLe 进去接住中文，英文数字还是走 Fredoka，不用逐个
-     组件改，一次覆盖所有用 var(--round) 的地方(59 处)。 */
-  --round: "Fredoka", "ZCOOL KuaiLe", ui-rounded, "Segoe UI", sans-serif;
+  --round: "Fredoka", ui-rounded, "Segoe UI", sans-serif;
 
   /* ===== 首页改版 v2：仙气浪漫风 token ===== */
   --mist-white: #fbf4fa; /* 背景起点 */
@@ -4755,6 +4750,14 @@ a {
 /* 记忆罐头正文 → 顺风顺水（顶栏仍走花仙子，上面已盖） */
 .memory-scroll,
 .memory-scroll * {
+  font-family: "ShunFengFull", var(--round);
+}
+/* .memory-cats button / button.is-on 选择器比 .memory-scroll * 更具体
+  （class+元素 vs 单 class），CSS 规则是"具体的赢，跟源码顺序在哪无关"，
+   所以上面那条盖不到分类筛选按钮（全部/纪念日/约定/特性/喜好），
+   之前一直漏在外面显素——单独补一条同等或更高具体度的规则盖住。 */
+.memory-scroll button,
+.memory-scroll button.is-on {
   font-family: "ShunFengFull", var(--round);
 }
 /* 首页房间名 → 花仙子（CaoKe 子集缺「忆罐头」等新字，统一用花仙子免得花字） */
