@@ -103,7 +103,12 @@
   --cream: #fff5ce;
   --shadow: rgba(118, 96, 132, 0.18);
   --display: "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --round: "Fredoka", ui-rounded, "Segoe UI", sans-serif;
+  /* Fredoka 是纯拉丁字体，不带中文字形——原来这串后面接的 ui-rounded/Segoe UI 也都
+     不认中文，中文字符会一路 fallback 到系统默认无衬线体，跟同一段里的英文/数字
+     （走 Fredoka 花体）风格对不上，就是"有的有花体有的没有"的真凶。塞一个已经在
+     加载的中文花体 ZCOOL KuaiLe 进去接住中文，英文数字还是走 Fredoka，不用逐个
+     组件改，一次覆盖所有用 var(--round) 的地方(59 处)。 */
+  --round: "Fredoka", "ZCOOL KuaiLe", ui-rounded, "Segoe UI", sans-serif;
 
   /* ===== 首页改版 v2：仙气浪漫风 token ===== */
   --mist-white: #fbf4fa; /* 背景起点 */
