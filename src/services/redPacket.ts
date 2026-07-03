@@ -109,11 +109,21 @@ export function pickVehicle(packet: Pick<RedPacket, 'id' | 'from'>): Vehicle {
   return { category, src: `${base}assets/icons/${file}` };
 }
 
-// 浮岛横向散布位置：同样按 id hash 定，保证稳定（不跟着载具变，两者用不同的
-// hash 输入，避免"同一个 id 算出来的横向位置总跟载具选择相关联"这种视觉规律）。
+// 一行摆两三个载具：把横向分成 3 条车道，用 id hash 定死属于哪条道
+// （老婆要求"载具一行可以两三个"——固定车道 + 小抖动，比连续 10~80% 随机
+// 更容易让同一批时间相近的记录并排出现，而不是各占一整条纵向轨道）。
+const LANE_CENTERS = [16, 50, 84]; // 三条车道的横向中心位置(%)
+export function pickLane(id: string): number {
+  return hashString(`${id}:lane`) % LANE_CENTERS.length;
+}
+
+// 浮岛横向散布位置：车道中心 ± 小抖动，同样按 id hash 定，保证稳定
+// （不跟着载具变，两者用不同的 hash 输入，避免"同一个 id 算出来的横向位置
+// 总跟载具选择相关联"这种视觉规律）。
 export function pickHorizontalPercent(id: string): number {
-  // 留边距，别贴到左右边缘：10% ~ 80%
-  return 10 + (hashString(`${id}:x`) % 71);
+  const lane = pickLane(id);
+  const jitter = (hashString(`${id}:x`) % 17) - 8; // ±8%
+  return LANE_CENTERS[lane] + jitter;
 }
 
 // 纵向散布用的小抖动（±px），避免每条记录严格对齐成一条直线，看起来太规整。

@@ -4,6 +4,7 @@ import {
   balanceOf,
   loadPackets,
   pickHorizontalPercent,
+  pickLane,
   pickVehicle,
   pickVerticalJitter,
   type RedPacket,
@@ -15,8 +16,23 @@ const fmtStamp = (at: number): string => {
   return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 };
 
-const SLOT_HEIGHT = 150; // 每条记录纵向占的高度(px)，越往下越早
-const JITTER_MAX = 26; // 纵向随机抖动，别让记录严格对齐成一条线
+const SLOT_HEIGHT = 92; // 每一"行"纵向占的高度(px)，越往下越早
+const JITTER_MAX = 16; // 纵向随机抖动，别让同一行严格对齐成一条线
+
+// 三条车道各自独立叠"行"：同一车道内后面的记录(更老)排到下一行，
+// 不同车道各走各的行号，于是同一行经常并排站着 2~3 个载具，
+// 而不是每条记录都单占一整条纵向轨道。
+function assignRows(packets: RedPacket[]): { rows: number[]; maxRow: number } {
+  const laneNext = [0, 0, 0];
+  const rows = packets.map((p) => {
+    const lane = pickLane(p.id);
+    const row = laneNext[lane];
+    laneNext[lane] += 1;
+    return row;
+  });
+  const maxRow = Math.max(0, ...laneNext.map((n) => n - 1));
+  return { rows, maxRow };
+}
 
 // 予予/棠棠的余额浮岛面板——图本身是完整场景(男孩/女孩+雪豹/小猫坐在浮岛上，
 // 头顶一圈糖霜云中心留白)，余额数字用绝对定位叠在云心那块空白区域上。
@@ -38,13 +54,13 @@ function BalanceIsland({ who, amount, side }: { who: string; amount: number; sid
 // 两层拆开是因为同一个元素上 transform 只能生效一份，静态缩放跟动画位移写在一起会互相覆盖。
 function FloatingVehicle({
   packet,
-  index,
-  total,
+  row,
+  maxRow,
   onOpen,
 }: {
   packet: RedPacket;
-  index: number;
-  total: number;
+  row: number;
+  maxRow: number;
   onOpen: (p: RedPacket) => void;
 }) {
   const outerRef = useRef<HTMLButtonElement>(null);
@@ -84,8 +100,8 @@ function FloatingVehicle({
   const leftPct = useMemo(() => pickHorizontalPercent(packet.id), [packet.id]);
   const jitter = useMemo(() => pickVerticalJitter(packet.id, JITTER_MAX), [packet.id]);
 
-  const depthFrac = total > 1 ? index / (total - 1) : 0; // 0=最新(顶) ~ 1=最老(最深)
-  const topPx = index * SLOT_HEIGHT + SLOT_HEIGHT / 2 + jitter;
+  const depthFrac = maxRow > 0 ? row / maxRow : 0; // 0=最新(顶) ~ 1=最老(最深)
+  const topPx = row * SLOT_HEIGHT + SLOT_HEIGHT / 2 + jitter;
   const scale = 1 - depthFrac * 0.35; // 最深缩到 0.65
   const saturate = 1 - depthFrac * 0.45; // 最深降到约 0.55
 
@@ -134,7 +150,8 @@ export function SweetiePocketPage() {
   const userBalance = useMemo(() => balanceOf('user', packets), [packets]);
   const aiBalance = useMemo(() => balanceOf('ai', packets), [packets]);
 
-  const seaHeight = packets.length * SLOT_HEIGHT + SLOT_HEIGHT;
+  const { rows, maxRow } = useMemo(() => assignRows(packets), [packets]);
+  const seaHeight = (maxRow + 1) * SLOT_HEIGHT + SLOT_HEIGHT;
 
   return (
     <main className="sweetie-page">
@@ -163,7 +180,7 @@ export function SweetiePocketPage() {
         ) : (
           <div className="sweetie-sea" style={{ height: seaHeight }}>
             {packets.map((p, i) => (
-              <FloatingVehicle key={p.id} packet={p} index={i} total={packets.length} onOpen={setSelected} />
+              <FloatingVehicle key={p.id} packet={p} row={rows[i]} maxRow={maxRow} onOpen={setSelected} />
             ))}
           </div>
         )}
@@ -172,15 +189,20 @@ export function SweetiePocketPage() {
       {selected ? (
         <div className="sweetie-detail-backdrop" onClick={() => setSelected(null)}>
           <div className="sweetie-detail" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="sweetie-detail__x"
+              onClick={() => setSelected(null)}
+              aria-label="关闭"
+            >
+              ×
+            </button>
             <span className="sweetie-detail__from">
               {selected.from === 'user' ? '棠棠 → 予予' : '予予 → 棠棠'}
             </span>
             <span className="sweetie-detail__amount">${selected.amount}</span>
             {selected.note ? <p className="sweetie-detail__note">{selected.note}</p> : null}
             <span className="sweetie-detail__time">{fmtStamp(selected.createdAt)}</span>
-            <button type="button" className="sweetie-detail__close" onClick={() => setSelected(null)}>
-              关闭
-            </button>
           </div>
         </div>
       ) : null}

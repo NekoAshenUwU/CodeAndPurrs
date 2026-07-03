@@ -4674,7 +4674,7 @@ a {
   position: fixed;
   top: calc(56px + env(safe-area-inset-top));
   z-index: 20;
-  width: 165px;
+  width: 200px;
   pointer-events: none; /* 纯展示，别挡住底下的点击 */
 }
 .balance-island--left {
@@ -4700,11 +4700,11 @@ a {
   color: #9c3fa0;
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
-/* ---------- 浮岛海面：每条红包记录是一个漂浮物，纵向位置=时间(越下越早)，
-   横向散布靠 id hash 定，深度感靠外层静态 scale+saturate ---------- */
-/* 165px 宽 * (1536/1024) 图片本身比例 ≈ 248px 高，留够净空提示语才不会被面板挡住 */
+/* ---------- 浮岛海面：三条车道各自叠行，同一行常并排 2~3 个载具，
+   纵向行号=时间(越下越早)，深度感靠外层静态 scale+saturate ---------- */
+/* 200px 宽 * (1536/1024) 图片本身比例 = 300px 高，留够净空提示语才不会被面板挡住 */
 .sweetie-sea-scroll {
-  padding-top: calc(56px + env(safe-area-inset-top) + 264px);
+  padding-top: calc(56px + env(safe-area-inset-top) + 316px);
 }
 .sweetie-sea {
   position: relative;
@@ -4718,8 +4718,8 @@ a {
 }
 .floatvic {
   position: absolute;
-  width: 100px;
-  height: 100px;
+  width: 72px;
+  height: 72px;
   margin: 0;
   border: 0;
   padding: 0;
@@ -4775,32 +4775,51 @@ a {
   backdrop-filter: blur(4px);
 }
 .sweetie-detail {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   width: fit-content;
-  min-width: 200px;
-  max-width: min(85vw, 320px);
-  padding: 20px;
-  border-radius: 20px;
+  min-width: 160px;
+  max-width: min(78vw, 280px);
+  padding: 16px;
+  border-radius: 18px;
   background: linear-gradient(160deg, #241640 0%, #3b2266 55%, #2a1850 100%);
   box-shadow: 0 10px 30px rgba(30, 10, 50, 0.45);
 }
+.sweetie-detail__x {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #d8c9ef;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
 .sweetie-detail__from {
+  padding-right: 22px; /* 别被右上角的 X 挡住 */
   font-family: var(--round);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #cbb6ec;
 }
 .sweetie-detail__amount {
   font-family: "RoughOwl", var(--round);
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   font-weight: 700;
   color: #e0a3f0;
 }
 .sweetie-detail__note {
   margin: 0;
   font-family: var(--round);
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   line-height: 1.5;
   color: #d8c9ef;
   white-space: pre-wrap;
@@ -4808,20 +4827,8 @@ a {
 }
 .sweetie-detail__time {
   font-family: var(--round);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: #9c86c4;
-}
-.sweetie-detail__close {
-  align-self: flex-end;
-  margin-top: 8px;
-  padding: 6px 16px;
-  border: 0;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #c9a7f5, #f2a9c4);
-  color: #fff;
-  font-family: var(--round);
-  font-size: 0.85rem;
-  cursor: pointer;
 }
 
 /* ===== 自定义字体的最终应用（放最后，确保不被更具体的旧规则按源序覆盖） ===== */
