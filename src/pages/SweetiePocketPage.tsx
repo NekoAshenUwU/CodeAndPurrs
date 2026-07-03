@@ -117,7 +117,10 @@ function FloatingVehicle({
         {
           left: `${leftPct}%`,
           top: `${topPx}px`,
-          transform: `scale(${scale})`,
+          // leftPct 是载具"中心点"，先 translateX(-50%) 把图标居中在这个点上
+          // (不然图标是按左边缘定位，靠右的车道会被自己的宽度顶出屏幕右边)，
+          // 深度缩放接在同一个 transform 里，跟内层的浮动动画分层互不干扰。
+          transform: `translateX(-50%) scale(${scale})`,
           filter: `saturate(${saturate})`,
         } as CSSProperties
       }

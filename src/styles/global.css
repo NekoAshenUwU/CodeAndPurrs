@@ -85,6 +85,12 @@
   font-display: swap;
 }
 @font-face {
+  font-family: "RiFuYiRi"; /* Aa日富一日可爱圆 全字库 · 甜甜口袋详情弹窗正文(留言是自由输入，留全字库) */
+  src: url("/fonts/rifuyiri-full.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
   font-family: "TianTianQuanAmount"; /* 字魂甜甜圈 子集(仅 $0-9.) · 甜甜口袋余额数额专用 */
   src: url("/fonts/tiantianquan-amount.woff2") format("woff2");
   font-weight: 400;
@@ -4799,7 +4805,7 @@ a {
 }
 .sweetie-detail__from {
   padding-right: 22px; /* 别被右上角的 X 挡住 */
-  font-family: var(--round);
+  font-family: "RiFuYiRi", var(--round);
   font-size: 0.8rem;
   color: #cbb6ec;
 }
@@ -4812,7 +4818,7 @@ a {
 }
 .sweetie-detail__note {
   margin: 0;
-  font-family: var(--round);
+  font-family: "RiFuYiRi", var(--round);
   font-size: 0.88rem;
   line-height: 1.5;
   color: #d8c9ef;
@@ -4820,7 +4826,7 @@ a {
   word-break: break-word;
 }
 .sweetie-detail__time {
-  font-family: var(--round);
+  font-family: "RiFuYiRi", var(--round);
   font-size: 0.72rem;
   color: #9c86c4;
 }

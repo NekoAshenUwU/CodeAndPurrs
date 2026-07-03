@@ -125,17 +125,19 @@ export function assignVehicles(list: Pick<RedPacket, 'id' | 'from'>[]): Map<stri
 // 一行摆两三个载具：把横向分成 3 条车道，用 id hash 定死属于哪条道
 // （老婆要求"载具一行可以两三个"——固定车道 + 小抖动，比连续 10~80% 随机
 // 更容易让同一批时间相近的记录并排出现，而不是各占一整条纵向轨道）。
-const LANE_CENTERS = [16, 50, 84]; // 三条车道的横向中心位置(%)
+const LANE_CENTERS = [18, 50, 82]; // 三条车道的横向中心位置(%)，留够边距不会被载具自身宽度顶出屏幕
 export function pickLane(id: string): number {
   return hashString(`${id}:lane`) % LANE_CENTERS.length;
 }
 
 // 浮岛横向散布位置：车道中心 ± 小抖动，同样按 id hash 定，保证稳定
 // （不跟着载具变，两者用不同的 hash 输入，避免"同一个 id 算出来的横向位置
-// 总跟载具选择相关联"这种视觉规律）。
+// 总跟载具选择相关联"这种视觉规律）。这个百分比是载具中心点(渲染时靠
+// translateX(-50%) 把图标居中在这个点上，不是图标左边缘，否则最右那条
+// 车道的图标会被自己的宽度顶出屏幕右边)。
 export function pickHorizontalPercent(id: string): number {
   const lane = pickLane(id);
-  const jitter = (hashString(`${id}:x`) % 17) - 8; // ±8%
+  const jitter = (hashString(`${id}:x`) % 15) - 7; // ±7%
   return LANE_CENTERS[lane] + jitter;
 }
 
