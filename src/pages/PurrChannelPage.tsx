@@ -307,7 +307,7 @@ function RedPacketBubble({
       </span>
       <span className="redpacket__body">
         <span className="redpacket__note">{note || '甜甜红包'}</span>
-        <span className="redpacket__amount">¥{amount}</span>
+        <span className="redpacket__amount">${amount}</span>
       </span>
       <span className="redpacket__claimed">已领取</span>
     </div>
@@ -1037,7 +1037,7 @@ function ChatRoom({
       if (t.redPacket) {
         const { amount, note } = t.redPacket;
         // "我"/"你"跟着 role 走,user 是棠棠说的,assistant 是予予说的,同一句话两边都通
-        out.push({ role: t.role, content: `(我给你发了个红包：¥${amount}${note ? `，写着"${note}"` : ''})` });
+        out.push({ role: t.role, content: `(我给你发了个红包：$${amount}${note ? `，写着"${note}"` : ''})` });
         continue;
       }
       if (!t.content.trim()) continue;

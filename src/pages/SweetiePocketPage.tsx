@@ -20,16 +20,16 @@ const JITTER_MAX = 26; // 纵向随机抖动，别让记录严格对齐成一条
 
 // 予予/棠棠的余额浮岛面板——图本身是完整场景(男孩/女孩+雪豹/小猫坐在浮岛上，
 // 头顶一圈糖霜云中心留白)，余额数字用绝对定位叠在云心那块空白区域上。
+// 云朵里只放数额，不放别的文字（老婆明确要求），who 只留给 aria-label 给读屏用。
 function BalanceIsland({ who, amount, side }: { who: string; amount: number; side: 'left' | 'right' }) {
   const src =
     side === 'left'
       ? `${import.meta.env.BASE_URL}assets/icons/balance_island_tangtang.webp`
       : `${import.meta.env.BASE_URL}assets/icons/balance_island_yuyu.webp`;
   return (
-    <div className={`balance-island balance-island--${side}`}>
+    <div className={`balance-island balance-island--${side}`} role="img" aria-label={`${who} $${amount}`}>
       <img className="balance-island__art" src={src} alt="" />
-      <span className="balance-island__amount">¥{amount}</span>
-      <span className="balance-island__who">{who}</span>
+      <span className="balance-island__amount">${amount}</span>
     </div>
   );
 }
@@ -103,7 +103,7 @@ function FloatingVehicle({
           filter: `saturate(${saturate})`,
         } as CSSProperties
       }
-      aria-label={`${packet.from === 'user' ? '棠棠' : '予予'}发的红包 ¥${packet.amount}`}
+      aria-label={`${packet.from === 'user' ? '棠棠' : '予予'}发的红包 $${packet.amount}`}
     >
       <div
         ref={innerRef}
@@ -175,7 +175,7 @@ export function SweetiePocketPage() {
             <span className="sweetie-detail__from">
               {selected.from === 'user' ? '棠棠 → 予予' : '予予 → 棠棠'}
             </span>
-            <span className="sweetie-detail__amount">¥{selected.amount}</span>
+            <span className="sweetie-detail__amount">${selected.amount}</span>
             {selected.note ? <p className="sweetie-detail__note">{selected.note}</p> : null}
             <span className="sweetie-detail__time">{fmtStamp(selected.createdAt)}</span>
             <button type="button" className="sweetie-detail__close" onClick={() => setSelected(null)}>
