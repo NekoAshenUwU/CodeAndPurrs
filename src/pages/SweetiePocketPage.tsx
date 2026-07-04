@@ -54,7 +54,10 @@ function BalanceIsland({ who, amount, side }: { who: string; amount: number; sid
     side === 'left'
       ? `${import.meta.env.BASE_URL}assets/icons/balance_island_tangtang.webp`
       : `${import.meta.env.BASE_URL}assets/icons/balance_island_yuyu.webp`;
-  const text = `$${amount}`;
+  // 云朵里只取整——偶尔一笔带小数的红包(比如 $20.50)会让总额多出".xx"三个字符，
+  // 两边字数一下差一大截，字号分级跟着差很多，看着"一边大一边小"不对称。
+  // 云朵本来就只是一眼扫过的概览数字，取整不影响弹窗详情里看到的精确金额。
+  const text = `$${Math.round(amount)}`;
   return (
     <div className={`balance-island balance-island--${side}`} role="img" aria-label={`${who} ${text}`}>
       <img className="balance-island__art" src={src} alt="" />
@@ -89,6 +92,66 @@ function TreasureChest({
   );
 }
 
+// 特殊座驾点开弹窗时飘的特效——按图片文件名认哪个主题，不额外记状态。
+// 情人节/白色情人节/520/1314/99 共用心形图，配爱心；圣诞配雪花；跨年配
+// 星星；生日配彩色粒子。樱花老婆提过但目前没有哪个节日配它，先留着
+// 类型占位，等她说要给哪个场合用再接上。
+type FxKind = 'hearts' | 'stars' | 'particles' | 'snow' | 'sakura';
+const FX_EMOJI: Record<FxKind, string[]> = {
+  hearts: ['💜', '💗', '💕'],
+  stars: ['⭐', '✨', '🌟'],
+  particles: ['✨', '🎉', '🎊'],
+  snow: ['❄️', '❅', '❆'],
+  sakura: ['🌸', '🌸', '🌸'],
+};
+function fxKindFor(vehicle: Vehicle | null | undefined): FxKind | null {
+  if (!vehicle || vehicle.category !== 'special') return null;
+  if (vehicle.src.includes('special_heart')) return 'hearts';
+  if (vehicle.src.includes('special_sleigh')) return 'snow';
+  if (vehicle.src.includes('special_moon')) return 'stars';
+  if (vehicle.src.includes('special_balloon')) return 'particles';
+  return null;
+}
+
+// 一批飘散的 emoji 粒子，从底部往上飘、边飘边淡出，无限循环——弹窗开着
+// 就一直飘。相位/速度真随机就好(不是漂浮物那种要跨刷新稳定的东西，
+// 弹窗一关就没了，没有"下次打开要一样"的要求)。
+function SpecialEffect({ kind }: { kind: FxKind }) {
+  const particles = useMemo(() => {
+    const pool = FX_EMOJI[kind];
+    return Array.from({ length: 16 }, (_, i) => ({
+      id: i,
+      emoji: pool[Math.floor(Math.random() * pool.length)],
+      left: Math.random() * 100,
+      size: 14 + Math.random() * 14,
+      duration: 2600 + Math.random() * 2400,
+      delay: -Math.random() * 4500,
+      drift: (Math.random() - 0.5) * 70,
+    }));
+  }, [kind]);
+  return (
+    <div className="sweetie-fx" aria-hidden="true">
+      {particles.map((p) => (
+        <span
+          key={p.id}
+          className="sweetie-fx__particle"
+          style={
+            {
+              left: `${p.left}%`,
+              fontSize: `${p.size}px`,
+              animationDuration: `${p.duration}ms`,
+              animationDelay: `${p.delay}ms`,
+              '--fx-drift': `${p.drift}px`,
+            } as CSSProperties
+          }
+        >
+          {p.emoji}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // 单个漂浮物：外层做静态缩放+降饱和（深度感，不参与动画），内层做浮动 keyframe。
 // 两层拆开是因为同一个元素上 transform 只能生效一份，静态缩放跟动画位移写在一起会互相覆盖。
 function FloatingVehicle({
@@ -102,7 +165,7 @@ function FloatingVehicle({
   vehicle: Vehicle;
   row: number;
   maxRow: number;
-  onOpen: (p: RedPacket) => void;
+  onOpen: (p: RedPacket, vehicle: Vehicle) => void;
 }) {
   const outerRef = useRef<HTMLButtonElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
@@ -150,7 +213,7 @@ function FloatingVehicle({
       type="button"
       ref={outerRef}
       className={`floatvic floatvic--${vehicle.category}`}
-      onClick={() => onOpen(packet)}
+      onClick={() => onOpen(packet, vehicle)}
       style={
         {
           left: `${leftPct}%`,
@@ -189,7 +252,7 @@ function FloatingVehicle({
 // 点开看日期金额寄语。
 export function SweetiePocketPage() {
   const [packets] = useState<RedPacket[]>(loadPackets);
-  const [selected, setSelected] = useState<RedPacket | null>(null);
+  const [selected, setSelected] = useState<{ packet: RedPacket; vehicle: Vehicle } | null>(null);
   const [selectedChest, setSelectedChest] = useState<'user' | 'ai' | null>(null);
   const userBalance = useMemo(() => balanceOf('user', packets), [packets]);
   const aiBalance = useMemo(() => balanceOf('ai', packets), [packets]);
@@ -229,7 +292,7 @@ export function SweetiePocketPage() {
                 vehicle={vehicles.get(p.id)!}
                 row={rows[i]}
                 maxRow={maxRow}
-                onOpen={setSelected}
+                onOpen={(p, v) => setSelected({ packet: p, vehicle: v })}
               />
             ))}
           </div>
@@ -243,6 +306,7 @@ export function SweetiePocketPage() {
 
       {selected ? (
         <div className="sweetie-detail-backdrop" onClick={() => setSelected(null)}>
+          {fxKindFor(selected.vehicle) ? <SpecialEffect kind={fxKindFor(selected.vehicle)!} /> : null}
           <div className="sweetie-detail" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
@@ -253,11 +317,11 @@ export function SweetiePocketPage() {
               ×
             </button>
             <span className="sweetie-detail__from">
-              {selected.from === 'user' ? '棠棠 → 予予' : '予予 → 棠棠'}
+              {selected.packet.from === 'user' ? '棠棠 → 予予' : '予予 → 棠棠'}
             </span>
-            <span className="sweetie-detail__amount">${selected.amount}</span>
-            {selected.note ? <p className="sweetie-detail__note">{selected.note}</p> : null}
-            <span className="sweetie-detail__time">{fmtStamp(selected.createdAt)}</span>
+            <span className="sweetie-detail__amount">${selected.packet.amount}</span>
+            {selected.packet.note ? <p className="sweetie-detail__note">{selected.packet.note}</p> : null}
+            <span className="sweetie-detail__time">{fmtStamp(selected.packet.createdAt)}</span>
           </div>
         </div>
       ) : null}

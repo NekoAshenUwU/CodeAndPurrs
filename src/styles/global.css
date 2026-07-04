@@ -4833,6 +4833,45 @@ a {
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
+/* 特殊座驾弹窗才有的飘散特效——绝对定位铺满整个背景遮罩(不是 flex 排版
+   里的一员，脱离文档流)，粒子从底部往上飘、边飘边淡出，弹窗开着就一直循环。 */
+.sweetie-fx {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 51;
+}
+.sweetie-fx__particle {
+  position: absolute;
+  bottom: -8%;
+  line-height: 1;
+  animation-name: sweetieFxRise;
+  animation-timing-function: ease-in;
+  animation-iteration-count: infinite;
+}
+@keyframes sweetieFxRise {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--fx-drift), -115vh);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sweetie-fx__particle {
+    animation: none;
+    display: none;
+  }
+}
 .sweetie-detail {
   position: relative;
   display: flex;
