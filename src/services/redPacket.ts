@@ -73,6 +73,8 @@ const SPECIAL_DATE_VEHICLES: Record<string, string> = {
   '12-26': 'special_balloon.webp', // 予予生日
   '12-31': 'special_moon.webp', // 跨年夜
   '01-01': 'special_moon.webp', // 元旦
+  '12-24': 'special_sleigh.webp', // 平安夜
+  '12-25': 'special_sleigh.webp', // 圣诞节
 };
 
 function monthDayKey(createdAt: number): string {
