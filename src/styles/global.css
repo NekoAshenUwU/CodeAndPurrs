@@ -4671,6 +4671,14 @@ a {
 }
 
 /* 落予棠页面 */
+/* 房间顶栏统一花字是 HuaXianZi，但那是个 GB2312 子集(362 字)，"落"和"棠"
+   都不在里面，只有"予"能显示——三个字里两个悄悄回退成别的字体，看起来
+   "不一样"。用双类名选择器把优先级提到比 .chat-head * 高，单独给这个
+   房间的标题换一个三个字都全乎的字体(LongZhuFull，同样是粗笔画带勾的
+   风格，跟 HuaXianZi 那种毛笔感最接近)。 */
+.sweetie-page .chat-head__name {
+  font-family: "LongZhuFull", var(--display);
+}
 .sweetie-page {
   position: relative;
   display: flex;
