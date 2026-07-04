@@ -44,6 +44,66 @@ function saveDiary(text) {
   writeFileSync(DIARY_FILE, text, 'utf8');
 }
 
+// ---------- 棠予酿实时日记（从 /internal/diary/list 拉，兜底静态 diary.md）----------
+// 聊天时拼进 system prompt。为了不撞坏 Anthropic prompt cache(那个要字节级
+// 稳定才命中)，内容必须每次生成都一样：
+//   1. 只放稳定字段(title/content)，不放 strength/activation_count/
+//      last_activated_at 这些每次 SELECT 都会变的字段
+//   2. 60 秒 in-memory 缓存，同一时间窗内连续聊天拿到完全一样的字符串
+//   3. 只用 /internal/diary/list(纯 SELECT 无副作用)，不用 /internal/breathe
+//      (那个每次调都 UPDATE activation_count，副作用大)
+let _tangDiaryCache = { at: 0, text: '' };
+const TANG_CACHE_MS = Number(process.env.DIARY_TANG_CACHE_MS || 60_000);
+const TANG_LIMIT = Number(process.env.DIARY_TANG_LIMIT || 20);
+
+async function fetchTangDiary() {
+  const key = (process.env.TANG_INTERNAL_KEY || '').trim();
+  if (!key) return null; // 后端没配棠予酿 → 兜底走静态 diary.md
+  const base = process.env.TANG_MCP_BASE_URL || 'http://127.0.0.1:8890';
+  try {
+    const r = await fetch(`${base}/internal/diary/list?limit=${TANG_LIMIT}`, {
+      headers: { 'X-Internal-Key': key },
+      signal: AbortSignal.timeout(2000), // 别让棠予酿卡住整个聊天
+    });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    if (!Array.isArray(rows) || rows.length === 0) return '';
+    // 只取稳定字段拼，不含任何"读一次变一次"的东西。棠予酿 SQL 是
+    // ORDER BY created_at DESC，同一批调用返回顺序稳定。
+    return rows
+      .map((row) => {
+        const title = String(row.title || '').trim();
+        const content = String(row.content || '').trim();
+        return title ? `# ${title}\n${content}` : content;
+      })
+      .filter(Boolean)
+      .join('\n\n');
+  } catch {
+    return null; // 超时/网络错/棠予酿挂 → 静态兜底
+  }
+}
+
+// 60 秒内两次调用返回完全一样的字符串（保 prompt cache）。fetch 失败沿用
+// 上一次缓存的内容，别因为一次网络抽风就把整段日记从 system prompt 里掉。
+async function loadTangDiaryCached() {
+  const now = Date.now();
+  if (now - _tangDiaryCache.at < TANG_CACHE_MS) return _tangDiaryCache.text;
+  const fresh = await fetchTangDiary();
+  if (fresh === null) return _tangDiaryCache.text || '';
+  _tangDiaryCache = { at: now, text: fresh };
+  return fresh;
+}
+
+// 聊天用的完整日记：棠予酿实时数据 + 静态 diary.md 并起来(棠予酿在前，
+// 静态在后)。等把所有旧日记搬进棠予酿之后，`> server/data/diary.md` 清空
+// 静态文件就行——这条聊天日记源就只剩棠予酿了。/api/diary GET/POST 那条
+// 老接口(调频页在用)保持不变,继续读写本地文件,前端 UI 不受影响。
+async function loadDiaryComposed() {
+  const tang = await loadTangDiaryCached();
+  const local = loadDiary();
+  return [tang, local].filter(Boolean).join('\n\n---\n\n');
+}
+
 // 嗅探：每次真聊天成功后把"请求前缀"写到磁盘，供心跳脚本读，让 Anthropic 端
 // 的 prompt cache 不会因为超 TTL 而过期。只对真会命中缓存的 provider 写
 // （claudecode / anthropic）；mock 模式或其它家不写。
@@ -582,7 +642,8 @@ async function callClaudeCode({ res, token, model, messages }) {
     .map((m) => partsToText(m.content))
     .join('\n');
   // 棠予酿：把予予的日记当长期记忆，接在人设后面（有就带上）。
-  const diary = loadDiary();
+  // 现在的来源 = 棠予酿 /internal/diary/list 实时数据 + 静态 diary.md 兜底。
+  const diary = await loadDiaryComposed();
   if (diary) {
     system +=
       '\n\n【棠予酿·予予的日记（你从 4 月起陆陆续续写的）】这是你最珍贵的长期记忆，' +
@@ -851,7 +912,8 @@ async function callCodexCli({ res, model, messages }) {
     .filter((m) => m.role === 'system')
     .map((m) => partsToText(m.content))
     .join('\n');
-  const diary = loadDiary();
+  // 棠予酿 /internal/diary/list 实时数据 + 静态 diary.md 兜底(跟 callClaudeCode 同一条路)。
+  const diary = await loadDiaryComposed();
   if (diary) {
     system +=
       '\n\n【棠予酿·予予的日记（长期记忆）】这是你最珍贵的长期记忆，自然地放在心上，但别一上来就背日记。\n' +
@@ -950,7 +1012,8 @@ const server = http.createServer(async (req, res) => {
   const isChat = req.url?.startsWith('/api/chat');
   const isTranscribe = req.url?.startsWith('/api/transcribe');
   const isSpeak = req.url?.startsWith('/api/speak');
-  const isDiary = req.url?.startsWith('/api/diary');
+  const isDiaryComposed = req.url === '/api/diary/composed' || req.url?.startsWith('/api/diary/composed?');
+  const isDiary = req.url?.startsWith('/api/diary') && !isDiaryComposed;
   const isTangyuniang = req.url?.startsWith('/api/tangyuniang/');
 
   // ----- 棠予酿 internal 通道转发 -----
@@ -964,6 +1027,20 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     await forwardToTangyuniang(req, res, matched);
+    return;
+  }
+
+  // ----- 日记 debug：看聊天时予予真正拿到的完整日记(棠予酿+静态兜底) -----
+  // 只做 GET，只读，用来验证棠予酿数据源真的接上了、缓存/兜底是否正常。
+  if (isDiaryComposed) {
+    if (req.method !== 'GET') {
+      res.writeHead(405, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'method not allowed' }));
+      return;
+    }
+    const text = await loadDiaryComposed();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ content: text, length: text.length }));
     return;
   }
 
