@@ -4717,8 +4717,9 @@ a {
   font-family: "TianTianQuanAmount", var(--round);
   font-weight: 700;
   font-size: 1.45rem;
-  /* 深紫→浅紫→渐白→淡粉，循环流动 */
-  background-image: linear-gradient(95deg, #4c1d95 0%, #a78bfa 35%, #f5f3ff 65%, #f5b8dc 100%);
+  /* 深紫→浅紫→淡粉，循环流动——去掉了白色那一段：云朵背景本来就浅白，
+     渐变扫到接近白色时数额直接隐形，索性只留三段有辨识度的紫/粉。 */
+  background-image: linear-gradient(95deg, #4c1d95 0%, #8b5cf6 45%, #d6559c 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
