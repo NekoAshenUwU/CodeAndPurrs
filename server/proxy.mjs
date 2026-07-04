@@ -200,6 +200,104 @@ function extractImageBlocks(content) {
   return out;
 }
 
+// ---------- 棠予酿 internal 通道代理 ----------
+// 前端 /api/tangyuniang/* → 转发到棠予酿 mcp.service 的 /internal/*(默认
+// http://127.0.0.1:8890)，附带 X-Internal-Key 头。这条通道跟上面的
+// CC_MEMORY_MCP(那个是给 Claude 家版 spawn 出来的 CLI 通过 MCP 协议调工具用的，
+// 完全另一码事)井水不犯河水。
+//
+// 只放行 6 条固定路径的白名单——不做通用转发，防止代理沦为"CodeAndPurrs 后端
+// 可以任意调棠予酿任意接口"这种放大攻击面。
+// 白名单里的 key 是 CodeAndPurrs 侧的 URL 后缀(前端调 /api/tangyuniang/<key>)，
+// value 是转发到棠予酿侧的 /internal/<...> 路径 + 允许的 HTTP method。
+// diary/{diary_id} 是变量段，单独用前缀匹配处理。
+const TANGYUNIANG_ROUTES = {
+  pulse: { method: 'GET', path: '/internal/pulse' },
+  breathe: { method: 'GET', path: '/internal/breathe' },
+  'diary/list': { method: 'GET', path: '/internal/diary/list' },
+  'memory/hold': { method: 'POST', path: '/internal/memory/hold' },
+  'memory/grow': { method: 'POST', path: '/internal/memory/grow' },
+};
+
+// 收到 /api/tangyuniang/xxx 后从 URL 里抠出白名单 key 和 query string。
+function parseTangyuniangUrl(rawUrl) {
+  // rawUrl 长这样: "/api/tangyuniang/pulse?a=b" 或 "/api/tangyuniang/diary/abc-123"
+  const withoutPrefix = rawUrl.slice('/api/tangyuniang/'.length);
+  const qIdx = withoutPrefix.indexOf('?');
+  const pathPart = qIdx === -1 ? withoutPrefix : withoutPrefix.slice(0, qIdx);
+  const queryPart = qIdx === -1 ? '' : withoutPrefix.slice(qIdx); // 保留 '?'
+
+  // diary/{id} 变量段单独判——白名单 key 里没有它,但这个前缀是允许的。
+  if (pathPart.startsWith('diary/') && pathPart !== 'diary/list') {
+    const id = pathPart.slice('diary/'.length);
+    if (!id) return null;
+    return { method: 'GET', upstreamPath: `/internal/diary/${encodeURIComponent(id)}${queryPart}` };
+  }
+
+  const route = TANGYUNIANG_ROUTES[pathPart];
+  if (!route) return null;
+  return { method: route.method, upstreamPath: `${route.path}${queryPart}` };
+}
+
+async function forwardToTangyuniang(req, res, matched) {
+  const key = (process.env.TANG_INTERNAL_KEY || '').trim();
+  if (!key) {
+    res.writeHead(503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'TANG_INTERNAL_KEY not configured on backend' }));
+    return;
+  }
+  if (req.method !== matched.method) {
+    res.writeHead(405, { 'Content-Type': 'application/json', Allow: matched.method });
+    res.end(JSON.stringify({ error: `method not allowed, expected ${matched.method}` }));
+    return;
+  }
+
+  const base = process.env.TANG_MCP_BASE_URL || 'http://127.0.0.1:8890';
+  const upstreamUrl = `${base}${matched.upstreamPath}`;
+
+  const init = {
+    method: matched.method,
+    headers: { 'X-Internal-Key': key },
+  };
+
+  if (matched.method === 'POST') {
+    // 把 body 原样透传(棠予酿那边自己解 JSON、自己校验字段)。
+    let raw = '';
+    try {
+      raw = await new Promise((resolve, reject) => {
+        let s = '';
+        req.on('data', (c) => {
+          s += c;
+          if (s.length > 1_000_000) reject(new Error('body too large'));
+        });
+        req.on('end', () => resolve(s));
+        req.on('error', reject);
+      });
+    } catch (err) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err?.message || err) }));
+      return;
+    }
+    init.headers['Content-Type'] = 'application/json';
+    init.body = raw || '{}';
+  }
+
+  let upstream;
+  try {
+    upstream = await fetch(upstreamUrl, init);
+  } catch (err) {
+    res.writeHead(502, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: `tangyuniang unreachable: ${err?.message || err}` }));
+    return;
+  }
+
+  // 上游 content-type 大多是 application/json，直接透传状态码和 body。
+  const bodyText = await upstream.text();
+  const upstreamCt = upstream.headers.get('content-type') || 'application/json';
+  res.writeHead(upstream.status, { 'Content-Type': upstreamCt });
+  res.end(bodyText);
+}
+
 // ---------- 棠予酿记忆库（MCP，只给 Claude 两条路用：家克 CC + API Claude）----------
 // 设齐 CC_MEMORY_MCP（服务器名）+ CC_MEMORY_MCP_URL（http 端点）才算开；CC_MEMORY_MCP_TOKEN 可选鉴权。
 function memoryMcpConfig() {
@@ -853,6 +951,21 @@ const server = http.createServer(async (req, res) => {
   const isTranscribe = req.url?.startsWith('/api/transcribe');
   const isSpeak = req.url?.startsWith('/api/speak');
   const isDiary = req.url?.startsWith('/api/diary');
+  const isTangyuniang = req.url?.startsWith('/api/tangyuniang/');
+
+  // ----- 棠予酿 internal 通道转发 -----
+  // 白名单 + 强制 X-Internal-Key 头 + method 检查全在 forwardToTangyuniang 里做,
+  // 这里只负责路由分发。
+  if (isTangyuniang) {
+    const matched = parseTangyuniangUrl(req.url);
+    if (!matched) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'not found' }));
+      return;
+    }
+    await forwardToTangyuniang(req, res, matched);
+    return;
+  }
 
   // ----- 日记（长期记忆文件）：GET 读、POST 写 -----
   if (isDiary) {
