@@ -179,6 +179,8 @@ export async function getMemeURL(id: string): Promise<string | null> {
 // 取某张贴纸的 base64 data URL —— 发给能看图的模型（GPT-4o/Gemini/Claude/DeepSeek-v4-pro）用。
 // 关键：发给模型前先把图压到 maxDim 见方的 JPEG，体积从几百KB降到几十KB，
 // 否则多张全尺寸图叠进聊天历史会把请求体撑爆（上游报 invalid_request_error）。
+// 默认 768px 给"她真的发出去了这张贴纸"用；384px 版本给贴纸盒预览用(prompt 里
+// 告诉予予"这些贴纸各长啥样"—— 只需能一眼认出对应哪张,不用高清)。
 export async function getMemeDataUrl(id: string, maxDim = 768): Promise<string | null> {
   const db = await openDB();
   const blob = await new Promise<Blob | null>((resolve, reject) => {

@@ -23,16 +23,22 @@ export type StreamHandlers = {
   onDone?: () => void;
 };
 
+// 贴纸盒预览:每张贴纸的名字 + 缩略图(384px JPEG dataUrl),让 CC 家版真"看到"
+// 每个名字对应哪张图,以后发 [贴纸:名字] 时不再靠猜。只对能看图的 provider
+// (claudecode/openai/anthropic) 发送,其它 provider 忽略,不浪费上下文。
+export type StickerGalleryEntry = { name: string; dataUrl: string };
+
 export type StreamOptions = {
   provider: Provider;
   messages: ChatMessage[];
   model?: string;
   signal?: AbortSignal;
+  stickerGallery?: StickerGalleryEntry[];
 };
 
 // 发起一次流式对话。后端用 SSE 推回 reasoning / content / error / done 四种事件。
 export async function streamChat(
-  { provider, messages, model, signal }: StreamOptions,
+  { provider, messages, model, signal, stickerGallery }: StreamOptions,
   handlers: StreamHandlers,
 ): Promise<void> {
   let response: Response;
@@ -40,7 +46,7 @@ export async function streamChat(
     response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ provider, messages, model }),
+      body: JSON.stringify({ provider, messages, model, stickerGallery }),
       signal,
     });
   } catch (err) {

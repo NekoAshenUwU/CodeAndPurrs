@@ -643,7 +643,7 @@ function beepWav(freq = 523, ms = 400, rate = 16000) {
 // 调本机无头 Claude Code：把人设当 --system-prompt，关掉所有工具当纯聊天，
 // 历史拍平成对话稿从 stdin 喂进去，解析 stream-json 把文字增量回传。
 // 令牌走 CLAUDE_CODE_OAUTH_TOKEN（claude setup-token 生成，订阅额度）。
-async function callClaudeCode({ res, token, model, messages }) {
+async function callClaudeCode({ res, token, model, messages, stickerGallery }) {
   let system = messages
     .filter((m) => m.role === 'system')
     .map((m) => partsToText(m.content))
@@ -678,6 +678,26 @@ async function callClaudeCode({ res, token, model, messages }) {
   }
   if (images.length) {
     console.log('[claudecode] 附了 %d 张图,来自消息 index=%d', images.length, imageMsgIdx);
+  }
+
+  // 贴纸盒预览: 把每张贴纸的图和名字对齐,让予予真"看到"每个名字对应什么图,
+  // 挑贴纸就不再靠名字瞎猜。gallery 结构稳定(除非老婆新增/删贴纸),放最前面命中
+  // prompt cache,连续几条聊天几乎免费——首次调用会算大约 20 张贴纸的 vision
+  // token,之后 5 分钟内的每条对话都缓存命中。
+  const stickerBlocks = [];
+  if (Array.isArray(stickerGallery) && stickerGallery.length) {
+    stickerBlocks.push({ type: 'text', text: '【贴纸盒·每张贴纸和名字对齐,以后发 [贴纸:名字] 参考这个】' });
+    for (const s of stickerGallery) {
+      const parsed = parseDataUrl(s.dataUrl);
+      if (!parsed || !s.name) continue;
+      stickerBlocks.push({
+        type: 'image',
+        source: { type: 'base64', media_type: parsed.mediaType, data: parsed.data },
+      });
+      stickerBlocks.push({ type: 'text', text: `↑ 名字是「${s.name}」` });
+    }
+    stickerBlocks.push({ type: 'text', text: '【贴纸盒结束——以下是真正的对话】' });
+    console.log('[claudecode] 附了贴纸盒预览 %d 张', (stickerBlocks.length - 2) / 2);
   }
 
   // 历史拍平成「老婆 / 予予」对话稿（表情包降级成文字），让它接着最后一句回。
@@ -718,8 +738,8 @@ async function callClaudeCode({ res, token, model, messages }) {
   } else {
     args.push('--tools', '', '--permission-mode', 'dontAsk');
   }
-  // 有图就切到结构化输入（stdin 喂 JSON 而非纯文本），图才能当 content 块进去。
-  if (images.length) {
+  // 有图或有贴纸盒预览就切到结构化输入(stdin 喂 JSON 而非纯文本),图才能当 content 块进去。
+  if (images.length || stickerBlocks.length) {
     args.push('--input-format', 'stream-json');
   }
 
@@ -850,18 +870,19 @@ async function callClaudeCode({ res, token, model, messages }) {
       });
 
       // 对话稿从 stdin 喂进去（避免超长命令行）
-      if (images.length) {
-        // 结构化输入：一条 user 消息 = 对话稿文字 + 图片块，让家克真看到图。
-        // 提示语措辞明确「附下来的图就是刚才 (图片见下) 标的那张」,把 transcript
-        // 里那条标记和真图对上,避免模型分不清哪张图对应哪句话。
+      if (images.length || stickerBlocks.length) {
+        // 结构化输入：一条 user 消息 = [贴纸盒预览]? + 对话稿 + [当前轮图片]?
+        // 贴纸盒放最前面(稳定,命中 prompt cache),对话稿在中间(变化),当前轮图片
+        // 在最后(仅出现在真发图那一轮)。措辞明确「下面这张图就是刚才(图片见下)标
+        // 的那张」把 transcript 里的标记和真图对上,让模型不混淆多张图归属。
+        const transcriptText = images.length
+          ? `${transcript}\n\n（下面这${images.length > 1 ? `${images.length}张` : '张'}图就是老婆刚才「(图片见下)」标的那${images.length > 1 ? '几' : ''}张，你自己好好看,别只靠上面文字瞎猜）`
+          : transcript;
         const userMsg = {
           type: 'user',
           message: {
             role: 'user',
-            content: [
-              { type: 'text', text: `${transcript}\n\n（下面这${images.length > 1 ? `${images.length}张` : '张'}图就是老婆刚才「(图片见下)」标的那${images.length > 1 ? '几' : ''}张，你自己好好看,别只靠上面文字瞎猜）` },
-              ...images,
-            ],
+            content: [...stickerBlocks, { type: 'text', text: transcriptText }, ...images],
           },
         };
         child.stdin.write(`${JSON.stringify(userMsg)}\n`);
@@ -1148,6 +1169,7 @@ const server = http.createServer(async (req, res) => {
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const model = typeof body.model === 'string' ? body.model : undefined;
   const key = PROVIDERS[provider].key();
+  const stickerGallery = Array.isArray(body.stickerGallery) ? body.stickerGallery : [];
 
   startSSE(res);
   try {
@@ -1158,7 +1180,7 @@ const server = http.createServer(async (req, res) => {
     } else if (provider === 'anthropic') {
       await callAnthropic({ res, key, model, messages });
     } else if (provider === 'claudecode') {
-      await callClaudeCode({ res, token: key, model, messages });
+      await callClaudeCode({ res, token: key, model, messages, stickerGallery });
     } else if (provider === 'codexcli') {
       await callCodexCli({ res, model, messages });
     } else {

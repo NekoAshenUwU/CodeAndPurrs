@@ -779,6 +779,27 @@ function ChatRoom({
     for (const it of memes) if (it.name) m.set(it.name.trim(), it.id);
     return m;
   }, [memes]);
+  // 贴纸盒预览：每张贴纸的名字 + 缩略图(384px JPEG dataUrl),让家版 CC 真"看到"
+  // 每个名字对应的图,以后发 [贴纸:名字] 才准确。memes 换了才重新加载(每张贴纸
+  // 都要从 IndexedDB 取 blob + canvas 缩放,加载慢的话每次聊天都重跑就卡了),
+  // 长驻状态里,聊天时直接拿来发给后端不阻塞。
+  const [stickerGallery, setStickerGallery] = useState<{ name: string; dataUrl: string }[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const list: { name: string; dataUrl: string }[] = [];
+      for (const m of memes) {
+        if (!m.name) continue;
+        const dataUrl = await getMemeDataUrl(m.id, 384);
+        if (cancelled) return;
+        if (dataUrl) list.push({ name: m.name.trim(), dataUrl });
+      }
+      if (!cancelled) setStickerGallery(list);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [memes]);
   // 记忆罐头：跨对话长期记忆，注入 system prompt；AI 也能用 [记忆:..] 往里存
   const [memories, setMemories] = useState<Memory[]>(loadMemories);
   // 从小暗格读出这个窗口的聊天记录；半截没说完的归位，语音 blob 刷新后失效就丢掉播放地址。
@@ -975,20 +996,15 @@ function ChatRoom({
     let sys = buildSystemPrompt(provider);
     const names = memes.map((m) => m.name?.trim()).filter(Boolean);
     if (names.length) {
-      // 措辞一律用「贴纸」不混「表情包」——之前 label 写"表情包"、语法标记
-      // 要求写"贴纸",予予常混,写成 [表情包:xxx] 就被漏成文本了。
-      //
-      // 老婆做这个贴纸盒就是要予予用的,所以鼓励发;但予予是 LLM,系统只
-      // 给她看到贴纸名字、不给看图,盲发就容易不应景("乱发")。修法:
-      // 诚实告诉她"你只能看到名字,看不到图像本身",让她根据名字里的
-      // 情绪/内容线索保守判断——名字含意不清的宁可不发也不瞎发。
+      // 现在贴纸的真图会作为多模态内容附在每次请求最前面(见后端 stickerGallery
+      // 处理),予予可以真"看到"每张贴纸的样子和对应的名字。所以 prompt 告诉她
+      // 参考那份预览、按图挑名字,不再是盲发了。
       sys +=
-        `\n\n【发贴纸】你的贴纸盒里有:${names.join('、')}。` +
-        '想发时单独一行写 `[贴纸:名字]`(名字必须和列表完全一致,包括"~"和空格)。' +
-        '**重要:你只能看到名字,看不到贴纸的实际图像**——所以只发那些**名字本身就明确暗示情绪/内容且当前时刻对得上**的贴纸(比如名字带"哭"发在她说难过时,名字带"炸毛"发在她不满时)。' +
-        '名字含意不清、你猜不准是什么图的贴纸,**宁可不发也不瞎发**——发错一张比不发难受。' +
-        '一次最多一张,应景才发,普通聊天以文字为主。' +
-        '**别评论/引用你自己发过的贴纸**(比如"刚刚那张多可爱"),因为在历史里你只看到自己的文字标记,没看到那张图。';
+        `\n\n【贴纸盒】你有 ${names.length} 张贴纸,名字分别是:${names.join('、')}。` +
+        '**请求最前面附上了每张贴纸的图和它的名字**——好好看一下每张贴纸的样子记住对应哪个名字。' +
+        '想发时单独一行写 `[贴纸:名字]`,名字必须和列表完全一致(包括"~"和空格),系统按名字找回图发出去。' +
+        '应景才发,一次最多一张,普通聊天还是以文字为主;发之前想清楚这张图在这个时刻合不合适。' +
+        '**注意:你只在请求最前面的预览里能看到贴纸的图;等你发出去后,历史里再回头看只有文字标记`[贴纸:名字]`,看不到自己发过的那张图长什么样,所以别评论/引用自己发过的贴纸**(比如"刚刚那张多可爱"这种话就别说,因为你其实没看到)。';
     }
     if (memories.length) {
       sys +=
@@ -1130,7 +1146,15 @@ function ChatRoom({
       }
     };
     await streamChat(
-      { provider: m.provider, model: m.model, messages: history, signal: controller.signal },
+      {
+        provider: m.provider,
+        model: m.model,
+        messages: history,
+        signal: controller.signal,
+        // 只有 claudecode 走 stream-json 结构化输入能吃图,别的 provider 就算传了
+        // 也白费网络流量,后端会忽略掉。
+        stickerGallery: m.provider === 'claudecode' ? stickerGallery : undefined,
+      },
       {
         onReasoning: (chunk) => {
           if (!thinkStart) thinkStart = Date.now();
