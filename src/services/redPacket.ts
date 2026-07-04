@@ -128,19 +128,30 @@ const VEHICLE_POOLS: Record<Exclude<VehicleCategory, 'bottle' | 'special'>, stri
 
 export type Vehicle = { category: VehicleCategory; src: string };
 
+// 瓶子池——3 款：粉(棠棠原本专属)/紫(予予原本专属)/透明(共用款)。
+// 之前瓶子写死按发送方选色(棠棠=粉/予予=紫)，只有 2 张图，连续两次落到
+// bottle 类别就一模一样。老婆说"载具重复太多"+"透明玻璃瓶不要删掉"，
+// 一并解决:改成 3 款轮流,不看发送方。发送方身份从弹窗里能看到,不靠
+// 瓶子颜色区分身份了。
+const BOTTLE_POOL: string[] = [
+  'bottle_tangtang.png', // 粉
+  'bottle_clear.webp', // 透明(之前删了老婆要回)
+  'bottle_yuyu.webp', // 紫
+];
+
 // 载具分配改成"轮着来"：按 id 哈希取模会出现同类扎堆(比如连续好几个都分到
-// bottle，而瓶子颜色又是按发送方写死的，同一人连续几笔看着像是同一个图重复)。
-// 改成按列表顺序轮流发牌——类别轮流 bottle→shell→boat→starfish→bottle...，
-// 类别内部的具体图案也各自轮流过一遍图池再回头，最大程度避免相邻重复。
-// 只要传入的列表顺序不变(localStorage 数组本来就稳定累加)，同一笔红包
-// 算出来的还是同一个载具，符合"同一条记录不能一天一个样"的要求。
+// bottle，同一张图连续出现)。改成按列表顺序轮流发牌——类别轮流
+// bottle→shell→boat→starfish→bottle...，类别内部具体图案也各自轮流
+// 过一遍图池再回头，最大程度避免相邻重复。只要传入的列表顺序不变
+// (localStorage 数组本来就稳定累加)，同一笔红包算出来的还是同一个载具，
+// 符合"同一条记录不能一天一个样"的要求。
 //
-// 特殊日子命中的记录直接给专属座驾，不占用上面的轮转名额(单独判断、
+// 特殊日子/金额命中的记录直接给专属座驾，不占用上面的轮转名额(单独判断、
 // 不推进 normalIndex)，免得偶尔冒出的节日红包把后面正常记录的轮转顺序
 // 往后挤一位。
 export function assignVehicles(list: Pick<RedPacket, 'id' | 'from' | 'amount' | 'createdAt'>[]): Map<string, Vehicle> {
   const base = import.meta.env.BASE_URL;
-  const counters: Record<Exclude<VehicleCategory, 'bottle' | 'special'>, number> = { shell: 0, boat: 0, starfish: 0 };
+  const counters: Record<VehicleCategory, number> = { bottle: 0, shell: 0, boat: 0, starfish: 0, special: 0 };
   const map = new Map<string, Vehicle>();
   let normalIndex = 0;
   list.forEach((packet) => {
@@ -153,7 +164,8 @@ export function assignVehicles(list: Pick<RedPacket, 'id' | 'from' | 'amount' | 
     const category = VEHICLE_CATEGORIES[normalIndex % VEHICLE_CATEGORIES.length];
     normalIndex += 1;
     if (category === 'bottle') {
-      const file = packet.from === 'user' ? 'bottle_tangtang.png' : 'bottle_yuyu.webp';
+      const file = BOTTLE_POOL[counters.bottle % BOTTLE_POOL.length];
+      counters.bottle += 1;
       map.set(packet.id, { category, src: `${base}assets/icons/${file}` });
       return;
     }

@@ -4737,13 +4737,10 @@ a {
 .sweetie-sea {
   position: relative;
 }
-.sweetie-sea::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(to bottom, transparent 0%, rgba(40, 20, 70, 0.32) 100%);
-}
+/* 之前这里有一层 sweetie-sea::after 半透明深紫渐变遮罩("越深越暗"营造海底
+   感)——老婆说"夜晚版磨砂盖住载具看不清"，去掉。载具本身的"越深越小越
+   淡"(每个 button 上写死的 static scale+saturate)完全保留,那是每个载具
+   自己的样式不是遮罩,不受影响。 */
 .floatvic {
   position: absolute;
   width: 72px;
