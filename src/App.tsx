@@ -7,6 +7,7 @@ import { SwitchCorePage } from './pages/SwitchCorePage';
 import { MemeBoxPage } from './pages/MemeBoxPage';
 import { MemoryJarPage } from './pages/MemoryJarPage';
 import { SweetiePocketPage } from './pages/SweetiePocketPage';
+import { PurrTablePage } from './pages/PurrTablePage';
 
 export function App() {
   return (
@@ -19,6 +20,7 @@ export function App() {
       <Route path="/meme-box" element={<MemeBoxPage />} />
       <Route path="/memory-jar" element={<MemoryJarPage />} />
       <Route path="/sweetie-pocket" element={<SweetiePocketPage />} />
+      <Route path="/purr-table" element={<PurrTablePage />} />
       <Route path="*" element={<HomePage />} />
     </Routes>
   );

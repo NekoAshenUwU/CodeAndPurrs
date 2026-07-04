@@ -695,7 +695,7 @@ function beepWav(freq = 523, ms = 400, rate = 16000) {
 // 调本机无头 Claude Code：把人设当 --system-prompt，关掉所有工具当纯聊天，
 // 历史拍平成对话稿从 stdin 喂进去，解析 stream-json 把文字增量回传。
 // 令牌走 CLAUDE_CODE_OAUTH_TOKEN（claude setup-token 生成，订阅额度）。
-async function callClaudeCode({ res, token, model, messages, stickerGallery }) {
+async function callClaudeCode({ res, token, model, messages, stickerGallery, thinking }) {
   let system = messages
     .filter((m) => m.role === 'system')
     .map((m) => partsToText(m.content))
@@ -828,7 +828,10 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery }) {
         // 默认 1024(约等于 medium 档)——原来 2048(约等于 high) 老婆反馈烧订阅
         // 额度太快,Opus 4.7 又是家版最贵档。想再省可在 .env 设 512(low) 或 0(关);
         // 深度对话/夜谈想让 予予 想深一点可临时拉回 2048。
-        childEnv.MAX_THINKING_TOKENS = process.env.MAX_THINKING_TOKENS || '1024';
+        // 前端可以按房间传 thinking='low'|'medium'|'high' 覆盖默认(咕噜圆桌走 low)。
+        const budgetMap = { low: '512', medium: '1024', high: '2048' };
+        childEnv.MAX_THINKING_TOKENS =
+          budgetMap[thinking] || process.env.MAX_THINKING_TOKENS || '1024';
         child = spawn('claude', args, {
           env: childEnv,
           stdio: ['pipe', 'pipe', 'pipe'],
@@ -1224,6 +1227,7 @@ const server = http.createServer(async (req, res) => {
   const model = typeof body.model === 'string' ? body.model : undefined;
   const key = PROVIDERS[provider].key();
   const stickerGallery = Array.isArray(body.stickerGallery) ? body.stickerGallery : [];
+  const thinking = ['low', 'medium', 'high'].includes(body.thinking) ? body.thinking : undefined;
 
   startSSE(res);
   try {
@@ -1234,7 +1238,7 @@ const server = http.createServer(async (req, res) => {
     } else if (provider === 'anthropic') {
       await callAnthropic({ res, key, model, messages });
     } else if (provider === 'claudecode') {
-      await callClaudeCode({ res, token: key, model, messages, stickerGallery });
+      await callClaudeCode({ res, token: key, model, messages, stickerGallery, thinking });
     } else if (provider === 'codexcli') {
       await callCodexCli({ res, model, messages });
     } else {

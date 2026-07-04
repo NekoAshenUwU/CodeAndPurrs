@@ -28,17 +28,22 @@ export type StreamHandlers = {
 // (claudecode/openai/anthropic) 发送,其它 provider 忽略,不浪费上下文。
 export type StickerGalleryEntry = { name: string; dataUrl: string };
 
+// 思考预算档位:后端把 low→512/medium→1024/high→2048 塞成 MAX_THINKING_TOKENS,
+// 只对 claudecode/anthropic 生效,别家忽略。咕噜圆桌走 'low' 省 token。
+export type ThinkingBudget = 'low' | 'medium' | 'high';
+
 export type StreamOptions = {
   provider: Provider;
   messages: ChatMessage[];
   model?: string;
   signal?: AbortSignal;
   stickerGallery?: StickerGalleryEntry[];
+  thinking?: ThinkingBudget;
 };
 
 // 发起一次流式对话。后端用 SSE 推回 reasoning / content / error / done 四种事件。
 export async function streamChat(
-  { provider, messages, model, signal, stickerGallery }: StreamOptions,
+  { provider, messages, model, signal, stickerGallery, thinking }: StreamOptions,
   handlers: StreamHandlers,
 ): Promise<void> {
   let response: Response;
@@ -46,7 +51,7 @@ export async function streamChat(
     response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ provider, messages, model, stickerGallery }),
+      body: JSON.stringify({ provider, messages, model, stickerGallery, thinking }),
       signal,
     });
   } catch (err) {
