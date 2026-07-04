@@ -1,9 +1,12 @@
 // 落予棠 —— 红包开启音效。
-// 优先播放真实音效文件 /assets/sound/coin.mp3;找不到/加载失败自动回退到 Web Audio
-// 合成的"硬币叮当"声(不依赖素材文件也能有声音)。
-// 想换真声就把 .mp3 扔到 public/assets/sound/coin.mp3,浏览器强刷新即生效,代码不用改。
+// 优先播放真实音效文件(先试 coin.wav 再试 coin.mp3);找不到/加载失败自动回退
+// 到 Web Audio 合成的"硬币叮当"声(不依赖素材文件也能有声音)。
+// 想换真声就把 .wav 或 .mp3 扔到 public/assets/sound/,浏览器强刷即生效。
 const SOUND_ENABLED = true;
-const REAL_COIN_URL = `${import.meta.env.BASE_URL}assets/sound/coin.mp3`;
+const REAL_COIN_URLS = [
+  `${import.meta.env.BASE_URL}assets/sound/coin.wav`,
+  `${import.meta.env.BASE_URL}assets/sound/coin.mp3`,
+];
 
 // 单次探测:第一次调用时 fetch 一下真声音文件在不在,in-memory 记结果,
 // 第二次开始要么直接播文件、要么直接合成,不重复请求。
@@ -67,21 +70,23 @@ const COIN_CLINKS: { filterFreq: number; startAt: number; duration: number; gain
 ];
 
 // 播真声音文件——用 AudioBuffer 提前 decode 好,之后每次开红包直接 BufferSource
-// 播,零延迟。第一次调用时懒加载,失败就把 realCoinAvailable 置 false 永久回退合成。
+// 播,零延迟。第一次调用时懒加载,依次尝试 REAL_COIN_URLS 里的每个路径,
+// 第一个成功的就用；全都失败就把 realCoinAvailable 置 false 永久回退合成。
 async function tryLoadRealCoin(ctx: AudioContext): Promise<void> {
   if (realCoinAvailable !== null) return; // 已经探过了
-  try {
-    const resp = await fetch(REAL_COIN_URL);
-    if (!resp.ok) {
-      realCoinAvailable = false;
+  for (const url of REAL_COIN_URLS) {
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) continue;
+      const arrayBuffer = await resp.arrayBuffer();
+      realCoinBuffer = await ctx.decodeAudioData(arrayBuffer);
+      realCoinAvailable = true;
       return;
+    } catch {
+      // 这个 url 挂了,试下一个
     }
-    const arrayBuffer = await resp.arrayBuffer();
-    realCoinBuffer = await ctx.decodeAudioData(arrayBuffer);
-    realCoinAvailable = true;
-  } catch {
-    realCoinAvailable = false; // 不存在/decode 失败/CORS 之类,永久回退合成
   }
+  realCoinAvailable = false;
 }
 
 function playRealCoin(ctx: AudioContext): void {
