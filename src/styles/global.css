@@ -4672,7 +4672,7 @@ a {
   position: fixed;
   top: calc(56px + env(safe-area-inset-top));
   z-index: 20;
-  width: 150px; /* 200px 在窄屏上左右两块会在中间叠起来，正好把背景图的太阳挡住，缩回来留出中间空隙 */
+  width: 165px; /* 200px 会在窄屏中间叠起来挡住太阳；150px 予予那张图云心比棠棠窄，数额又顶出去了，165px 各退一步 */
   pointer-events: none; /* 纯展示，别挡住底下的点击 */
 }
 .balance-island--left {
@@ -4692,18 +4692,23 @@ a {
   top: 23%;
   left: 50%;
   transform: translate(-50%, -50%);
+  /* 查过 computed style：从这个 span 一路到 html 的父链上 filter/mix-blend-mode
+     都是 none、opacity 都是 1，没有谁在背后混色——之前看着"花"是照片质感的
+     云背景 + 手机截图压缩造成的观感，不是 CSS 混色。isolation:isolate 单独
+     建一个层叠上下文，防止以后哪个兄弟节点加了 blend-mode 意外混到这里来。 */
+  isolation: isolate;
   font-family: "TianTianQuanAmount", var(--round);
   font-weight: 700;
   font-size: 1.45rem;
-  color: #9c3fa0;
-  -webkit-text-fill-color: #9c3fa0;
+  color: #7c3aed;
+  -webkit-text-fill-color: #7c3aed;
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 /* ---------- 浮岛海面：三条车道各自叠行，同一行常并排 2~3 个载具，
    纵向行号=时间(越下越早)，深度感靠外层静态 scale+saturate ---------- */
-/* 150px 宽 * (1536/1024) 图片本身比例 ≈ 225px 高，留够净空才不会被面板挡住 */
+/* 165px 宽 * (1536/1024) 图片本身比例 ≈ 248px 高，留够净空才不会被面板挡住 */
 .sweetie-sea-scroll {
-  padding-top: calc(56px + env(safe-area-inset-top) + 240px);
+  padding-top: calc(56px + env(safe-area-inset-top) + 264px);
 }
 .sweetie-sea {
   position: relative;
@@ -4783,7 +4788,11 @@ a {
   max-width: min(78vw, 280px);
   padding: 16px;
   border-radius: 18px;
-  background: linear-gradient(160deg, #241640 0%, #3b2266 55%, #2a1850 100%);
+  /* 同样查过：这个 div 到 html 全程没有 filter/mix-blend-mode/opacity<1，
+     不是混色问题。原来三档色全部亮度不到 27%，人眼在这么暗的地方对
+     紫色这种短波长色相本来就分辨力弱，截图压缩一道更容易看成灰——
+     中间那档提到约 40% 亮度，紫味就压不住地跳出来了。 */
+  background: linear-gradient(160deg, #2c1a50 0%, #5b3499 55%, #34205e 100%);
   box-shadow: 0 10px 30px rgba(30, 10, 50, 0.45);
 }
 .sweetie-detail__x {
