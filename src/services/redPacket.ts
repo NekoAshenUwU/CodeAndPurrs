@@ -27,24 +27,25 @@ export function addPacket(from: Sender, amount: number, note: string): RedPacket
   return p;
 }
 
-// 某一方口袋里累积了多少：对方发的红包金额总和
+// 本金——两边宝箱里记的底子，跟红包礼物历史脱钩(不是某一笔可以点开看的
+// 记录，就是个固定数字)，棠棠和予予两边一样多。
+export const PRINCIPAL_AMOUNT = 5200;
+
+// 某一方口袋里累积了多少：本金 + 对方发的红包金额总和
 export function balanceOf(who: Sender, list: RedPacket[] = loadPackets()): number {
   const senderOfOther: Sender = who === 'user' ? 'ai' : 'user';
-  return list.filter((p) => p.from === senderOfOther).reduce((sum, p) => sum + p.amount, 0);
+  const gifts = list.filter((p) => p.from === senderOfOther).reduce((sum, p) => sum + p.amount, 0);
+  return PRINCIPAL_AMOUNT + gifts;
 }
 
-// 开局给两边口袋各塞 500，只在这台设备第一次打开时补一次(账本已经有记录/已经塞过就不再塞)
-const SEEDED_KEY = 'sweetie-pocket:seeded-starter';
-export function ensureStarterPackets(): void {
-  if (loadLocal<boolean>(SEEDED_KEY, false)) return;
-  if (loadPackets().length === 0) {
-    const now = Date.now();
-    saveLocal(KEY, [
-      { id: uid(), from: 'user' as Sender, amount: 500, note: '开局塞给你的', createdAt: now },
-      { id: uid(), from: 'ai' as Sender, amount: 500, note: '开局塞给你的', createdAt: now + 1 },
-    ]);
-  }
-  saveLocal(SEEDED_KEY, true);
+// 早期版本把"开局本金"当成两条普通红包记录塞进账本，会被当成载具浮出来。
+// 现在本金改用底部宝箱单独展示，这两条历史记录留着没用了，清掉——
+// 按当年写死的备注文本认，不会误伤真实红包（谁也不会手打一模一样的话）。
+const LEGACY_STARTER_NOTE = '开局塞给你的';
+export function cleanupLegacyStarterPackets(): void {
+  const list = loadPackets();
+  const cleaned = list.filter((p) => p.note !== LEGACY_STARTER_NOTE);
+  if (cleaned.length !== list.length) saveLocal(KEY, cleaned);
 }
 
 // ---------- 浮岛：每笔红包记录随机领一个载具（瓶子/贝壳/纸船/海星）----------

@@ -7,6 +7,7 @@ import {
   pickHorizontalPercent,
   pickLane,
   pickVerticalJitter,
+  PRINCIPAL_AMOUNT,
   type RedPacket,
   type Vehicle,
 } from '../services/redPacket';
@@ -47,6 +48,22 @@ function BalanceIsland({ who, amount, side }: { who: string; amount: number; sid
     <div className={`balance-island balance-island--${side}`} role="img" aria-label={`${who} $${amount}`}>
       <img className="balance-island__art" src={src} alt="" />
       <span className="balance-island__amount">${amount}</span>
+    </div>
+  );
+}
+
+// 本金宝箱——沉在海底最深处，比任何漂浮的红包都早、都老，记的是两边口袋的
+// 老本(跟礼物历史脱钩，就是个固定数字)。数额叠在开箱后水晶堆最亮的那簇上
+// (实测像素找的最亮区域，蓝箱子/粉箱子都差不多在 60%,47% 那一块)。
+function TreasureChest({ who, side }: { who: string; side: 'left' | 'right' }) {
+  const src =
+    side === 'left'
+      ? `${import.meta.env.BASE_URL}assets/icons/chest_tangtang.webp`
+      : `${import.meta.env.BASE_URL}assets/icons/chest_yuyu.webp`;
+  return (
+    <div className="treasure-chest" role="img" aria-label={`${who}本金 $${PRINCIPAL_AMOUNT}`}>
+      <img className="treasure-chest__art" src={src} alt="" />
+      <span className="treasure-chest__amount">${PRINCIPAL_AMOUNT}</span>
     </div>
   );
 }
@@ -195,6 +212,11 @@ export function SweetiePocketPage() {
             ))}
           </div>
         )}
+
+        <div className="treasure-chest-row">
+          <TreasureChest who="棠棠" side="left" />
+          <TreasureChest who="予予" side="right" />
+        </div>
       </div>
 
       {selected ? (

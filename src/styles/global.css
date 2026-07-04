@@ -4765,6 +4765,39 @@ a {
   }
 }
 
+/* ---------- 本金宝箱：沉在海底最深处，比任何漂浮的红包都老，
+   跟礼物历史脱钩的固定底子，正常文档流排在 .sweetie-sea 后面，
+   不用像浮岛/漂浮物那样算绝对定位——滚到底自然就看到 ---------- */
+.treasure-chest-row {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px 12px 40px;
+}
+.treasure-chest {
+  position: relative;
+  width: min(46%, 190px);
+}
+.treasure-chest__art {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 8px 16px rgba(30, 15, 60, 0.35));
+}
+.treasure-chest__amount {
+  position: absolute;
+  top: 47%;
+  left: 60%;
+  transform: translate(-50%, -50%);
+  isolation: isolate;
+  font-family: "TianTianQuanAmount", var(--round);
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #7c3aed;
+  -webkit-text-fill-color: #7c3aed;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.85);
+}
+
 /* ---------- 点开漂浮物看详情 ---------- */
 .sweetie-detail-backdrop {
   position: fixed;
