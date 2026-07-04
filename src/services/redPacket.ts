@@ -82,6 +82,15 @@ function monthDayKey(createdAt: number): string {
   return `${mm}-${dd}`;
 }
 
+// 特殊数额专属座驾——跟日期无关，金额本身谐音/寓意"表白"就够格。
+// 三个都还是表白/长久的意思，先都配心形；以后要是给别的数额画了别的图，
+// 再从心形里拆出去就好。
+const SPECIAL_AMOUNT_VEHICLES: Record<number, string> = {
+  520: 'special_heart.webp', // 我爱你
+  1314: 'special_heart.webp', // 一生一世
+  99: 'special_heart.webp', // 长长久久
+};
+
 // 贝壳/纸船/海星：类别内部具体挑哪个也按 hash 定，不掺 Math.random()。
 // 瓶子例外——粉/紫两款分别是棠棠/予予专属（她说的"紫色是予予的，这粉色是我的"），
 // 挑到 bottle 类别时直接按发送方定色，不再二次随机。
@@ -127,13 +136,14 @@ export type Vehicle = { category: VehicleCategory; src: string };
 // 特殊日子命中的记录直接给专属座驾，不占用上面的轮转名额(单独判断、
 // 不推进 normalIndex)，免得偶尔冒出的节日红包把后面正常记录的轮转顺序
 // 往后挤一位。
-export function assignVehicles(list: Pick<RedPacket, 'id' | 'from' | 'createdAt'>[]): Map<string, Vehicle> {
+export function assignVehicles(list: Pick<RedPacket, 'id' | 'from' | 'amount' | 'createdAt'>[]): Map<string, Vehicle> {
   const base = import.meta.env.BASE_URL;
   const counters: Record<Exclude<VehicleCategory, 'bottle' | 'special'>, number> = { shell: 0, boat: 0, starfish: 0 };
   const map = new Map<string, Vehicle>();
   let normalIndex = 0;
   list.forEach((packet) => {
-    const specialFile = SPECIAL_DATE_VEHICLES[monthDayKey(packet.createdAt)];
+    // 金额寓意优先于日期——一笔 $520 不管哪天发的都算表白，比"刚好那天生日"更明确。
+    const specialFile = SPECIAL_AMOUNT_VEHICLES[packet.amount] ?? SPECIAL_DATE_VEHICLES[monthDayKey(packet.createdAt)];
     if (specialFile) {
       map.set(packet.id, { category: 'special', src: `${base}assets/icons/${specialFile}` });
       return;

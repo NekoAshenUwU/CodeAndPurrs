@@ -36,6 +36,16 @@ function assignRows(packets: RedPacket[]): { rows: number[]; maxRow: number } {
   return { rows, maxRow };
 }
 
+// 余额只会越攒越多，数字位数迟早变长——固定字号迟早会顶出云心那块窄窗口
+// (予予那张图云心本来就比棠棠窄，最先顶出去)。改成按显示字符数分级缩小，
+// 一次性解决"以后余额涨了又要来改字号"的问题，而不是每次涨了再调一次。
+function amountFontSize(text: string): string {
+  if (text.length <= 4) return '1.45rem';
+  if (text.length === 5) return '1.3rem';
+  if (text.length === 6) return '1.1rem';
+  return '0.95rem';
+}
+
 // 予予/棠棠的余额浮岛面板——图本身是完整场景(男孩/女孩+雪豹/小猫坐在浮岛上，
 // 头顶一圈糖霜云中心留白)，余额数字用绝对定位叠在云心那块空白区域上。
 // 云朵里只放数额，不放别的文字（老婆明确要求），who 只留给 aria-label 给读屏用。
@@ -44,10 +54,13 @@ function BalanceIsland({ who, amount, side }: { who: string; amount: number; sid
     side === 'left'
       ? `${import.meta.env.BASE_URL}assets/icons/balance_island_tangtang.webp`
       : `${import.meta.env.BASE_URL}assets/icons/balance_island_yuyu.webp`;
+  const text = `$${amount}`;
   return (
-    <div className={`balance-island balance-island--${side}`} role="img" aria-label={`${who} $${amount}`}>
+    <div className={`balance-island balance-island--${side}`} role="img" aria-label={`${who} ${text}`}>
       <img className="balance-island__art" src={src} alt="" />
-      <span className="balance-island__amount">${amount}</span>
+      <span className="balance-island__amount" style={{ fontSize: amountFontSize(text) }}>
+        {text}
+      </span>
     </div>
   );
 }
