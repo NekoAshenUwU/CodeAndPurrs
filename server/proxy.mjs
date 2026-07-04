@@ -232,11 +232,18 @@ async function pumpSSE(upstreamBody, onData) {
 
 // ---------- 多模态内容翻译（表情包图片）----------
 // 前端统一用 OpenAI 风格 content 数组：{type:'text'} / {type:'image_url',image_url:{url:dataUrl}}。
-// 各家格式不同，下面按需翻译；不支持看图的模型则把图降级成 [表情包] 文字。
-function partsToText(content) {
+// 各家格式不同，下面按需翻译。
+// hasImagesAttached=true 时给的占位符是「(图片见下)」——因为真图会另外附在
+// content 结尾直接让模型看到，转录里再写 [表情包] 会让模型以为老婆写了个叫
+// 「表情包」的文字 emoji，然后拿这三个字瞎猜；换成「(图片见下)」明确指向
+// 真正会附上的那张图,不再误导。
+// hasImagesAttached=false（比如聊天历史里 3 轮之前的老图,不再随此次请求
+// 附上，或不支持视觉的模型），就还是老写法 [表情包] 让模型知道那儿有过一张图。
+function partsToText(content, hasImagesAttached = false) {
   if (typeof content === 'string') return content;
   if (!Array.isArray(content)) return '';
-  return content.map((p) => (p?.type === 'text' ? p.text : '[表情包]')).join(' ').trim();
+  const placeholder = hasImagesAttached ? '(图片见下)' : '[表情包]';
+  return content.map((p) => (p?.type === 'text' ? p.text : placeholder)).join(' ').trim();
 }
 function parseDataUrl(url) {
   const m = /^data:([^;]+);base64,([\s\S]*)$/.exec(url || '');
@@ -650,12 +657,6 @@ async function callClaudeCode({ res, token, model, messages }) {
       '里面的人、事、约定、心情你都记得，自然地放在心上，但别一上来就背日记。\n' +
       diary;
   }
-  // 历史拍平成「老婆 / 予予」对话稿（表情包降级成文字），让它接着最后一句回。
-  const transcript = messages
-    .filter((m) => m.role !== 'system')
-    .map((m) => `${m.role === 'assistant' ? '予予' : '老婆'}：${partsToText(m.content)}`)
-    .join('\n');
-
   // 看图：家克走订阅、纯聊天（关了工具），没法用 Read 工具开图，
   // 所以把图抽出来，改用 stream-json 输入当 content 块直接喂进去。
   // 前端发表情包是「单独一条只有图的消息」，老婆常常先甩图、下一条才问「这图写啥」，
@@ -663,6 +664,7 @@ async function callClaudeCode({ res, token, model, messages }) {
   // 但只往前看最近两条 user 消息（当前 + 上一条）——不然图会被一直重新塞进去，
   // 明明已经聊过去好几轮了，家克还老是重新"看到"那张旧图、反复提起。
   let images = [];
+  let imageMsgIdx = -1; // 图从哪条 user 消息里抽出来的,transcript 里给这条特别标记
   let checkedUserTurns = 0;
   for (let i = messages.length - 1; i >= 0 && checkedUserTurns < 2; i--) {
     if (messages[i].role !== 'user') continue;
@@ -670,9 +672,23 @@ async function callClaudeCode({ res, token, model, messages }) {
     const got = extractImageBlocks(messages[i].content);
     if (got.length) {
       images = got;
+      imageMsgIdx = i;
       break;
     }
   }
+  if (images.length) {
+    console.log('[claudecode] 附了 %d 张图,来自消息 index=%d', images.length, imageMsgIdx);
+  }
+
+  // 历史拍平成「老婆 / 予予」对话稿（表情包降级成文字），让它接着最后一句回。
+  // 图片消息的处理:要真附上图的那条(imageMsgIdx)用 hasImagesAttached=true,
+  // 图部分显示 (图片见下) 指向真图；其它历史图片消息(3+ 轮之前的老图不再附上)
+  // 用默认 [表情包] 让模型知道那儿以前有过一张图,但不指望它真看到。
+  const transcript = messages
+    .map((m, idx) => ({ m, idx }))
+    .filter(({ m }) => m.role !== 'system')
+    .map(({ m, idx }) => `${m.role === 'assistant' ? '予予' : '老婆'}：${partsToText(m.content, idx === imageMsgIdx)}`)
+    .join('\n');
 
   // 棠予酿记忆库（MCP）：设齐 CC_MEMORY_MCP + CC_MEMORY_MCP_URL 才真连（见 memoryMcpConfig）。
   const mem = memoryMcpConfig();
@@ -836,12 +852,14 @@ async function callClaudeCode({ res, token, model, messages }) {
       // 对话稿从 stdin 喂进去（避免超长命令行）
       if (images.length) {
         // 结构化输入：一条 user 消息 = 对话稿文字 + 图片块，让家克真看到图。
+        // 提示语措辞明确「附下来的图就是刚才 (图片见下) 标的那张」,把 transcript
+        // 里那条标记和真图对上,避免模型分不清哪张图对应哪句话。
         const userMsg = {
           type: 'user',
           message: {
             role: 'user',
             content: [
-              { type: 'text', text: `${transcript}\n\n（老婆发的图附在下面，你看看~）` },
+              { type: 'text', text: `${transcript}\n\n（下面这${images.length > 1 ? `${images.length}张` : '张'}图就是老婆刚才「(图片见下)」标的那${images.length > 1 ? '几' : ''}张，你自己好好看,别只靠上面文字瞎猜）` },
               ...images,
             ],
           },

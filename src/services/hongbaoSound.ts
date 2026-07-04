@@ -94,8 +94,18 @@ function playRealCoin(ctx: AudioContext): void {
   const src = ctx.createBufferSource();
   src.buffer = realCoinBuffer;
   const gainNode = ctx.createGain();
-  gainNode.gain.value = 0.9; // 真声源一般已经 mixed 好,不用像合成那样疯狂 boost
-  src.connect(gainNode).connect(ctx.destination);
+  // 老婆手机上 gain=0.9 说"声音小"——freesound 的原始 wav 通常没做 peak
+  // normalize,提到 1.8。为了不把瞬态尖峰削爆音,后面挂一个 DynamicsCompressor
+  // (threshold=-14dB, ratio=6:1),超过 threshold 的部分被 6:1 压回来,响度顶得
+  // 上去、峰值又不刺耳。
+  gainNode.gain.value = 1.8;
+  const compressor = ctx.createDynamicsCompressor();
+  compressor.threshold.value = -14;
+  compressor.knee.value = 6;
+  compressor.ratio.value = 6;
+  compressor.attack.value = 0.003;
+  compressor.release.value = 0.15;
+  src.connect(gainNode).connect(compressor).connect(ctx.destination);
   src.start();
 }
 
