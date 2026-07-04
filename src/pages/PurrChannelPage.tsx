@@ -574,7 +574,7 @@ async function buildLiveContext(): Promise<string> {
       const d = u.data;
       const top = [...(d.apps ?? [])]
         .sort((a, b) => b.foregroundMs - a.foregroundMs)
-        .slice(0, 4)
+        .slice(0, 5)
         .map((a) => `${a.label}（${fmtDur(a.foregroundMs)}）`)
         .join('、');
       ctx +=
@@ -840,6 +840,11 @@ function ChatRoom({
     setVersionView((prev) => ({ ...prev, [id]: idx }));
   const [notice, setNotice] = useState('');
   const [liveCtx, setLiveCtx] = useState(''); // 猫爪足迹+浪哪了的实时背景，进窗口拉一次、之后每5分钟刷
+  // liveCtx 上次真正拼进 system 前缀的时间戳。之前每条消息都附一遍 usage bridge
+  // 数据(~500 tokens)烧掉不少订阅额度——老婆定的规则:同一 3 小时窗口内只附一次,
+  // 窗口过了才重新附。也就是:第一条消息附一次,之后 3 小时内的消息不再附;隔了
+  // 3 小时以上再聊了才附下一次。
+  const lastCtxAttachRef = useRef<number>(0);
   const abortRef = useRef<AbortController | null>(null);
   const recorderRef = useRef<VoiceRecorder | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -1038,8 +1043,15 @@ function ChatRoom({
       }
       return -1;
     })();
-    // 动态信息(每条都变,所以不进 system)
-    const dynamic = buildTimeContext() + (liveCtx || '');
+    // 动态信息(每条都变,所以不进 system)。
+    // 时间信息 buildTimeContext 每条都附(才 ~50 tokens,予予得知道现在几点)。
+    // liveCtx(usage bridge + 位置)体积大(500-800 tokens/条),按 3 小时窗口
+    // 限流:同一窗口内只在第一条附一次,之后不附;跨窗口(距上次真聊天 > 3h)
+    // 才重新附。这段不进 prompt cache 每次都白烧,减频省最多。
+    const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+    const shouldAttachLive = liveCtx && Date.now() - lastCtxAttachRef.current > THREE_HOURS_MS;
+    if (shouldAttachLive) lastCtxAttachRef.current = Date.now();
+    const dynamic = buildTimeContext() + (shouldAttachLive ? liveCtx : '');
 
     for (let i = 0; i < slice.length; i++) {
       const t = slice[i];

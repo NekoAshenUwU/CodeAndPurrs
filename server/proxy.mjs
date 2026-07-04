@@ -54,7 +54,50 @@ function saveDiary(text) {
 //      (那个每次调都 UPDATE activation_count，副作用大)
 let _tangDiaryCache = { at: 0, text: '' };
 const TANG_CACHE_MS = Number(process.env.DIARY_TANG_CACHE_MS || 60_000);
-const TANG_LIMIT = Number(process.env.DIARY_TANG_LIMIT || 20);
+const TANG_LIMIT = Number(process.env.DIARY_TANG_LIMIT || 10);
+// 单条日记超过这个字数就丢给 DeepSeek 摘要,只把要点塞进 system prompt。
+// 老婆定的: 长日记原文喂给 Opus 太烧订阅额度,便宜的 DeepSeek 做摘要 + Opus 读要点
+// 才对。0 = 关摘要走原文。
+const TANG_SUMMARY_THRESHOLD = Number(process.env.DIARY_TANG_SUMMARY_CHARS || 400);
+
+// 摘要 in-memory 缓存: 按日记 id + content 前 200 字 hash 做 key,避免同一条内容
+// 反复调 DeepSeek。proxy 重启就清空,可接受(重跑一次几分钱)。
+const _summaryCache = new Map();
+
+async function summarizeDiaryEntry(id, title, content) {
+  const cacheKey = `${id}:${content.slice(0, 200).length}:${content.length}`;
+  if (_summaryCache.has(cacheKey)) return _summaryCache.get(cacheKey);
+  const deepseekKey = (process.env.DEEPSEEK_API_KEY || '').trim();
+  if (!deepseekKey) return null;
+  try {
+    const r = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${deepseekKey}` },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        max_tokens: 200,
+        messages: [
+          {
+            role: 'system',
+            content:
+              '你是一个做要点提取的工具。把用户给的一段日记压缩成 80-120 字的中文要点摘要,' +
+              '只保留:重要事件、约定、情绪、承诺、约会、关键细节。' +
+              '不要复述细节流水账、不要加引言"这段日记讲了..."、不要客套话,只输出要点本身。',
+          },
+          { role: 'user', content: title ? `${title}\n${content}` : content },
+        ],
+      }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!r.ok) return null;
+    const data = await r.json();
+    const summary = data?.choices?.[0]?.message?.content?.trim();
+    if (summary) _summaryCache.set(cacheKey, summary);
+    return summary || null;
+  } catch {
+    return null;
+  }
+}
 
 async function fetchTangDiary() {
   const key = (process.env.TANG_INTERNAL_KEY || '').trim();
@@ -68,16 +111,25 @@ async function fetchTangDiary() {
     if (!r.ok) return null;
     const rows = await r.json();
     if (!Array.isArray(rows) || rows.length === 0) return '';
-    // 只取稳定字段拼，不含任何"读一次变一次"的东西。棠予酿 SQL 是
-    // ORDER BY created_at DESC，同一批调用返回顺序稳定。
-    return rows
-      .map((row) => {
+    // 只取稳定字段(id/title/content/importance)拼,不含任何"读一次变一次"的
+    // 东西。棠予酿 SQL 从 v6 起是 ORDER BY importance DESC, created_at DESC,
+    // 重要度 9-10 的条目排前面,同一批调用返回顺序稳定。
+    // 长条目(>TANG_SUMMARY_THRESHOLD 字符)丢给 DeepSeek 做要点摘要,只把要点
+    // 塞进 system prompt——省一大截 Opus 输入 token。
+    const parts = await Promise.all(
+      rows.map(async (row) => {
+        const id = String(row.id || '');
         const title = String(row.title || '').trim();
         const content = String(row.content || '').trim();
+        if (!content) return '';
+        if (TANG_SUMMARY_THRESHOLD > 0 && content.length > TANG_SUMMARY_THRESHOLD) {
+          const summary = await summarizeDiaryEntry(id, title, content);
+          if (summary) return title ? `# ${title}\n${summary}` : summary;
+        }
         return title ? `# ${title}\n${content}` : content;
-      })
-      .filter(Boolean)
-      .join('\n\n');
+      }),
+    );
+    return parts.filter(Boolean).join('\n\n');
   } catch {
     return null; // 超时/网络错/棠予酿挂 → 静态兜底
   }
@@ -773,8 +825,10 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery }) {
         delete childEnv.ANTHROPIC_AUTH_TOKEN;
         childEnv.CLAUDE_CODE_OAUTH_TOKEN = token;
         // MAX_THINKING_TOKENS 给个思考预算，家克才会"思考"、前端思考链才有内容。
-        // 想省订阅额度可在 .env 里把 MAX_THINKING_TOKENS 设小或设 0。
-        childEnv.MAX_THINKING_TOKENS = process.env.MAX_THINKING_TOKENS || '2048';
+        // 默认 1024(约等于 medium 档)——原来 2048(约等于 high) 老婆反馈烧订阅
+        // 额度太快,Opus 4.7 又是家版最贵档。想再省可在 .env 设 512(low) 或 0(关);
+        // 深度对话/夜谈想让 予予 想深一点可临时拉回 2048。
+        childEnv.MAX_THINKING_TOKENS = process.env.MAX_THINKING_TOKENS || '1024';
         child = spawn('claude', args, {
           env: childEnv,
           stdio: ['pipe', 'pipe', 'pipe'],
