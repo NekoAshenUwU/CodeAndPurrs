@@ -53,18 +53,26 @@ function BalanceIsland({ who, amount, side }: { who: string; amount: number; sid
 }
 
 // 本金宝箱——沉在海底最深处，比任何漂浮的红包都早、都老，记的是两边口袋的
-// 老本(跟礼物历史脱钩，就是个固定数字)。数额叠在开箱后水晶堆最亮的那簇上
-// (实测像素找的最亮区域，蓝箱子/粉箱子都差不多在 60%,47% 那一块)。
-function TreasureChest({ who, side }: { who: string; side: 'left' | 'right' }) {
+// 老本(跟礼物历史脱钩，就是个固定数字)。图本身是精致的珠宝插画，不在上面
+// 叠字(会把这张图的风格弄乱)，改成跟漂浮物一样点一下弹窗看金额。
+function TreasureChest({
+  who,
+  side,
+  onOpen,
+}: {
+  who: 'user' | 'ai';
+  side: 'left' | 'right';
+  onOpen: (who: 'user' | 'ai') => void;
+}) {
   const src =
     side === 'left'
       ? `${import.meta.env.BASE_URL}assets/icons/chest_tangtang.webp`
       : `${import.meta.env.BASE_URL}assets/icons/chest_yuyu.webp`;
+  const label = who === 'user' ? '棠棠' : '予予';
   return (
-    <div className="treasure-chest" role="img" aria-label={`${who}本金 $${PRINCIPAL_AMOUNT}`}>
+    <button type="button" className="treasure-chest" onClick={() => onOpen(who)} aria-label={`${label}的本金`}>
       <img className="treasure-chest__art" src={src} alt="" />
-      <span className="treasure-chest__amount">${PRINCIPAL_AMOUNT}</span>
-    </div>
+    </button>
   );
 }
 
@@ -169,6 +177,7 @@ function FloatingVehicle({
 export function SweetiePocketPage() {
   const [packets] = useState<RedPacket[]>(loadPackets);
   const [selected, setSelected] = useState<RedPacket | null>(null);
+  const [selectedChest, setSelectedChest] = useState<'user' | 'ai' | null>(null);
   const userBalance = useMemo(() => balanceOf('user', packets), [packets]);
   const aiBalance = useMemo(() => balanceOf('ai', packets), [packets]);
 
@@ -214,8 +223,8 @@ export function SweetiePocketPage() {
         )}
 
         <div className="treasure-chest-row">
-          <TreasureChest who="棠棠" side="left" />
-          <TreasureChest who="予予" side="right" />
+          <TreasureChest who="user" side="left" onOpen={setSelectedChest} />
+          <TreasureChest who="ai" side="right" onOpen={setSelectedChest} />
         </div>
       </div>
 
@@ -236,6 +245,23 @@ export function SweetiePocketPage() {
             <span className="sweetie-detail__amount">${selected.amount}</span>
             {selected.note ? <p className="sweetie-detail__note">{selected.note}</p> : null}
             <span className="sweetie-detail__time">{fmtStamp(selected.createdAt)}</span>
+          </div>
+        </div>
+      ) : null}
+
+      {selectedChest ? (
+        <div className="sweetie-detail-backdrop" onClick={() => setSelectedChest(null)}>
+          <div className="sweetie-detail" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="sweetie-detail__x"
+              onClick={() => setSelectedChest(null)}
+              aria-label="关闭"
+            >
+              ×
+            </button>
+            <span className="sweetie-detail__from">{selectedChest === 'user' ? '棠棠的本金' : '予予的本金'}</span>
+            <span className="sweetie-detail__amount">${PRINCIPAL_AMOUNT}</span>
           </div>
         </div>
       ) : null}

@@ -636,6 +636,22 @@ a {
   }
 }
 
+/* 跟 textBreathe 效果一样，只是把 .balance-island__amount 自己需要的
+   translate(-50%,-50%) 居中位移也编进每一帧里，两个 transform 函数合成
+   一份，不会互相覆盖(textBreathe 本身不能直接改，首页标语也在用，没有
+   那个居中需求)。 */
+@keyframes balanceAmountBreathe {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.025);
+    filter: brightness(1.06);
+  }
+}
+
 @keyframes heroGlowPulse {
   0%,
   100% {
@@ -4691,12 +4707,12 @@ a {
   position: absolute;
   top: 23%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  /* 查过 computed style：从这个 span 一路到 html 的父链上 filter/mix-blend-mode
-     都是 none、opacity 都是 1，没有谁在背后混色。这里的渐变是主动要的
-     效果(跟首页 .vow span 中文标语同一套 gradSweep/textBreathe 循环)，
-     不是意外混色——isolation:isolate 单独建层叠上下文，防止以后哪个
-     兄弟节点加了 blend-mode 意外混到这里来。 */
+  /* 注意：不能在这里静态写 transform:translate(-50%,-50%) 再叠
+     textBreathe 的 scale 动画——同一个元素上 transform 只有一份计算值，
+     动画会整个替换掉静态声明(不是叠加)，一旦动画跑起来，居中用的
+     translate(-50%,-50%) 就凭空消失，数额直接顶到锚点右下方，出现过
+     "偏右出框"。改用下面专属的 balanceAmountBreathe，把居中位移写进
+     每一帧动画本身里，跟缩放合成在一起。 */
   isolation: isolate;
   font-family: "TianTianQuanAmount", var(--round);
   font-weight: 700;
@@ -4708,7 +4724,7 @@ a {
   color: transparent;
   -webkit-text-fill-color: transparent;
   background-size: 200% 100%;
-  animation: gradSweep 4.6s ease-in-out infinite alternate, textBreathe 2.6s ease-in-out infinite;
+  animation: gradSweep 4.6s ease-in-out infinite alternate, balanceAmountBreathe 2.6s ease-in-out infinite;
   text-shadow: 0 1px 3px rgba(90, 50, 130, 0.25);
 }
 /* ---------- 浮岛海面：三条车道各自叠行，同一行常并排 2~3 个载具，
@@ -4784,25 +4800,17 @@ a {
 .treasure-chest {
   position: relative;
   width: min(46%, 190px);
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
 }
 .treasure-chest__art {
   display: block;
   width: 100%;
   height: auto;
   filter: drop-shadow(0 8px 16px rgba(30, 15, 60, 0.35));
-}
-.treasure-chest__amount {
-  position: absolute;
-  top: 47%;
-  left: 60%;
-  transform: translate(-50%, -50%);
-  isolation: isolate;
-  font-family: "TianTianQuanAmount", var(--round);
-  font-weight: 700;
-  font-size: 1.2rem;
-  color: #7c3aed;
-  -webkit-text-fill-color: #7c3aed;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.85);
 }
 
 /* ---------- 点开漂浮物看详情 ---------- */
