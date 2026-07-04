@@ -4755,6 +4755,12 @@ a {
   cursor: pointer;
   transform-origin: center;
 }
+/* 特殊日子座驾——情人节心形/生日热气球/跨年月亮，一年就撞上这么几天，
+   图也画得比日常载具精致，放大一圈让它在海面上显眼一点 */
+.floatvic--special {
+  width: 108px;
+  height: 108px;
+}
 .floatvic__inner {
   width: 100%;
   height: 100%;

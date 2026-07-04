@@ -60,13 +60,32 @@ function hashString(s: string): number {
   return h >>> 0; // 转成无符号，避免负数取模的坑
 }
 
-export type VehicleCategory = 'bottle' | 'shell' | 'boat' | 'starfish';
-const VEHICLE_CATEGORIES: VehicleCategory[] = ['bottle', 'shell', 'boat', 'starfish'];
+export type VehicleCategory = 'bottle' | 'shell' | 'boat' | 'starfish' | 'special';
+const VEHICLE_CATEGORIES: Exclude<VehicleCategory, 'special'>[] = ['bottle', 'shell', 'boat', 'starfish'];
+
+// 特殊日子专属座驾——按红包记下的 createdAt 的月/日判断，不看"今天"是几号
+// （同一笔红包哪天打开页面都得是同一个座驾，只有创建时间是固定不变的）。
+// 情人节/白色情人节共用心形，两人生日共用热气球，跨年夜/元旦共用月亮摇篮。
+const SPECIAL_DATE_VEHICLES: Record<string, string> = {
+  '02-14': 'special_heart.webp', // 情人节
+  '03-14': 'special_heart.webp', // 白色情人节
+  '05-20': 'special_balloon.webp', // 棠棠生日
+  '12-26': 'special_balloon.webp', // 予予生日
+  '12-31': 'special_moon.webp', // 跨年夜
+  '01-01': 'special_moon.webp', // 元旦
+};
+
+function monthDayKey(createdAt: number): string {
+  const d = new Date(createdAt);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${mm}-${dd}`;
+}
 
 // 贝壳/纸船/海星：类别内部具体挑哪个也按 hash 定，不掺 Math.random()。
 // 瓶子例外——粉/紫两款分别是棠棠/予予专属（她说的"紫色是予予的，这粉色是我的"），
 // 挑到 bottle 类别时直接按发送方定色，不再二次随机。
-const VEHICLE_POOLS: Record<Exclude<VehicleCategory, 'bottle'>, string[]> = {
+const VEHICLE_POOLS: Record<Exclude<VehicleCategory, 'bottle' | 'special'>, string[]> = {
   shell: [
     'shell_scallop_1.png',
     'shell_scallop_2.png',
@@ -104,12 +123,23 @@ export type Vehicle = { category: VehicleCategory; src: string };
 // 类别内部的具体图案也各自轮流过一遍图池再回头，最大程度避免相邻重复。
 // 只要传入的列表顺序不变(localStorage 数组本来就稳定累加)，同一笔红包
 // 算出来的还是同一个载具，符合"同一条记录不能一天一个样"的要求。
-export function assignVehicles(list: Pick<RedPacket, 'id' | 'from'>[]): Map<string, Vehicle> {
+//
+// 特殊日子命中的记录直接给专属座驾，不占用上面的轮转名额(单独判断、
+// 不推进 normalIndex)，免得偶尔冒出的节日红包把后面正常记录的轮转顺序
+// 往后挤一位。
+export function assignVehicles(list: Pick<RedPacket, 'id' | 'from' | 'createdAt'>[]): Map<string, Vehicle> {
   const base = import.meta.env.BASE_URL;
-  const counters: Record<Exclude<VehicleCategory, 'bottle'>, number> = { shell: 0, boat: 0, starfish: 0 };
+  const counters: Record<Exclude<VehicleCategory, 'bottle' | 'special'>, number> = { shell: 0, boat: 0, starfish: 0 };
   const map = new Map<string, Vehicle>();
-  list.forEach((packet, i) => {
-    const category = VEHICLE_CATEGORIES[i % VEHICLE_CATEGORIES.length];
+  let normalIndex = 0;
+  list.forEach((packet) => {
+    const specialFile = SPECIAL_DATE_VEHICLES[monthDayKey(packet.createdAt)];
+    if (specialFile) {
+      map.set(packet.id, { category: 'special', src: `${base}assets/icons/${specialFile}` });
+      return;
+    }
+    const category = VEHICLE_CATEGORIES[normalIndex % VEHICLE_CATEGORIES.length];
+    normalIndex += 1;
     if (category === 'bottle') {
       const file = packet.from === 'user' ? 'bottle_tangtang.png' : 'bottle_yuyu.webp';
       map.set(packet.id, { category, src: `${base}assets/icons/${file}` });
