@@ -41,7 +41,7 @@ type Turn = {
   transcribing?: boolean;
   meme?: string; // 表情包消息才有：脑洞贴纸盒里的 meme id，渲染时按需取 blob
   photo?: string; // 随手发的照片才有：photos IndexedDB 里的 id，渲染时按需取 blob
-  redPacket?: { amount: number; note: string; from: 'user' | 'ai' }; // 红包消息才有：甜甜口袋账本已经记过这一笔了
+  redPacket?: { amount: number; note: string; from: 'user' | 'ai' }; // 红包消息才有：落予棠账本已经记过这一笔了
   redPacketOpened?: boolean; // 不管自己发的还是收到的都要点开才展开(才有拆红包动效)，默认 false
   memo?: string; // 这条 AI 回复顺手存进记忆罐头的内容（显示"记住了"小条）
   errorDetail?: string; // status 为 error 时的原始报错文本；渲染成系统提示条，点"详情"才展开看这个
@@ -390,7 +390,7 @@ function MemePicker({ onPick, onClose }: { onPick: (id: string) => void; onClose
   );
 }
 
-// 「＋ → 红包」弹出的发红包表单：填金额 + 写句话(像微信一样)，发出去存进甜甜口袋。
+// 「＋ → 红包」弹出的发红包表单：填金额 + 写句话(像微信一样)，发出去存进落予棠。
 function RedPacketComposer({
   onSend,
   onClose,
@@ -522,7 +522,7 @@ function extractMemos(content: string) {
   return { text, memos };
 }
 
-// AI 发红包用的标记：[红包:金额|留言]（留言可省）,存进甜甜口袋(予予 → 棠棠这一方)
+// AI 发红包用的标记：[红包:金额|留言]（留言可省）,存进落予棠(予予 → 棠棠这一方)
 const RED_PACKET_TAG = /[[【]\s*红包\s*[:：]\s*([^\]】]+?)\s*[\]】]/g;
 function extractRedPackets(content: string) {
   const packets: { amount: number; note: string }[] = [];
@@ -849,7 +849,7 @@ function ChatRoom({
     return () => window.clearTimeout(t);
   }, [notice]);
 
-  // 「+」菜单：表情包走脑洞贴纸盒；图片走系统选图+自动压缩；红包填金额+留言发进甜甜口袋
+  // 「+」菜单：表情包走脑洞贴纸盒；图片走系统选图+自动压缩；红包填金额+留言发进落予棠
   const pickMore = (key: string, label: string) => {
     setMoreOpen(false);
     if (key === 'meme') {
@@ -888,7 +888,7 @@ function ChatRoom({
     await runAssistant(history);
   };
 
-  // 填好金额和留言，发一个红包给予予：先记进甜甜口袋账本(棠棠 → 予予)，再作为一条用户消息发出去。
+  // 填好金额和留言，发一个红包给予予：先记进落予棠账本(棠棠 → 予予)，再作为一条用户消息发出去。
   const sendRedPacket = async (amount: number, note: string) => {
     setRedPacketOpen(false);
     if (sending) return;
@@ -987,7 +987,7 @@ function ChatRoom({
       '系统会自动存进记忆罐头。**只记真正重要的事——日常寒暄、心情起伏、随口一句都别记**,记多了反而吵。已经记过的别重复记;标记会自动隐藏,不影响你正常说话。';
     sys +=
       '\n\n【你也可以发红包】跟她表现好、说了什么让你感动/开心的话、或者单纯想宠她时,' +
-      '可以在回复里单独写一行 [红包:金额|留言](例:[红包:20|今天很乖值得奖励]),系统会把这个红包发给她,存进甜甜口袋。' +
+      '可以在回复里单独写一行 [红包:金额|留言](例:[红包:20|今天很乖值得奖励]),系统会把这个红包发给她,存进落予棠。' +
       '金额随手写个 1~99 的数就行(这是虚拟的,不是真钱);留言要真心、贴合这次聊天的内容,别复制粘贴老一套。' +
       '**别发太勤**,一次聊天顶多一个,大部分时候光聊天就够了,发红包是偶尔的小惊喜,不是任务。';
 
@@ -1139,7 +1139,7 @@ function ChatRoom({
                 setMemories(loadMemories());
               });
             }
-            // 一次聊天最多算一个红包(多写也只认第一个),记进甜甜口袋账本(予予 → 棠棠)
+            // 一次聊天最多算一个红包(多写也只认第一个),记进落予棠账本(予予 → 棠棠)
             const packet = packets[0];
             if (packet) queueMicrotask(() => addPacket('ai', packet.amount, packet.note));
             const memo = memos.length ? memos.map((m) => `[${m.category}] ${m.text}`).join('\n') : undefined;

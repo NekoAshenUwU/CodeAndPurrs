@@ -1,4 +1,4 @@
-// 甜甜口袋 —— 红包开启音效。默认用 Web Audio API 合成"硬币叮当"声，不依赖素材文件。
+// 落予棠 —— 红包开启音效。默认用 Web Audio API 合成"硬币叮当"声，不依赖素材文件。
 // 以后想换成真实音效素材：保留 SOUND_ENABLED 这个总开关，playHongbaoChime() 内部
 // 改成 new Audio('/assets/sound/xxx.mp3').play() 即可，调用方（RedPacketBubble）不用动。
 const SOUND_ENABLED = true;

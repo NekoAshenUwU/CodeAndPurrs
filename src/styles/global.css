@@ -85,13 +85,13 @@
   font-display: swap;
 }
 @font-face {
-  font-family: "RiFuYiRi"; /* Aa日富一日可爱圆 全字库 · 甜甜口袋详情弹窗正文(留言是自由输入，留全字库) */
+  font-family: "RiFuYiRi"; /* Aa日富一日可爱圆 全字库 · 落予棠详情弹窗正文(留言是自由输入，留全字库) */
   src: url("/fonts/rifuyiri-full.woff2") format("woff2");
   font-weight: 400;
   font-display: swap;
 }
 @font-face {
-  font-family: "TianTianQuanAmount"; /* 字魂甜甜圈 子集(仅 $0-9.) · 甜甜口袋余额数额专用 */
+  font-family: "TianTianQuanAmount"; /* 字魂甜甜圈 子集(仅 $0-9.) · 落予棠余额数额专用 */
   src: url("/fonts/tiantianquan-amount.woff2") format("woff2");
   font-weight: 400;
   font-display: swap;
@@ -4670,7 +4670,7 @@ a {
   }
 }
 
-/* 甜甜口袋页面 */
+/* 落予棠页面 */
 .sweetie-page {
   position: relative;
   display: flex;

@@ -246,7 +246,7 @@ function FloatingVehicle({
   );
 }
 
-// 甜甜口袋 —— 棠棠和予予各自的虚拟红包户口(互不混,各自只累积对方发来的)。
+// 落予棠 —— 棠棠和予予各自的虚拟红包户口(互不混,各自只累积对方发来的)。
 // 发红包在呼噜频道「＋ → 红包」里(像微信一样能写留言)，这里看成"浮岛"：
 // 每笔红包记录随机领一个漂流瓶/贝壳/纸船/海星，越往下越早、海越深，
 // 点开看日期金额寄语。
@@ -268,8 +268,8 @@ export function SweetiePocketPage() {
           ‹
         </Link>
         <div className="chat-head__title">
-          <span className="chat-head__name">甜甜口袋</span>
-          <span className="chat-head__sub">Sweetie Pocket · 虚拟红包</span>
+          <span className="chat-head__name">落予棠</span>
+          <span className="chat-head__sub">Every Drop For You · 虚拟红包</span>
         </div>
       </header>
 
