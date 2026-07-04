@@ -4693,16 +4693,23 @@ a {
   left: 50%;
   transform: translate(-50%, -50%);
   /* 查过 computed style：从这个 span 一路到 html 的父链上 filter/mix-blend-mode
-     都是 none、opacity 都是 1，没有谁在背后混色——之前看着"花"是照片质感的
-     云背景 + 手机截图压缩造成的观感，不是 CSS 混色。isolation:isolate 单独
-     建一个层叠上下文，防止以后哪个兄弟节点加了 blend-mode 意外混到这里来。 */
+     都是 none、opacity 都是 1，没有谁在背后混色。这里的渐变是主动要的
+     效果(跟首页 .vow span 中文标语同一套 gradSweep/textBreathe 循环)，
+     不是意外混色——isolation:isolate 单独建层叠上下文，防止以后哪个
+     兄弟节点加了 blend-mode 意外混到这里来。 */
   isolation: isolate;
   font-family: "TianTianQuanAmount", var(--round);
   font-weight: 700;
   font-size: 1.45rem;
-  color: #7c3aed;
-  -webkit-text-fill-color: #7c3aed;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+  /* 深紫→浅紫→渐白→淡粉，循环流动 */
+  background-image: linear-gradient(95deg, #4c1d95 0%, #a78bfa 35%, #f5f3ff 65%, #f5b8dc 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% 100%;
+  animation: gradSweep 4.6s ease-in-out infinite alternate, textBreathe 2.6s ease-in-out infinite;
+  text-shadow: 0 1px 3px rgba(90, 50, 130, 0.25);
 }
 /* ---------- 浮岛海面：三条车道各自叠行，同一行常并排 2~3 个载具，
    纵向行号=时间(越下越早)，深度感靠外层静态 scale+saturate ---------- */
