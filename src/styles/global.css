@@ -66,6 +66,12 @@
   font-display: swap;
 }
 @font-face {
+  font-family: "RoughOwl"; /* Rough Owl · Shaped Fonts · 咕噜圆桌"Join"标签 */
+  src: url("/fonts/rough-owl.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
   font-family: "GongZhuFull"; /* 创小公主体 全字库(1.85MB) · 思考链；只在用到时浏览器才会拉 */
   src: url("/fonts/gongzhu-full.woff2") format("woff2");
   font-weight: 400;
@@ -5053,10 +5059,23 @@ a {
 .pt-roster::-webkit-scrollbar { display: none; }
 .pt-roster__label {
   color: #8e6472;
-  font-family: var(--round);
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
+  font-family: "RoughOwl", var(--display);
+  font-size: 1.05rem;
+  letter-spacing: 0.03em;
   flex-shrink: 0;
+}
+
+/* 咕噜圆桌空态提示走"顺风顺水"(项目里已注册的 ShunFengFull) */
+.pt-empty p,
+.pt-empty span {
+  font-family: "ShunFengFull", var(--chat);
+}
+.pt-empty p {
+  font-size: 1.15rem;
+}
+.pt-empty span {
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 /* 马卡龙药丸胶囊:圆头、糖霜阴影、内白高光,英文字用 Quimil 那种糖果衬线 */
 .pt-chip {

@@ -261,7 +261,7 @@ export function PurrTablePage() {
       </header>
 
       <div className="pt-roster" role="group" aria-label="在场的 CC">
-        <span className="pt-roster__label">在场</span>
+        <span className="pt-roster__label">Join</span>
         {TABLE_MEMBERS.map((m) => {
           const on = selectedIds.includes(m.id);
           return (
@@ -281,7 +281,7 @@ export function PurrTablePage() {
 
       <div className="chat-scroll pt-scroll" ref={scrollRef}>
         {turns.length === 0 ? (
-          <div className="chat-empty">
+          <div className="chat-empty pt-empty">
             <div className="chat-empty__paw">🐆</div>
             <p>说一句开个头吧～</p>
             <span>他们会接龙 4 回合,你想插嘴随时打字。思考走 low,专门省订阅。</span>
