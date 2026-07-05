@@ -1904,11 +1904,14 @@ a {
   color: #a78bd8;
 }
 
-/* Mind Theater 品牌字:英文花体,顶替之前的云朵/旋涡 emoji */
+/* Mind Theater 品牌字: Quimil 衬线加粗(Quimil Demo 只有 Regular,靠
+   浏览器合成 font-weight:800 假粗,搭配透明填色+紫渐变 background-clip 才不会
+   跟 stroke 打架——之前咕噜圆桌药丸用 text-stroke 是纯色,这里是渐变文本填色,
+   text-stroke 会以 currentColor 描出来跟渐变冲突,所以不用 stroke) */
 .think-card__brand {
-  font-family: "Tangerine", "Marcellus", serif;
-  font-size: 1.18rem;
-  font-weight: 700;
+  font-family: "Quimil", "Marcellus", serif;
+  font-size: 1.05rem;
+  font-weight: 800;
   line-height: 1;
   color: #8e6fc9;
   letter-spacing: 0.02em;
