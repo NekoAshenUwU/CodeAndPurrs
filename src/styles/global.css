@@ -54,8 +54,14 @@
   font-display: swap;
 }
 @font-face {
-  font-family: "HuaXianZi"; /* 汉仪花仙子 子集(GB2312) · 各房间顶栏 */
+  font-family: "HuaXianZi"; /* 汉仪花仙子 子集(约 1200 个 app 用字, 538KB) · 各房间顶栏 */
   src: url("/fonts/huaxianzi.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Brogetta"; /* Brogetta Regular · 咕噜圆桌马卡龙药丸英文字 */
+  src: url("/fonts/brogetta.woff2") format("woff2");
   font-weight: 400;
   font-display: swap;
 }
@@ -3205,7 +3211,8 @@ a {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
+  /* 顶栏 fixed 定位,列表得留出 header 高度 + 安全区,不然第一个卡会被顶栏盖住 */
+  padding: calc(60px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
 }
 
 /* 顶栏「开新窗口」玻璃按键（沿用玻璃珠基座，略小以适配顶栏） */
@@ -5051,25 +5058,43 @@ a {
   letter-spacing: 0.06em;
   flex-shrink: 0;
 }
+/* 马卡龙药丸胶囊:圆头、糖霜阴影、内白高光,英文字用 Brogetta 那手秀气的字型 */
 .pt-chip {
-  padding: 4px 12px;
+  min-width: 54px;
+  padding: 7px 16px;
   border-radius: 999px;
   border: 1.5px solid rgba(255, 255, 255, 0.85);
   background: rgba(255, 255, 255, 0.72);
   color: #8e6472;
-  font-family: var(--round);
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-family: "Brogetta", var(--display);
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
   cursor: pointer;
   flex-shrink: 0;
-  transition: transform 0.14s ease, opacity 0.14s ease;
+  transition: transform 0.14s ease, opacity 0.14s ease, box-shadow 0.18s ease;
+  box-shadow: inset 0 -2px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(155, 123, 200, 0.08);
 }
 .pt-chip.is-on {
   color: #4a2b6f;
-  box-shadow: 0 2px 8px rgba(155, 123, 200, 0.28);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.9),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.05),
+    0 4px 10px rgba(155, 123, 200, 0.28);
 }
 .pt-chip:disabled { opacity: 0.5; cursor: default; }
-.pt-chip:active { transform: scale(0.96); }
+.pt-chip:active { transform: scale(0.94); }
+
+/* CC 气泡头像:小圆糖果,short 徽章走 Brogetta */
+.pt-cc-avatar {
+  color: #4a2b6f;
+  font-family: "Brogetta", var(--display);
+  font-size: 0.86rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  display: grid;
+  place-items: center;
+}
 
 /* 消息区顶部要给 header + roster 都留出空间 */
 .pt-scroll {

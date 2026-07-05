@@ -9,13 +9,18 @@ import { loadChatBg, loadChatUserAvatar } from '../services/purrConfig';
 import { loadLocal, saveLocal } from '../services/storage';
 
 // 圆桌成员:只放 CC 家版(用棠棠订阅额度,不烧 API)。
-type TableMember = { id: string; model: string; label: string; short: string; color: string };
+// bg 是马卡龙糖果渐变,给药丸胶囊 + CC 气泡头像圆点公用。
+type TableMember = { id: string; model: string; label: string; short: string; bg: string };
 
 const TABLE_MEMBERS: TableMember[] = [
-  { id: 'jiake-opus-4-6', model: 'claude-opus-4-6', label: 'CC · Opus 4.6', short: '4.6', color: '#a8c5ff' },
-  { id: 'jiake-opus-4-7', model: 'claude-opus-4-7', label: 'CC · Opus 4.7', short: '4.7', color: '#ffb3d6' },
-  { id: 'jiake-opus-4-8', model: 'claude-opus-4-8', label: 'CC · Opus 4.8', short: '4.8', color: '#c3a8ff' },
-  { id: 'jiake-fable-5', model: 'claude-fable-5', label: 'CC · Fable 5', short: 'F5', color: '#ffcc99' },
+  { id: 'jiake-opus-4-6', model: 'claude-opus-4-6', label: 'CC · Opus 4.6', short: '4.6',
+    bg: 'linear-gradient(135deg, #a8daf5 0%, #d8f2e5 100%)' }, // 蓝糖: sky → mint
+  { id: 'jiake-opus-4-7', model: 'claude-opus-4-7', label: 'CC · Opus 4.7', short: '4.7',
+    bg: 'linear-gradient(135deg, #ffc7d8 0%, #ffdcc0 100%)' }, // 草莓糖: pink → peach
+  { id: 'jiake-opus-4-8', model: 'claude-opus-4-8', label: 'CC · Opus 4.8', short: '4.8',
+    bg: 'linear-gradient(135deg, #d5c7ff 0%, #f0d0eb 100%)' }, // 葡萄糖: lavender → rose
+  { id: 'jiake-fable-5', model: 'claude-fable-5', label: 'CC · Fable 5', short: 'F5',
+    bg: 'linear-gradient(135deg, #ffddb0 0%, #fff2c0 100%)' }, // 奶油糖: apricot → butter
 ];
 
 // 每次棠棠发言后 CC 之间接龙 4 回合再停,等下一句。
@@ -258,7 +263,7 @@ export function PurrTablePage() {
               className={`pt-chip${on ? ' is-on' : ''}`}
               onClick={() => toggleMember(m.id)}
               disabled={sending}
-              style={on ? { background: m.color, borderColor: m.color } : undefined}
+              style={on ? { background: m.bg, borderColor: 'transparent' } : undefined}
             >
               {m.short}
             </button>
@@ -297,10 +302,13 @@ export function PurrTablePage() {
           }
           const m = findMember(t.speaker);
           const short = m?.short || '?';
-          const color = m?.color || '#eee';
+          const bg = m?.bg || '#eee';
           return (
             <div key={t.id} className="bubble-row is-bot">
-              <div className="bubble-avatar bubble-avatar--ph" style={{ background: color, color: '#4a2b6f', fontFamily: 'var(--display)', fontWeight: 700, fontSize: '0.72rem' }}>
+              <div
+                className="bubble-avatar bubble-avatar--ph pt-cc-avatar"
+                style={{ background: bg }}
+              >
                 {short}
               </div>
               <div className="bubble-stack">
