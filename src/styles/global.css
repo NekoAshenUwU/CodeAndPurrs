@@ -4826,26 +4826,41 @@ a {
   position: relative;
 }
 
-/* 海面动态海浪叠加层: 不改原背景图, 两层 SVG 波形错峰漂 + 一道月光光斑
-   波浪 path 首尾 y 相同(60/70) + 宽 200% 平移 -50% → 无缝循环
-   transform/opacity 动画 + pointer-events:none, 手机性能友好 */
+/* 海面动态海浪叠加层: 描边浪线, 不糊雾;三条错峰漂 + 月光光斑
+   波浪 path 首尾 y 相同(60/70/50) + 宽 200% 平移 -50% → 无缝循环
+   transform/opacity 动画 + pointer-events:none, 手机性能友好
+   跟漂流物同一个世界:从海平线(容器顶)一路铺到海底,浪线穿过整块海面 */
 .sea-waves {
   position: absolute;
   left: 0; right: 0;
+  top: 0;
   bottom: 0;
-  height: 38%;
   pointer-events: none;
   overflow: hidden;
   z-index: 0;
 }
 .wave {
   position: absolute;
-  bottom: 0;
+  /* 三层浪各占一个 y 段, 分层错峰:
+     wave-1 海平面附近(顶部), wave-2 中层, wave-3 更深处
+     每层高度只需容纳 SVG viewBox 就行,不用满高 */
   width: 200%;
-  height: 100%;
+  height: 120px;
 }
-.wave-1 { animation: waveDrift 12s linear infinite; }
-.wave-2 { animation: waveDriftBack 20s linear infinite; opacity: 0.8; }
+.wave-1 {
+  top: 6%;
+  animation: waveDrift 12s linear infinite;
+}
+.wave-2 {
+  top: 42%;
+  animation: waveDriftBack 20s linear infinite;
+  opacity: 0.85;
+}
+.wave-3 {
+  top: 72%;
+  animation: waveDrift 32s linear infinite;
+  opacity: 0.7;
+}
 
 @keyframes waveDrift {
   from { transform: translateX(0); }
@@ -4858,8 +4873,8 @@ a {
 
 .sea-glint {
   position: absolute;
-  top: 10%; left: -30%;
-  width: 60%; height: 18%;
+  top: 8%; left: -30%;
+  width: 60%; height: 14%;
   background: linear-gradient(90deg, transparent, rgba(255, 240, 235, 0.22), transparent);
   filter: blur(6px);
   animation: glintMove 16s ease-in-out infinite;
@@ -4870,7 +4885,7 @@ a {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wave-1, .wave-2, .sea-glint { animation: none; }
+  .wave-1, .wave-2, .wave-3, .sea-glint { animation: none; }
 }
 /* 之前这里有一层 sweetie-sea::after 半透明深紫渐变遮罩("越深越暗"营造海底
    感)——老婆说"夜晚版磨砂盖住载具看不清"，去掉。载具本身的"越深越小越
