@@ -18,7 +18,7 @@ export const MODELS: ModelInfo[] = [
   { id: 'deepseek', brand: 'DeepSeek', label: 'DeepSeek', provider: 'deepseek' },
   { id: 'gemini', brand: 'Gemini', label: 'Gemini', provider: 'gemini' },
   // chatgpt-4o-latest = ChatGPT 里那个"温暖版"4o，比 API 默认的 gpt-4o 像活人得多，看图也行
-  { id: 'chatgpt-4o-latest', brand: 'GPT', label: 'GPT-4o 最新版', provider: 'openai', model: 'chatgpt-4o-latest' },
+  { id: 'chatgpt-4o-latest', brand: 'GPT', label: 'GPT-4o latest', provider: 'openai', model: 'chatgpt-4o-latest' },
   // 家版 Codex：走 VPS 上登录好的 Codex CLI（ChatGPT Plus/Pro 订阅额度，不走 OpenAI API key）。
   { id: 'codex-5-5t', brand: 'Codex', label: 'Codex 5.5T', provider: 'codexcli', model: 'gpt-5.5' },
   { id: 'gpt-4o', brand: 'GPT', label: 'GPT-4o', provider: 'openai', model: 'gpt-4o' },
