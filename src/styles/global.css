@@ -5022,251 +5022,123 @@ a {
   transform: scale(0.98);
 }
 
-/* ---------- 咕噜圆桌 · Purr Table ---------- */
-.purr-table-page {
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(180deg, #f7ecff 0%, #ffe6f2 100%);
-  color: #4d3a5f;
-}
-.pt-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.62);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(180, 140, 220, 0.25);
-}
-.pt-head__back {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(180, 140, 220, 0.35);
-  color: #7a5db0;
-  font-size: 1.4rem;
-  line-height: 1;
-  display: grid;
-  place-items: center;
-  text-decoration: none;
-}
-.pt-head__title {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-}
-.pt-head__name {
-  font-family: var(--cute, sans-serif);
-  font-size: 1.15rem;
-  font-weight: 600;
-  color: #6a3f8a;
-}
-.pt-head__sub {
-  font-size: 0.7rem;
-  color: #a488c4;
-  letter-spacing: 0.06em;
-}
-.pt-head__clear {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(180, 140, 220, 0.3);
-  font-size: 1rem;
-  cursor: pointer;
-}
-.pt-head__clear:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
 
+/* ---------- 咕噜圆桌 · Purr Table (沿用呼噜频道 chat-page 视觉,只加少量补丁) ---------- */
+
+/* 头顶下面钉一条"在场"胶囊行,让棠棠随时勾选/去掉在场的 CC */
 .pt-roster {
+  position: fixed;
+  top: calc(50px + env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  z-index: 25;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   align-items: center;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.4);
-  border-bottom: 1px solid rgba(180, 140, 220, 0.18);
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.42);
+  -webkit-backdrop-filter: blur(12px) saturate(1.15);
+  backdrop-filter: blur(12px) saturate(1.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.42);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.pt-roster::-webkit-scrollbar { display: none; }
 .pt-roster__label {
-  font-size: 0.78rem;
-  color: #7a5db0;
-  margin-right: 2px;
+  color: #8e6472;
+  font-family: var(--round);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
 }
 .pt-chip {
-  padding: 5px 12px;
+  padding: 4px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1.5px solid rgba(180, 140, 220, 0.35);
-  color: #7a5db0;
-  font-size: 0.82rem;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.72);
+  color: #8e6472;
+  font-family: var(--round);
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.12s, opacity 0.12s;
+  flex-shrink: 0;
+  transition: transform 0.14s ease, opacity 0.14s ease;
 }
 .pt-chip.is-on {
   color: #4a2b6f;
-  box-shadow: 0 2px 6px rgba(155, 123, 200, 0.25);
+  box-shadow: 0 2px 8px rgba(155, 123, 200, 0.28);
 }
-.pt-chip:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.pt-chip:disabled { opacity: 0.5; cursor: default; }
 .pt-chip:active { transform: scale(0.96); }
 
+/* 消息区顶部要给 header + roster 都留出空间 */
 .pt-scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 14px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.pt-empty {
-  margin: auto;
-  text-align: center;
-  color: #a488c4;
-  padding: 40px 20px;
-}
-.pt-empty__emoji {
-  font-size: 2.4rem;
-  margin-bottom: 10px;
-}
-.pt-empty p {
-  font-family: var(--cute, sans-serif);
-  font-size: 1rem;
-  margin: 0 0 6px;
-  color: #7a5db0;
-}
-.pt-empty span {
-  font-size: 0.78rem;
-  color: #b7a1cf;
+  padding-top: calc(100px + env(safe-area-inset-top));
 }
 
-.pt-row {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  max-width: 82%;
-}
-.pt-row.is-user {
-  align-self: flex-end;
-  align-items: flex-end;
-}
-.pt-row.is-cc {
-  align-self: flex-start;
-  align-items: flex-start;
-}
-.pt-badge {
+/* 流式打字光标 */
+.pt-cursor {
   display: inline-block;
-  padding: 2px 10px;
-  border-radius: 999px;
-  color: #4a2b6f;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  margin-left: 4px;
-}
-.pt-bubble {
-  padding: 9px 13px;
-  border-radius: 16px;
-  font-size: 0.95rem;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  box-shadow: 0 1px 3px rgba(155, 123, 200, 0.15);
-}
-.pt-bubble--user {
-  background: linear-gradient(135deg, #ffb3d6 0%, #d9b3ff 100%);
-  color: #fff;
-  border-bottom-right-radius: 5px;
-}
-.pt-bubble--cc {
-  background: rgba(255, 255, 255, 0.92);
-  color: #3d2c56;
-  border-bottom-left-radius: 5px;
-}
-.pt-bubble--cc.is-streaming::after {
-  content: '▍';
-  color: #b493d6;
-  animation: pt-blink 1s infinite;
   margin-left: 2px;
-}
-.pt-bubble--cc.is-error {
-  background: rgba(255, 220, 220, 0.9);
-  color: #9c3a5b;
+  color: rgba(155, 123, 200, 0.75);
+  animation: pt-blink 1s infinite;
 }
 @keyframes pt-blink {
   50% { opacity: 0; }
 }
-.pt-foot {
-  font-size: 0.65rem;
-  color: #b7a1cf;
-  padding: 0 6px;
-}
-.pt-error {
-  align-self: center;
-  padding: 6px 12px;
-  border-radius: 10px;
-  background: rgba(255, 220, 220, 0.8);
-  color: #9c3a5b;
-  font-size: 0.78rem;
+
+/* CC 掉线的气泡淡红提示 */
+.pt-bubble--error {
+  background: linear-gradient(to top left, rgba(255, 220, 220, 0.6), rgba(255, 180, 200, 0.55)) !important;
+  color: #9c3a5b !important;
 }
 
-.pt-composer {
-  display: flex;
-  gap: 8px;
-  padding: 10px 12px 14px;
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(180, 140, 220, 0.25);
-}
-.pt-input {
-  flex: 1;
-  padding: 10px 14px;
+/* 错误横幅 */
+.pt-error {
+  align-self: center;
+  margin: 8px auto;
+  padding: 6px 14px;
   border-radius: 999px;
-  border: 1.5px solid rgba(180, 140, 220, 0.35);
-  background: #fff;
-  font-size: 0.95rem;
-  outline: none;
-  color: #3d2c56;
-}
-.pt-input:focus {
-  border-color: #b493d6;
-}
-.pt-input:disabled {
-  background: rgba(240, 235, 250, 0.6);
-}
-.pt-btn {
-  padding: 0 14px;
-  border-radius: 999px;
-  border: none;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.pt-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.pt-btn:active { transform: scale(0.97); }
-.pt-btn--send {
-  background: linear-gradient(135deg, #b493d6 0%, #ffb3d6 100%);
-  color: #fff;
-  min-width: 50px;
-}
-.pt-btn--more {
-  background: rgba(255, 255, 255, 0.85);
-  color: #7a5db0;
-  border: 1px solid rgba(180, 140, 220, 0.35);
-}
-.pt-btn--stop {
-  background: rgba(255, 200, 200, 0.9);
+  background: rgba(255, 220, 220, 0.85);
   color: #9c3a5b;
+  font-size: 0.78rem;
+  font-family: var(--round);
+}
+
+/* ---------- 咕噜圆桌钉钉卡:窗口列表最顶的那条 ---------- */
+.win-card--pinned {
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(226, 209, 255, 0.72), rgba(255, 220, 240, 0.72));
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 10px 26px rgba(155, 123, 200, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.win-card--pinned .win-card__open {
+  grid-template-columns: 56px 1fr auto;
+  grid-template-areas:
+    "avatar name when"
+    "avatar preview preview";
+  gap: 2px 12px;
+  align-items: center;
+}
+.win-card__avatar {
+  grid-area: avatar;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(155, 123, 200, 0.35));
+  align-self: center;
+}
+.win-card--pinned .win-card__name {
+  font-family: "HuaXianZi", var(--cute);
+  font-size: 1.15rem;
+  color: #6a3f8a;
+}
+.win-card--pinned .win-card__preview {
+  color: #7a5db0;
+}
+.win-card--pinned .win-card__when {
+  color: #a488c4;
+  letter-spacing: 0.06em;
+  font-family: var(--display);
 }

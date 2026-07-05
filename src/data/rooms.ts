@@ -84,16 +84,6 @@ export const rooms: Room[] = [
     scene: true,
   },
   {
-    id: 'purr-table',
-    name: '咕噜圆桌',
-    englishName: 'Purr Table',
-    emoji: '🪐',
-    status: 'ready',
-    summary: '一群 CC 家版围坐八卦,你随时插嘴,他们接你的话继续咕噜。',
-    actionLabel: '入圆桌',
-    scene: true,
-  },
-  {
     id: 'little-star-notes',
     name: '日历上の星星',
     englishName: 'Little Star Notes',

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { streamChat, type ChatMessage } from '../services/chat';
 import { getModel, MODEL_GROUPS } from '../data/models';
 import { buildSystemPrompt, loadDefaultModel, loadChatBg, loadChatAvatar, loadChatUserAvatar } from '../services/purrConfig';
@@ -1643,6 +1643,7 @@ function WindowList({
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  const navigate = useNavigate();
 
   const startEdit = (w: WindowMeta) => {
     setEditingId(w.id);
@@ -1675,6 +1676,25 @@ function WindowList({
       </header>
 
       <div className="win-list">
+        {/* 咕噜圆桌:钉在最顶,不可删。点进去是多 CC 围桌八卦的圆桌页。 */}
+        <div className="win-card win-card--pinned">
+          <button
+            type="button"
+            className="win-card__open"
+            onClick={() => navigate('/purr-table')}
+          >
+            <img
+              className="win-card__avatar"
+              src="/rooms/purr-table.webp"
+              alt=""
+              aria-hidden="true"
+            />
+            <span className="win-card__name">咕噜圆桌</span>
+            <span className="win-card__preview">CC 家版围坐八卦,想插嘴就插</span>
+            <span className="win-card__when">Purr Table</span>
+          </button>
+        </div>
+
         {windows.length === 0 ? (
           <div className="chat-empty">
             <div className="chat-empty__paw">🐾</div>

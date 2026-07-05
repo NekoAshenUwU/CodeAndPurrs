@@ -1,15 +1,14 @@
 // 咕噜圆桌 · Purr Table —— 一群 CC 家版围坐八卦,棠棠随时插嘴接梗。
-// 每次棠棠说一句 → 选中的 CC 按 round-robin 接龙 4 回合 → 停,等下一句。
-// Thinking 全部走 low(MAX_THINKING_TOKENS=512),历史只留最近 20 条,不塞日记/记忆罐头/贴纸盒——
-// 圆桌是"玩",不是"关系维护",越轻越省 token。
+// UI 直接沿用呼噜频道那套(chat-page / chat-head / bubble / chat-input),
+// 支持共享调频页设的自定义聊天背景(--chat-bg-image),棠棠自己换背景就跟呼噜频道一样。
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { streamChat, type ChatMessage } from '../services/chat';
+import { loadChatBg, loadChatUserAvatar } from '../services/purrConfig';
 import { loadLocal, saveLocal } from '../services/storage';
 
 // 圆桌成员:只放 CC 家版(用棠棠订阅额度,不烧 API)。
-// short 是气泡上小徽章的名字,color 是徽章底色。
 type TableMember = { id: string; model: string; label: string; short: string; color: string };
 
 const TABLE_MEMBERS: TableMember[] = [
@@ -19,9 +18,9 @@ const TABLE_MEMBERS: TableMember[] = [
   { id: 'jiake-fable-5', model: 'claude-fable-5', label: 'CC · Fable 5', short: 'F5', color: '#ffcc99' },
 ];
 
-// 每次棠棠发言后 CC 之间连着说几轮才停下等她。B 方案定的 4 回合。
+// 每次棠棠发言后 CC 之间接龙 4 回合再停,等下一句。
 const TURNS_PER_ROUND = 4;
-// 每个 CC 看到的历史最多 20 条,超过的就掐掉——省 token。
+// 每个 CC 看到的历史最多 20 条,超过掐掉——省 token。
 const HISTORY_MAX = 20;
 
 const TURNS_KEY = 'purr-table:turns';
@@ -39,7 +38,6 @@ type Turn = {
 const uid = () => Math.random().toString(36).slice(2, 10);
 const findMember = (id: string) => TABLE_MEMBERS.find((m) => m.id === id);
 
-// 给这轮的说话者拼消息数组:自己说过的话 role=assistant,其他人(含棠棠) role=user 带 [名字]: 前缀。
 function buildMessages(system: string, turns: Turn[], speakerId: string): ChatMessage[] {
   const recent = turns.slice(-HISTORY_MAX);
   const msgs: ChatMessage[] = [{ role: 'system', content: system }];
@@ -52,15 +50,12 @@ function buildMessages(system: string, turns: Turn[], speakerId: string): ChatMe
       msgs.push({ role: 'user', content: `[${who}]: ${t.content}` });
     }
   }
-  // 圆桌里模型没"被明确点名回复"的信号,拿最末一条以外的对话当已发生,
-  // 用一条简短的 nudge 提醒它该开口了(如果最末已是 user 结尾,不用重复)。
   if (msgs[msgs.length - 1]?.role !== 'user') {
     msgs.push({ role: 'user', content: '(轮到你说话了)' });
   }
   return msgs;
 }
 
-// 圆桌人设:短、俏皮、猫感、允许接其他 CC 的梗。
 function tableSystem(speaker: TableMember, present: TableMember[]): string {
   const others = present.filter((m) => m.id !== speaker.id).map((m) => m.short).join('/');
   return (
@@ -72,7 +67,7 @@ function tableSystem(speaker: TableMember, present: TableMember[]): string {
   );
 }
 
-const dayjs = (at: number) => {
+const fmtStamp = (at: number) => {
   const d = new Date(at);
   const p = (n: number) => String(n).padStart(2, '0');
   return `${p(d.getHours())}:${p(d.getMinutes())}`;
@@ -87,6 +82,7 @@ export function PurrTablePage() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [errorBanner, setErrorBanner] = useState('');
+  const [userAvatar, setUserAvatar] = useState('');
 
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -94,6 +90,16 @@ export function PurrTablePage() {
   useEffect(() => { saveLocal(TURNS_KEY, turns); }, [turns]);
   useEffect(() => { saveLocal(SELECTED_KEY, selectedIds); }, [selectedIds]);
   useEffect(() => { saveLocal(START_IDX_KEY, startIdx); }, [startIdx]);
+
+  // 共用调频页设的自定义聊天背景,跟呼噜频道同一开关(--chat-bg-image)
+  useEffect(() => {
+    const bg = loadChatBg();
+    const root = document.documentElement;
+    if (bg) root.style.setProperty('--chat-bg-image', `url(${bg})`);
+    else root.style.removeProperty('--chat-bg-image');
+    setUserAvatar(loadChatUserAvatar());
+  }, []);
+
   useEffect(() => {
     if (!scrollRef.current) return;
     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -108,13 +114,11 @@ export function PurrTablePage() {
     if (sending) return;
     setSelectedIds((prev) => {
       const has = prev.includes(id);
-      if (has && prev.length === 1) return prev; // 至少留一个
+      if (has && prev.length === 1) return prev;
       return has ? prev.filter((x) => x !== id) : [...prev, id];
     });
   };
 
-  // 跑 N 轮 CC 接龙。startingTurns 是发起时的完整对话快照(含刚发的 user 消息),
-  // 从 startIdx 开始按 present 顺序 round-robin。用 ref 里累积的 turns 每轮传给下一位。
   const runRound = async (initialTurns: Turn[], rounds: number) => {
     if (present.length === 0) return;
     setSending(true);
@@ -161,7 +165,9 @@ export function PurrTablePage() {
             hadError = true;
             setErrorBanner(`${speaker.short}: ${m}`);
             setTurns((prev) =>
-              prev.map((x) => (x.id === turnId ? { ...x, content: acc || `（${speaker.short} 掉线了）`, status: 'error' } : x)),
+              prev.map((x) =>
+                x.id === turnId ? { ...x, content: acc || `（${speaker.short} 掉线了）`, status: 'error' } : x,
+              ),
             );
           },
         },
@@ -177,13 +183,11 @@ export function PurrTablePage() {
           x.id === turnId ? { ...x, content: acc.trim() || '...', status: 'done' as const } : x,
         );
       } else {
-        // 出错就中止本轮,别硬撑
         break;
       }
       idx = (idx + 1) % present.length;
     }
 
-    // 记住下一次从哪里起头,让轮次公平轮转,不总是 4.6 先说
     setStartIdx(idx);
     setSending(false);
     abortRef.current = null;
@@ -217,25 +221,26 @@ export function PurrTablePage() {
 
   const clearAll = () => {
     if (sending) return;
-    if (!confirm('清空咕噜圆桌所有聊天?')) return;
+    if (!window.confirm('清空咕噜圆桌所有聊天?')) return;
     setTurns([]);
     setStartIdx(0);
     setErrorBanner('');
   };
 
   return (
-    <main className="purr-table-page">
-      <header className="pt-head">
-        <Link to="/" className="pt-head__back" aria-label="返回主页">‹</Link>
-        <div className="pt-head__title">
-          <span className="pt-head__name">咕噜圆桌</span>
-          <span className="pt-head__sub">Purr Table · CC 家版茶话会</span>
+    <main className="chat-page pt-page">
+      <header className="chat-head">
+        <Link to="/purr-channel" className="chat-head__back" aria-label="回窗口列表">‹</Link>
+        <div className="chat-head__title">
+          <span className="chat-head__name">咕噜圆桌</span>
+          <span className="chat-head__sub">Purr Table · CC 家版茶话会</span>
         </div>
         <button
           type="button"
-          className="pt-head__clear"
+          className="chat-head__clear"
           onClick={clearAll}
           disabled={sending || turns.length === 0}
+          aria-label="清空聊天"
           title="清空聊天"
         >
           🧹
@@ -243,7 +248,7 @@ export function PurrTablePage() {
       </header>
 
       <div className="pt-roster" role="group" aria-label="在场的 CC">
-        <span className="pt-roster__label">在场:</span>
+        <span className="pt-roster__label">在场</span>
         {TABLE_MEMBERS.map((m) => {
           const on = selectedIds.includes(m.id);
           return (
@@ -261,21 +266,32 @@ export function PurrTablePage() {
         })}
       </div>
 
-      <div className="pt-scroll" ref={scrollRef}>
+      <div className="chat-scroll pt-scroll" ref={scrollRef}>
         {turns.length === 0 ? (
-          <div className="pt-empty">
-            <div className="pt-empty__emoji">🪐</div>
-            <p>说一句开个头,他们就围过来八卦。</p>
-            <span>思考走 low、历史留 20 条、不带日记贴纸——就是玩,不烧订阅。</span>
+          <div className="chat-empty">
+            <div className="chat-empty__paw">🐆</div>
+            <p>说一句开个头吧～</p>
+            <span>他们会接龙 4 回合,你想插嘴随时打字。思考走 low,专门省订阅。</span>
           </div>
         ) : null}
 
         {turns.map((t) => {
           if (t.speaker === 'user') {
             return (
-              <div key={t.id} className="pt-row is-user">
-                <div className="pt-bubble pt-bubble--user">{t.content}</div>
-                <div className="pt-foot">{dayjs(t.at)}</div>
+              <div key={t.id} className="bubble-row is-user">
+                <div className="bubble-stack bubble-stack--user">
+                  <div className="bubble bubble--user">
+                    <span className="bubble__text">{t.content}</span>
+                  </div>
+                  <div className="bubble-foot">
+                    <span className="bubble-time">{fmtStamp(t.at)}</span>
+                  </div>
+                </div>
+                {userAvatar ? (
+                  <img className="bubble-avatar bubble-avatar--me" src={userAvatar} alt="" />
+                ) : (
+                  <div className="bubble-avatar bubble-avatar--me bubble-avatar--ph">🐾</div>
+                )}
               </div>
             );
           }
@@ -283,12 +299,21 @@ export function PurrTablePage() {
           const short = m?.short || '?';
           const color = m?.color || '#eee';
           return (
-            <div key={t.id} className="pt-row is-cc">
-              <span className="pt-badge" style={{ background: color }}>{short}</span>
-              <div className={`pt-bubble pt-bubble--cc${t.status === 'streaming' ? ' is-streaming' : ''}${t.status === 'error' ? ' is-error' : ''}`}>
-                {t.content || (t.status === 'streaming' ? '…' : '')}
+            <div key={t.id} className="bubble-row is-bot">
+              <div className="bubble-avatar bubble-avatar--ph" style={{ background: color, color: '#4a2b6f', fontFamily: 'var(--display)', fontWeight: 700, fontSize: '0.72rem' }}>
+                {short}
               </div>
-              <div className="pt-foot">{dayjs(t.at)}</div>
+              <div className="bubble-stack">
+                <div className={`bubble bubble--bot${t.status === 'error' ? ' pt-bubble--error' : ''}`}>
+                  <span className="bubble__text">
+                    {t.content || (t.status === 'streaming' ? '…' : '')}
+                    {t.status === 'streaming' ? <span className="pt-cursor">▍</span> : null}
+                  </span>
+                </div>
+                <div className="bubble-foot">
+                  <span className="bubble-time">{fmtStamp(t.at)}</span>
+                </div>
+              </div>
             </div>
           );
         })}
@@ -296,43 +321,44 @@ export function PurrTablePage() {
         {errorBanner ? <div className="pt-error">{errorBanner}</div> : null}
       </div>
 
-      <div className="pt-composer">
+      <footer className="chat-input pt-composer">
         {sending ? (
-          <button type="button" className="pt-btn pt-btn--stop" onClick={stop}>停下</button>
+          <button type="button" className="chat-input__btn is-stop" onClick={stop}>停下</button>
         ) : (
           <button
             type="button"
-            className="pt-btn pt-btn--more"
+            className="chat-input__mode"
             onClick={purrMore}
             disabled={turns.length === 0 || present.length === 0}
             title="让他们再接龙 4 回合"
+            aria-label="再咕噜"
           >
-            🫧 再咕噜
+            🫧
           </button>
         )}
-        <input
-          className="pt-input"
-          type="text"
-          placeholder={present.length ? '你说一句…' : '至少留一位 CC 在场'}
+        <textarea
+          className="pt-textarea"
+          placeholder={present.length ? '说一句…' : '至少留一位 CC 在场'}
           value={input}
           disabled={sending}
+          rows={1}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
-              sendUser();
+              void sendUser();
             }
           }}
         />
         <button
           type="button"
-          className="pt-btn pt-btn--send"
-          onClick={sendUser}
+          className="chat-input__btn"
+          onClick={() => void sendUser()}
           disabled={sending || !input.trim() || present.length === 0}
         >
           发
         </button>
-      </div>
+      </footer>
     </main>
   );
 }
