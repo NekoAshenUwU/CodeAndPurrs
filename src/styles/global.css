@@ -4326,7 +4326,8 @@ a {
 .meme-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 18px 16px calc(20px + env(safe-area-inset-bottom));
+  /* chat-head 是 position:fixed, 上面 padding 只有 18px 顶排贴纸被顶栏盖 */
+  padding: calc(66px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
 }
 .meme-grid {
   display: grid;
