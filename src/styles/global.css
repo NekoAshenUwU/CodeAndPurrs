@@ -3687,11 +3687,11 @@ a {
 .model-pop__brand {
   padding-left: 2px;
   color: var(--muted);
-  /* 品牌分组标题 Gemini/GPT/Codex/Claude 也走 Quimil, 跟胶囊统一 */
-  font-family: "Quimil", "Marcellus", var(--round);
-  font-size: 0.85rem;
+  /* 品牌分组标题 Gemini/GPT/Codex/Claude 换日复一日可爱圆(RiFuYiRi 全字库),
+     圆润手写感, 跟秀气衬线 Quimil 的模型药丸拉开层次 */
+  font-family: "RiFuYiRi", var(--round);
+  font-size: 0.9rem;
   font-weight: 700;
-  -webkit-text-stroke: 0.3px currentColor;
   letter-spacing: 0.05em;
 }
 .model-pop__pills {
@@ -5107,9 +5107,15 @@ a {
 /* .model-chip 顶栏型号胶囊要走 Quimil 秀气衬线 + text-stroke 加粗;
    上面的 .chat-head * 通配符跟 .model-chip 同为 (0,1,0) 特异性但排在
    后面, 按 CSS 源序会盖住 .model-chip 的 font-family——这里再补一条
-   .chat-head .model-chip (0,2,0), 用更高特异性锁死 Quimil 不被通配盖 */
-.chat-head .model-chip {
+   .chat-head .model-chip (0,2,0), 用更高特异性锁死 Quimil 不被通配盖。
+   .model-pill (菜单里每个模型药丸) 和 .model-pop__brand (品牌分组标题)
+   都在 .chat-head 里, 同一个坑, 一起加特异性锁死 */
+.chat-head .model-chip,
+.chat-head .model-pill {
   font-family: "Quimil", "Marcellus", var(--round);
+}
+.chat-head .model-pop__brand {
+  font-family: "RiFuYiRi", var(--round);
 }
 /* 记忆罐头正文 → 顺风顺水（顶栏仍走花仙子，上面已盖） */
 .memory-scroll,
