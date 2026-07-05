@@ -5087,7 +5087,10 @@ a {
   color: #8e6472;
   font-family: "Quimil", "Marcellus", var(--display);
   font-size: 0.95rem;
-  font-weight: 400;
+  /* Quimil Demo 只有 Regular 一个字重,靠 -webkit-text-stroke 加半像素描边做
+     干净的"加粗"效果(比 font-weight:700 让浏览器合成的 faux bold 清爽) */
+  font-weight: 700;
+  -webkit-text-stroke: 0.35px currentColor;
   letter-spacing: 0.02em;
   white-space: nowrap;
   cursor: pointer;
@@ -5105,12 +5108,13 @@ a {
 .pt-chip:disabled { opacity: 0.5; cursor: default; }
 .pt-chip:active { transform: scale(0.94); }
 
-/* CC 气泡头像:小圆糖果,short 徽章走 Brogetta */
+/* CC 气泡头像:小圆糖果,short 徽章走 Quimil + 描边加粗跟药丸胶囊对齐 */
 .pt-cc-avatar {
   color: #4a2b6f;
   font-family: "Quimil", "Marcellus", var(--display);
   font-size: 0.86rem;
-  font-weight: 400;
+  font-weight: 700;
+  -webkit-text-stroke: 0.3px currentColor;
   letter-spacing: 0.02em;
   display: grid;
   place-items: center;
