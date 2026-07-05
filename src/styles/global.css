@@ -4824,6 +4824,62 @@ a {
 }
 .sweetie-sea {
   position: relative;
+  /* 让点击有反馈:海面接受 tap 起涟漪, 手机上禁掉长按选中/高亮 */
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* ----- 海面星光 (12 颗小白点错峰闪烁) ----- */
+.sea-sparkle {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.55) 40%, transparent 70%);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.6);
+  pointer-events: none;
+  animation-name: seaSparkle;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+  will-change: opacity, transform;
+}
+@keyframes seaSparkle {
+  0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  50%      { opacity: 0.85; transform: translate(-50%, -50%) scale(1.15); }
+}
+
+/* ----- 点击涟漪 (双圈同心, 从点击处扩散) ----- */
+.sea-ripple {
+  position: absolute;
+  width: 0; height: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+.sea-ripple__ring {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  transform: translate(-50%, -50%) scale(0);
+  animation: rippleExpand 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+.sea-ripple__ring--2 {
+  border-color: rgba(255, 235, 240, 0.55);
+  animation-delay: 0.18s;
+  animation-duration: 1.5s;
+}
+@keyframes rippleExpand {
+  0%   { transform: translate(-50%, -50%) scale(0);  opacity: 0.9; border-width: 2.5px; }
+  60%  { opacity: 0.55; }
+  100% { transform: translate(-50%, -50%) scale(14); opacity: 0;   border-width: 0.4px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sea-sparkle, .sea-ripple__ring { animation: none; }
 }
 
 /* 之前这里有一层 sweetie-sea::after 半透明深紫渐变遮罩("越深越暗"营造海底

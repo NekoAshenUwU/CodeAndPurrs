@@ -246,14 +246,40 @@ function FloatingVehicle({
   );
 }
 
+// 海面 12 颗随机星光: 位置/延迟/尺寸 挂载时算一次
+const SEA_SPARKLES = Array.from({ length: 12 }, () => ({
+  x: 3 + Math.random() * 94,
+  y: 3 + Math.random() * 94,
+  delay: -Math.random() * 3,
+  size: 3 + Math.random() * 3,
+  dur: 2.4 + Math.random() * 1.8,
+}));
+
+type Ripple = { id: string; x: number; y: number };
+
 // 落予棠 —— 棠棠和予予各自的虚拟红包户口(互不混,各自只累积对方发来的)。
 // 发红包在呼噜频道「＋ → 红包」里(像微信一样能写留言)，这里看成"浮岛"：
 // 每笔红包记录随机领一个漂流瓶/贝壳/纸船/海星，越往下越早、海越深，
-// 点开看日期金额寄语。
+// 点开看日期金额寄语。海面点哪儿哪儿起涟漪 + 星光闪闪。
 export function SweetiePocketPage() {
   const [packets] = useState<RedPacket[]>(loadPackets);
   const [selected, setSelected] = useState<{ packet: RedPacket; vehicle: Vehicle } | null>(null);
   const [selectedChest, setSelectedChest] = useState<'user' | 'ai' | null>(null);
+  const [ripples, setRipples] = useState<Ripple[]>([]);
+  const seaRef = useRef<HTMLDivElement>(null);
+
+  // 点击/触碰海面空白处 → 该点起涟漪, 1.6s 后自动清除
+  const spawnRipple = (x: number, y: number) => {
+    const id = Math.random().toString(36).slice(2, 8);
+    setRipples((prev) => [...prev, { id, x, y }]);
+    window.setTimeout(() => setRipples((prev) => prev.filter((r) => r.id !== id)), 1800);
+  };
+  const onSeaTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    // 只有点空白海面时触发;点载具 button 时 e.target !== e.currentTarget, 跳过
+    if (e.target !== e.currentTarget || !seaRef.current) return;
+    const rect = seaRef.current.getBoundingClientRect();
+    spawnRipple(e.clientX - rect.left, e.clientY - rect.top);
+  };
   const userBalance = useMemo(() => balanceOf('user', packets), [packets]);
   const aiBalance = useMemo(() => balanceOf('ai', packets), [packets]);
 
@@ -284,7 +310,34 @@ export function SweetiePocketPage() {
             <span>发第一个红包试试吧</span>
           </div>
         ) : (
-          <div className="sweetie-sea" style={{ height: seaHeight }}>
+          <div
+            className="sweetie-sea"
+            style={{ height: seaHeight }}
+            ref={seaRef}
+            onClick={onSeaTap}
+          >
+            {/* 海面随机星光: 12 颗小白点错峰闪烁 */}
+            {SEA_SPARKLES.map((s, i) => (
+              <span
+                key={i}
+                className="sea-sparkle"
+                style={{
+                  left: `${s.x}%`,
+                  top: `${s.y}%`,
+                  width: `${s.size}px`,
+                  height: `${s.size}px`,
+                  animationDelay: `${s.delay}s`,
+                  animationDuration: `${s.dur}s`,
+                }}
+              />
+            ))}
+            {/* 点击涟漪: 双圈同心, 从点击处向外扩散淡出 */}
+            {ripples.map((r) => (
+              <span key={r.id} className="sea-ripple" style={{ left: r.x, top: r.y }}>
+                <span className="sea-ripple__ring sea-ripple__ring--1" />
+                <span className="sea-ripple__ring sea-ripple__ring--2" />
+              </span>
+            ))}
             {packets.map((p, i) => (
               <FloatingVehicle
                 key={p.id}
