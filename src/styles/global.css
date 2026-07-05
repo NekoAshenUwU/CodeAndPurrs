@@ -5172,10 +5172,11 @@ a {
 .pt-imgbtn:active {
   transform: scale(0.92);
 }
+/* 禁用态: 保留原图颜色(千万别 saturate 掉,不然可爱紫变灰),
+   只微微降透明度让它看着"待命"而不是"死机" */
 .pt-imgbtn:disabled {
-  opacity: 0.55;
+  opacity: 0.7;
   cursor: default;
-  filter: saturate(0.55) drop-shadow(0 2px 4px rgba(80, 55, 145, 0.18));
 }
 
 /* 错误横幅 */
