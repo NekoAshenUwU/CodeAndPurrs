@@ -291,7 +291,6 @@ export function PurrTablePage() {
       <div className="chat-scroll pt-scroll" ref={scrollRef}>
         {turns.length === 0 ? (
           <div className="chat-empty pt-empty">
-            <div className="chat-empty__paw">🐆</div>
             <p>说一句开个头吧～</p>
             <span>他们会接龙 4 回合,你想插嘴随时打字。思考走 low,专门省订阅。</span>
           </div>
@@ -361,7 +360,7 @@ export function PurrTablePage() {
 
         <textarea
           className="pt-textarea"
-          placeholder={present.length ? '说一句…' : '至少留一位 CC 在场'}
+          placeholder={present.length ? '喵呜～≽^•༚• ྀི≼' : '至少留一位 CC 在场'}
           value={input}
           disabled={sending}
           rows={1}

@@ -5152,7 +5152,12 @@ a {
   background: transparent;
   cursor: pointer;
   transition: transform 0.16s ease, opacity 0.16s ease, filter 0.16s ease;
-  filter: drop-shadow(0 6px 12px rgba(126, 106, 200, 0.28));
+  /* 淡紫粉玻璃图撞上淡紫粉聊天背景太糊,靠 contrast/saturate 拉一把,
+     再加一层深紫阴影让按钮从背景里飘出来 */
+  filter:
+    contrast(1.28) saturate(1.35)
+    drop-shadow(0 6px 12px rgba(80, 55, 145, 0.55))
+    drop-shadow(0 0 3px rgba(80, 55, 145, 0.28));
 }
 .pt-imgbtn img {
   width: 100%;
@@ -5165,9 +5170,9 @@ a {
   transform: scale(0.92);
 }
 .pt-imgbtn:disabled {
-  opacity: 0.42;
+  opacity: 0.5;
   cursor: default;
-  filter: drop-shadow(0 3px 6px rgba(126, 106, 200, 0.14)) grayscale(0.15);
+  filter: contrast(1.05) saturate(0.6) drop-shadow(0 3px 6px rgba(80, 55, 145, 0.2));
 }
 
 /* 错误横幅 */
