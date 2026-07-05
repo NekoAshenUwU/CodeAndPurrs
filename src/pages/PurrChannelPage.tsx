@@ -1823,11 +1823,14 @@ export function PurrChannelPage() {
   }, [windows]);
 
   // 应用用户自定义的聊天背景（在「调频」页设置；空则用默认场景图）
+  // 卸载时一定要清掉——这个变量是 root 上全局的, 落予棠/脑洞贴纸盒/咕噜圆桌
+  // 也用它做 fallback,不清会跟着漂过去顶掉别人的场景图(2026-07-05 老婆截到)
   useEffect(() => {
     const bg = loadChatBg();
     const root = document.documentElement;
     if (bg) root.style.setProperty('--chat-bg-image', `url(${bg})`);
     else root.style.removeProperty('--chat-bg-image');
+    return () => { root.style.removeProperty('--chat-bg-image'); };
   }, []);
 
   const newWindow = () => {

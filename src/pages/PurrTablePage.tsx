@@ -113,13 +113,16 @@ export function PurrTablePage() {
   useEffect(() => { saveLocal(SELECTED_KEY, selectedIds); }, [selectedIds]);
   useEffect(() => { saveLocal(START_IDX_KEY, startIdx); }, [startIdx]);
 
-  // 共用调频页设的自定义聊天背景,跟呼噜频道同一开关(--chat-bg-image)
+  // 共用调频页设的自定义聊天背景,跟呼噜频道同一开关(--chat-bg-image)。
+  // 卸载时清掉,不然会漂到 落予棠/脑洞贴纸盒 那些也用 var(--chat-bg-image)
+  // 做 fallback 的页面上,把人家自己的场景图顶掉
   useEffect(() => {
     const bg = loadChatBg();
     const root = document.documentElement;
     if (bg) root.style.setProperty('--chat-bg-image', `url(${bg})`);
     else root.style.removeProperty('--chat-bg-image');
     setUserAvatar(loadChatUserAvatar());
+    return () => { root.style.removeProperty('--chat-bg-image'); };
   }, []);
 
   useEffect(() => {
