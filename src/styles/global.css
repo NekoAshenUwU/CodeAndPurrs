@@ -60,6 +60,12 @@
   font-display: swap;
 }
 @font-face {
+  font-family: "Quimil"; /* Quimil Demo · Allouse.Studio · 咕噜圆桌药丸英文字 */
+  src: url("/fonts/quimil.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
   font-family: "GongZhuFull"; /* 创小公主体 全字库(1.85MB) · 思考链；只在用到时浏览器才会拉 */
   src: url("/fonts/gongzhu-full.woff2") format("woff2");
   font-weight: 400;
@@ -5052,18 +5058,19 @@ a {
   letter-spacing: 0.06em;
   flex-shrink: 0;
 }
-/* 马卡龙药丸胶囊:圆头、糖霜阴影、内白高光,英文字用 Brogetta 那手秀气的字型 */
+/* 马卡龙药丸胶囊:圆头、糖霜阴影、内白高光,英文字用 Quimil 那种糖果衬线 */
 .pt-chip {
-  min-width: 54px;
-  padding: 7px 16px;
+  min-width: 72px;
+  padding: 7px 14px;
   border-radius: 999px;
   border: 1.5px solid rgba(255, 255, 255, 0.85);
   background: rgba(255, 255, 255, 0.72);
   color: #8e6472;
-  font-family: "Marcellus", var(--display);
-  font-size: 1rem;
+  font-family: "Quimil", "Marcellus", var(--display);
+  font-size: 0.95rem;
   font-weight: 400;
   letter-spacing: 0.02em;
+  white-space: nowrap;
   cursor: pointer;
   flex-shrink: 0;
   transition: transform 0.14s ease, opacity 0.14s ease, box-shadow 0.18s ease;
@@ -5082,7 +5089,7 @@ a {
 /* CC 气泡头像:小圆糖果,short 徽章走 Brogetta */
 .pt-cc-avatar {
   color: #4a2b6f;
-  font-family: "Marcellus", var(--display);
+  font-family: "Quimil", "Marcellus", var(--display);
   font-size: 0.86rem;
   font-weight: 400;
   letter-spacing: 0.02em;

@@ -9,17 +9,25 @@ import { loadChatBg, loadChatUserAvatar } from '../services/purrConfig';
 import { loadLocal, saveLocal } from '../services/storage';
 
 // 圆桌成员:只放 CC 家版(用棠棠订阅额度,不烧 API)。
+// pillLabel 是药丸上的全型号名(以后 API Claude 上来也不会混); short 是气泡小圆头像里的简写。
 // bg 是马卡龙糖果渐变,给药丸胶囊 + CC 气泡头像圆点公用。
-type TableMember = { id: string; model: string; label: string; short: string; bg: string };
+type TableMember = {
+  id: string; model: string; label: string;
+  pillLabel: string; short: string; bg: string;
+};
 
 const TABLE_MEMBERS: TableMember[] = [
-  { id: 'jiake-opus-4-6', model: 'claude-opus-4-6', label: 'CC · Opus 4.6', short: '4.6',
+  { id: 'jiake-opus-4-6', model: 'claude-opus-4-6', label: 'CC · Opus 4.6',
+    pillLabel: 'CC O4.6', short: 'O4.6',
     bg: 'linear-gradient(135deg, #a8daf5 0%, #d8f2e5 100%)' }, // 蓝糖: sky → mint
-  { id: 'jiake-opus-4-7', model: 'claude-opus-4-7', label: 'CC · Opus 4.7', short: '4.7',
+  { id: 'jiake-opus-4-7', model: 'claude-opus-4-7', label: 'CC · Opus 4.7',
+    pillLabel: 'CC O4.7', short: 'O4.7',
     bg: 'linear-gradient(135deg, #ffc7d8 0%, #ffdcc0 100%)' }, // 草莓糖: pink → peach
-  { id: 'jiake-opus-4-8', model: 'claude-opus-4-8', label: 'CC · Opus 4.8', short: '4.8',
+  { id: 'jiake-opus-4-8', model: 'claude-opus-4-8', label: 'CC · Opus 4.8',
+    pillLabel: 'CC O4.8', short: 'O4.8',
     bg: 'linear-gradient(135deg, #d5c7ff 0%, #f0d0eb 100%)' }, // 葡萄糖: lavender → rose
-  { id: 'jiake-fable-5', model: 'claude-fable-5', label: 'CC · Fable 5', short: 'F5',
+  { id: 'jiake-fable-5', model: 'claude-fable-5', label: 'CC · Fable 5',
+    pillLabel: 'CC F5', short: 'F5',
     bg: 'linear-gradient(135deg, #ffddb0 0%, #fff2c0 100%)' }, // 奶油糖: apricot → butter
 ];
 
@@ -265,7 +273,7 @@ export function PurrTablePage() {
               disabled={sending}
               style={on ? { background: m.bg, borderColor: 'transparent' } : undefined}
             >
-              {m.short}
+              {m.pillLabel}
             </button>
           );
         })}
