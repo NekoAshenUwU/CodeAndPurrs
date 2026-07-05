@@ -3766,20 +3766,29 @@ a {
 }
 .loc-head {
   text-align: center;
-  position: sticky; /* 吸顶 */
+  position: sticky;
   top: 0;
-  z-index: 20;
-  padding: calc(10px + env(safe-area-inset-top)) 0 8px;
-  background: linear-gradient(180deg, rgba(253, 234, 244, 0.85), rgba(253, 234, 244, 0.35));
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  /* Leaflet 自带 UI 内部 z-index 到 400+, sticky 顶栏 z:20 输给它,
+     Leaflet 有时会在顶部渲染磁贴延伸区盖住副标题。拉高 z 让顶栏永远浮在最上 */
+  z-index: 500;
+  padding: calc(10px + env(safe-area-inset-top)) 0 10px;
+  /* 增强底色不透明度, 不给 Leaflet 磁贴透过来的机会 */
+  background: linear-gradient(180deg, rgba(253, 234, 244, 0.96) 0%, rgba(253, 234, 244, 0.9) 100%);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  box-shadow: 0 2px 12px -6px rgba(123, 90, 166, 0.25);
 }
 .loc-head h1 {
-  font-family: var(--hand), cursive;
+  /* 用 !important 硬盖: 底下有 .loc-head *(0.1.0) 想给 HuaXianZi, 但 .loc-head h1
+     (0.1.1) 元素选择器更具体, 盖不住; 之前老婆看到的手写字体就是这里输的 */
+  font-family: "HuaXianZi", var(--display) !important;
   font-size: 2rem; margin: 0; letter-spacing: 3px;
   color: #7b5aa6; text-shadow: 0 2px 0 rgba(255,255,255,0.7);
 }
-.loc-head p { margin: 8px 0 0; font-size: 0.9rem; color: #9a7fc0; }
+.loc-head p {
+  margin: 8px 0 0; font-size: 0.9rem; color: #9a7fc0;
+  font-family: "ShunFengFull", var(--round);
+}
 .loc-back {
   position: absolute; left: 0; top: 6px;
   width: 40px; height: 40px; border-radius: 50%;
@@ -3788,6 +3797,8 @@ a {
   box-shadow: 0 4px 10px -3px rgba(123,90,166,0.4), inset 0 2px 2px rgba(255,255,255,0.9);
 }
 .loc-map {
+  position: relative;
+  z-index: 1; /* 明确定居底层,不参与跟顶栏抢位置 */
   width: 100%; height: 56vh; min-height: 330px;
   border-radius: 26px; overflow: hidden; margin: 16px 0;
   border: 3px solid rgba(255,255,255,0.7);
@@ -4051,7 +4062,9 @@ a {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 14px 16px calc(28px + env(safe-area-inset-bottom));
+  /* chat-head 是 position:fixed 占顶部 ~54px+安全区, 上面 padding 只有 14px
+     顶栏底下第一个卡片会被盖住 (2026-07-05 老婆截到"想让它永远记住"输入被切) */
+  padding: calc(64px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));
 }
 .memory-add {
   display: flex;
