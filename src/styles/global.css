@@ -5097,6 +5097,13 @@ a {
 .loc-head * {
   font-family: "HuaXianZi", var(--display);
 }
+/* .model-chip 顶栏型号胶囊要走 Quimil 秀气衬线 + text-stroke 加粗;
+   上面的 .chat-head * 通配符跟 .model-chip 同为 (0,1,0) 特异性但排在
+   后面, 按 CSS 源序会盖住 .model-chip 的 font-family——这里再补一条
+   .chat-head .model-chip (0,2,0), 用更高特异性锁死 Quimil 不被通配盖 */
+.chat-head .model-chip {
+  font-family: "Quimil", "Marcellus", var(--round);
+}
 /* 记忆罐头正文 → 顺风顺水（顶栏仍走花仙子，上面已盖） */
 .memory-scroll,
 .memory-scroll * {
