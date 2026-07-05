@@ -1904,14 +1904,14 @@ a {
   color: #a78bd8;
 }
 
-/* Mind Theater 品牌字: Quimil 衬线加粗(Quimil Demo 只有 Regular,靠
-   浏览器合成 font-weight:800 假粗,搭配透明填色+紫渐变 background-clip 才不会
-   跟 stroke 打架——之前咕噜圆桌药丸用 text-stroke 是纯色,这里是渐变文本填色,
-   text-stroke 会以 currentColor 描出来跟渐变冲突,所以不用 stroke) */
+/* Mind Theater 品牌字: Quimil 衬线, background-clip 紫渐变文本 +
+   -webkit-text-stroke 深紫描一圈干净加粗。
+   之前只用 font-weight:800 假粗对渐变文本效果太弱, 老婆截图看不到加粗;
+   改用 stroke 描字体外沿——渐变仍在字内, 深紫描边把字轮廓加粗一圈, 视觉上明显更厚 */
 .think-card__brand {
   font-family: "Quimil", "Marcellus", serif;
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1;
   color: #8e6fc9;
   letter-spacing: 0.02em;
@@ -1919,6 +1919,7 @@ a {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 0.55px #8e6fc9;
 }
 .think-card__label {
   color: inherit;
@@ -3628,8 +3629,14 @@ a {
   gap: 5px;
   padding: 6px 11px;
   color: #6b4a8e;
-  font-family: "ShunFeng", var(--round);
-  font-size: 0.78rem;
+  /* Quimil 秀气衬线 + 描边加粗(Quimil Demo 单字重, 靠 -webkit-text-stroke
+     0.4px currentColor 描一圈干净假粗, 跟咕噜圆桌药丸/CC 头像徽章一致);
+     这里没有 background-clip:text 渐变, stroke 不会跟渐变打架, 放心用 */
+  font-family: "Quimil", "Marcellus", var(--round);
+  font-size: 0.9rem;
+  font-weight: 700;
+  -webkit-text-stroke: 0.4px currentColor;
+  letter-spacing: 0.02em;
   border: 1px solid rgba(255, 255, 255, 0.8);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.62);
