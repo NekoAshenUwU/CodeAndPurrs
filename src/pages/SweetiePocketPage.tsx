@@ -285,37 +285,13 @@ export function SweetiePocketPage() {
           </div>
         ) : (
           <div className="sweetie-sea" style={{ height: seaHeight }}>
-            {/* 海面动态海浪:三条描边浪线错峰漂 + 月光光斑
-                fill:none 描边线, 像浪尖泛光,不像糊层雾 */}
+            {/* 海面滚动水珠: 每颗是圆形 div, backdrop-filter 折射底下背景,
+                radial-gradient 高光+鼓面, 沿贝塞尔曲线慢慢滚过海面 */}
             <div className="sea-waves" aria-hidden="true">
-              <svg className="wave wave-1" viewBox="0 0 1440 120" preserveAspectRatio="none">
-                <path
-                  d="M0,60 C180,100 360,20 540,60 C720,100 900,20 1080,60 C1260,100 1350,40 1440,60"
-                  fill="none"
-                  stroke="rgba(255,235,240,0.4)"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <svg className="wave wave-2" viewBox="0 0 1440 120" preserveAspectRatio="none">
-                <path
-                  d="M0,70 C240,30 480,110 720,70 C960,30 1200,110 1440,70"
-                  fill="none"
-                  stroke="rgba(255,225,235,0.28)"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-              </svg>
-              {/* 第三层: 更透明更慢, 拉纵深 */}
-              <svg className="wave wave-3" viewBox="0 0 1440 120" preserveAspectRatio="none">
-                <path
-                  d="M0,50 C300,90 600,10 900,50 C1200,90 1350,30 1440,50"
-                  fill="none"
-                  stroke="rgba(255,240,245,0.18)"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                />
-              </svg>
+              <div className="waterdrop waterdrop--1" />
+              <div className="waterdrop waterdrop--2" />
+              <div className="waterdrop waterdrop--3" />
+              <div className="waterdrop waterdrop--4" />
               <div className="sea-glint" />
             </div>
             {packets.map((p, i) => (
