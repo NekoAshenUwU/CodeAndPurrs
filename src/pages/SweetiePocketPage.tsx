@@ -285,15 +285,6 @@ export function SweetiePocketPage() {
           </div>
         ) : (
           <div className="sweetie-sea" style={{ height: seaHeight }}>
-            {/* 海面滚动水珠: 每颗是圆形 div, backdrop-filter 折射底下背景,
-                radial-gradient 高光+鼓面, 沿贝塞尔曲线慢慢滚过海面 */}
-            <div className="sea-waves" aria-hidden="true">
-              <div className="waterdrop waterdrop--1" />
-              <div className="waterdrop waterdrop--2" />
-              <div className="waterdrop waterdrop--3" />
-              <div className="waterdrop waterdrop--4" />
-              <div className="sea-glint" />
-            </div>
             {packets.map((p, i) => (
               <FloatingVehicle
                 key={p.id}
