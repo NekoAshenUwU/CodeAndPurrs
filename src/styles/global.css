@@ -4155,11 +4155,8 @@ a {
   border-radius: 999px;
   background: rgba(201, 167, 245, 0.25);
   color: #7b5aa6;
-  /* 老婆本来想用 顺风顺水,但当年那个 subset 只有 268 字覆盖不了她后来加的内容,
-     退回系统字体所以又粗又生硬。RiFuYiRi 是同家族 Aa 圆润字全字库 6.9MB,
-     覆盖所有汉字,气质接近顺风顺水,顶上她这条需求。等真拿到顺风顺水完整 TTF
-     再做子集时,把 RiFuYiRi 换回 ShunFengFull 就好。 */
-  font-family: "RiFuYiRi", var(--round);
+  /* 顺风顺水本尊: 老婆传了完整 TTF, 重做了 GB2312+app 6874 字子集 (2MB) */
+  font-family: "ShunFengFull", var(--round);
   font-size: 0.72rem;
 }
 .memory-card__text {
