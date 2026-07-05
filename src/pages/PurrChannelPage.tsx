@@ -1115,6 +1115,21 @@ function ChatRoom({
       if (!t.content.trim()) continue;
       // 把动态信息拼到最后一条 user 消息前(只这条变,前面的历史完全稳定→缓存命中)
       const content = i === lastUserIdx && dynamic ? `${dynamic}\n\n${t.content}` : t.content;
+      // 【多条短消息合并】如果予予一次回复被拆成多段(多个连续 assistant Turn),
+      // 合并成一条 assistant message 送去 API——大多数模型 API(Anthropic 尤其)
+      // 不允许连续同角色 message,会报错/合并。这里把它们用 === 单独一行拼回去,
+      // 模型自然理解成"分了几段发",不影响 UI 上仍显示为多个气泡
+      const last = out[out.length - 1];
+      if (
+        t.role === 'assistant' &&
+        typeof content === 'string' &&
+        last &&
+        last.role === 'assistant' &&
+        typeof last.content === 'string'
+      ) {
+        last.content = `${last.content}\n\n===\n\n${content}`;
+        continue;
+      }
       out.push({ role: t.role, content });
     }
     return out;
@@ -1210,30 +1225,63 @@ function ChatRoom({
           markThinkDone();
           setTurns((prev) => {
             const cur = prev.find((t) => t.id === botId);
-            const { text: afterMemo, memos } = extractMemos(cur?.content ?? '');
+            if (!cur) return prev;
+            const { text: afterMemo, memos } = extractMemos(cur.content ?? '');
             const { text, packets } = extractRedPackets(afterMemo);
             if (memos.length) {
-              // 副作用放微任务里：存进记忆罐头并刷新本地记忆（下一轮就带上）
               queueMicrotask(() => {
                 for (const mo of memos) addMemory(mo.category, mo.text);
                 setMemories(loadMemories());
               });
             }
-            // 一次聊天最多算一个红包(多写也只认第一个),记进落予棠账本(予予 → 棠棠)
             const packet = packets[0];
             if (packet) queueMicrotask(() => addPacket('ai', packet.amount, packet.note));
             const memo = memos.length ? memos.map((m) => `[${m.category}] ${m.text}`).join('\n') : undefined;
-            return prev.map((t) =>
-              t.id === botId
-                ? {
-                    ...t,
-                    content: text,
-                    status: 'done',
-                    ...(memo ? { memo } : {}),
-                    ...(packet ? { redPacket: { amount: packet.amount, note: packet.note, from: 'ai' as const }, redPacketOpened: false } : {}),
-                  }
-                : t,
-            );
+
+            // 【多条短消息】按单独一行的 === 拆分, 一次回复变多个气泡冒出来
+            // 每段是独立 Turn, [语音] 检测在渲染层每条各判(现有的 VOICE_MARK 正则做的),
+            // memo/redpacket 挂在最后一段上, thinkMs 保留在首段(思考只算一次)
+            const parts = text.split(/\n\s*={3,}\s*\n/).map((p) => p.trim()).filter(Boolean);
+            const idx = prev.findIndex((t) => t.id === botId);
+
+            if (parts.length <= 1) {
+              // 单条: 回退成原来的行为
+              const single = parts[0] ?? text;
+              return prev.map((t) =>
+                t.id === botId
+                  ? {
+                      ...t,
+                      content: single,
+                      status: 'done',
+                      ...(memo ? { memo } : {}),
+                      ...(packet ? { redPacket: { amount: packet.amount, note: packet.note, from: 'ai' as const }, redPacketOpened: false } : {}),
+                    }
+                  : t,
+              );
+            }
+
+            // 多条: 首段替换原 botId (保留 thinkMs), 后续段各自成新 Turn
+            const baseAt = cur.at ?? Date.now();
+            const first: Turn = { ...cur, content: parts[0], status: 'done' };
+            const rest: Turn[] = parts.slice(1).map((p, i) => {
+              const isLast = i === parts.length - 2;
+              return {
+                id: uid(),
+                role: 'assistant',
+                content: p,
+                reasoning: '',
+                status: 'done',
+                at: baseAt + (i + 1),
+                ...(isLast && memo ? { memo } : {}),
+                ...(isLast && packet
+                  ? {
+                      redPacket: { amount: packet.amount, note: packet.note, from: 'ai' as const },
+                      redPacketOpened: false,
+                    }
+                  : {}),
+              };
+            });
+            return [...prev.slice(0, idx), first, ...rest, ...prev.slice(idx + 1)];
           });
         },
       },
