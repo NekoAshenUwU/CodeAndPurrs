@@ -2096,13 +2096,14 @@ a {
   letter-spacing: 0.02em;
 }
 
-/* 待发贴纸缩略图: 钉在输入框正上方,不进入 flex 流,免得挤走按钮 */
+/* 待发缩略图槽: 钉在输入框正上方,不进入 flex 流。贴纸/照片各占一格,可以并排两张 */
 .pending-meme {
   position: absolute;
   left: 14px;
   bottom: calc(100% - 4px);
   display: inline-flex;
   align-items: flex-start;
+  gap: 8px;
   padding: 6px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.9);
@@ -2110,6 +2111,10 @@ a {
   box-shadow: 0 8px 22px rgba(118, 96, 132, 0.2);
   -webkit-backdrop-filter: blur(12px) saturate(1.2);
   backdrop-filter: blur(12px) saturate(1.2);
+}
+.pending-meme__slot {
+  position: relative;
+  display: inline-block;
 }
 .pending-meme__img {
   display: block;

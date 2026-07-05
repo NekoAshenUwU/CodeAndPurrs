@@ -751,6 +751,17 @@ function PendingMemeThumb({ memeId }: { memeId: string }) {
   if (!url) return <div className="pending-meme__img pending-meme__img--loading" />;
   return <img className="pending-meme__img" src={url} alt="" aria-hidden="true" />;
 }
+// 相册照片版:走 getPhotoURL(photos IndexedDB), 视觉跟贴纸缩略图一致
+function PendingPhotoThumb({ photoId }: { photoId: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void getPhotoURL(photoId).then((u) => { if (alive && u) setUrl(u); });
+    return () => { alive = false; };
+  }, [photoId]);
+  if (!url) return <div className="pending-meme__img pending-meme__img--loading" />;
+  return <img className="pending-meme__img" src={url} alt="" aria-hidden="true" />;
+}
 function IconTrash() {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -842,8 +853,9 @@ function ChatRoom({
   const [recording, setRecording] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [memeOpen, setMemeOpen] = useState(false);
-  // 挑了贴纸不立刻发,先钉在输入框上方的"待发"槽,让老婆再打点话一起发过去
+  // 挑了贴纸/相册照片不立刻发,先钉在输入框上方的"待发"槽,让老婆再打点话一起发过去
   const [pendingMeme, setPendingMeme] = useState<string | null>(null);
+  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
   const [redPacketOpen, setRedPacketOpen] = useState(false);
   const [editTurnId, setEditTurnId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
@@ -921,15 +933,13 @@ function ChatRoom({
     setPendingMeme(memeId);
   };
 
-  // 选了一张照片：先压缩存进 photos 库，再作为一条用户消息发出去（跟表情包同一套发送流程）
+  // 选了一张照片:压缩存进 photos 库后钉到输入框上方"待发"槽,不立发。
+  // 老婆再打字或直接按发送时一起走出去(见 send()),跟贴纸同一套流程。
   const pickPhoto = async (file: File | undefined) => {
     if (photoFileRef.current) photoFileRef.current.value = '';
     if (!file || !file.type.startsWith('image/') || sending) return;
     const id = await addPhoto(file);
-    const photoTurn: Turn = { id: uid(), role: 'user', content: '', reasoning: '', status: 'done', photo: id, at: Date.now() };
-    const history = await toMessages([...turns, photoTurn]);
-    setTurns((prev) => [...prev, photoTurn]);
-    await runAssistant(history);
+    setPendingPhoto(id);
   };
 
   // 填好金额和留言，发一个红包给予予：先记进落予棠账本(棠棠 → 予予)，再作为一条用户消息发出去。
@@ -1242,13 +1252,19 @@ function ChatRoom({
   const send = async () => {
     const text = input.trim();
     if (sending) return;
-    // 允许:纯文字 / 纯贴纸 / 贴纸+文字。三种都空就 return
-    if (!text && !pendingMeme) return;
+    // 允许各种组合: 纯文字 / 贴纸 / 相册照片 / 上述任意搭配。全空就 return
+    if (!text && !pendingMeme && !pendingPhoto) return;
     const newTurns: Turn[] = [];
     if (pendingMeme) {
       newTurns.push({
         id: uid(), role: 'user', content: '', reasoning: '', status: 'done',
         meme: pendingMeme, at: Date.now(),
+      });
+    }
+    if (pendingPhoto) {
+      newTurns.push({
+        id: uid(), role: 'user', content: '', reasoning: '', status: 'done',
+        photo: pendingPhoto, at: Date.now(),
       });
     }
     if (text) {
@@ -1261,6 +1277,7 @@ function ChatRoom({
     setTurns((prev) => [...prev, ...newTurns]);
     setInput('');
     setPendingMeme(null);
+    setPendingPhoto(null);
     await runAssistant(history);
   };
 
@@ -1555,19 +1572,37 @@ function ChatRoom({
       </div>
 
       <footer className="chat-input">
-        {/* 待发贴纸缩略图:钉在输入区上方,直到按发送或叉掉才走 */}
-        {pendingMeme ? (
+        {/* 待发缩略图:贴纸/相册照片钉在输入区上方,按发送/叉掉才走。两者可同时挂 */}
+        {pendingMeme || pendingPhoto ? (
           <div className="pending-meme">
-            <PendingMemeThumb memeId={pendingMeme} />
-            <button
-              type="button"
-              className="pending-meme__remove"
-              onClick={() => setPendingMeme(null)}
-              aria-label="移除贴纸"
-              title="移除"
-            >
-              ×
-            </button>
+            {pendingMeme ? (
+              <span className="pending-meme__slot">
+                <PendingMemeThumb memeId={pendingMeme} />
+                <button
+                  type="button"
+                  className="pending-meme__remove"
+                  onClick={() => setPendingMeme(null)}
+                  aria-label="移除贴纸"
+                  title="移除"
+                >
+                  ×
+                </button>
+              </span>
+            ) : null}
+            {pendingPhoto ? (
+              <span className="pending-meme__slot">
+                <PendingPhotoThumb photoId={pendingPhoto} />
+                <button
+                  type="button"
+                  className="pending-meme__remove"
+                  onClick={() => setPendingPhoto(null)}
+                  aria-label="移除照片"
+                  title="移除"
+                >
+                  ×
+                </button>
+              </span>
+            ) : null}
           </div>
         ) : null}
 
@@ -1645,7 +1680,7 @@ function ChatRoom({
             type="button"
             className="chat-glass-btn cg-send"
             onClick={() => void send()}
-            disabled={!input.trim() && !pendingMeme}
+            disabled={!input.trim() && !pendingMeme && !pendingPhoto}
             aria-label="发送"
           >
             <IconArrowUp />
