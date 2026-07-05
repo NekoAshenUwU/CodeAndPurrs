@@ -2096,6 +2096,55 @@ a {
   letter-spacing: 0.02em;
 }
 
+/* 待发贴纸缩略图: 钉在输入框正上方,不进入 flex 流,免得挤走按钮 */
+.pending-meme {
+  position: absolute;
+  left: 14px;
+  bottom: calc(100% - 4px);
+  display: inline-flex;
+  align-items: flex-start;
+  padding: 6px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 8px 22px rgba(118, 96, 132, 0.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  backdrop-filter: blur(12px) saturate(1.2);
+}
+.pending-meme__img {
+  display: block;
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+.pending-meme__img--loading {
+  background: rgba(220, 210, 240, 0.6);
+  animation: pending-meme-pulse 1.4s ease-in-out infinite;
+}
+@keyframes pending-meme-pulse {
+  50% { opacity: 0.5; }
+}
+.pending-meme__remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  background: rgba(210, 130, 160, 0.95);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(118, 96, 132, 0.22);
+}
+.pending-meme__remove:active {
+  transform: scale(0.88);
+}
+
 .chat-input__btn {
   flex-shrink: 0;
   min-width: 56px;

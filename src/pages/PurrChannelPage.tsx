@@ -740,6 +740,17 @@ function IconPencil() {
     </svg>
   );
 }
+// 输入框上方"待发贴纸"缩略图:小方块预览 + 右上角 × 移除
+function PendingMemeThumb({ memeId }: { memeId: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void getMemeURL(memeId).then((u) => { if (alive && u) setUrl(u); });
+    return () => { alive = false; };
+  }, [memeId]);
+  if (!url) return <div className="pending-meme__img pending-meme__img--loading" />;
+  return <img className="pending-meme__img" src={url} alt="" aria-hidden="true" />;
+}
 function IconTrash() {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -831,6 +842,8 @@ function ChatRoom({
   const [recording, setRecording] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [memeOpen, setMemeOpen] = useState(false);
+  // 挑了贴纸不立刻发,先钉在输入框上方的"待发"槽,让老婆再打点话一起发过去
+  const [pendingMeme, setPendingMeme] = useState<string | null>(null);
   const [redPacketOpen, setRedPacketOpen] = useState(false);
   const [editTurnId, setEditTurnId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
@@ -900,14 +913,12 @@ function ChatRoom({
     setNotice(`「${label}」马上就来啦，先占个位～`);
   };
 
-  // 从贴纸盒选了一张：作为一条用户消息发出去，并把图片喂给予予让她看图回应。
+  // 从贴纸盒选了一张:先钉到输入框上方"待发"槽,不立刻发。老婆再打字/直接按发送时
+  // 一起送出去(见 send()),这样能带话点贴纸,不用等予予回复才能接着说话。
   const sendMeme = async (memeId: string) => {
     setMemeOpen(false);
     if (sending) return;
-    const memeTurn: Turn = { id: uid(), role: 'user', content: '', reasoning: '', status: 'done', meme: memeId, at: Date.now() };
-    const history = await toMessages([...turns, memeTurn]);
-    setTurns((prev) => [...prev, memeTurn]);
-    await runAssistant(history);
+    setPendingMeme(memeId);
   };
 
   // 选了一张照片：先压缩存进 photos 库，再作为一条用户消息发出去（跟表情包同一套发送流程）
@@ -1230,11 +1241,26 @@ function ChatRoom({
 
   const send = async () => {
     const text = input.trim();
-    if (!text || sending) return;
-    const userTurn: Turn = { id: uid(), role: 'user', content: text, reasoning: '', status: 'done', at: Date.now() };
-    const history = await toMessages([...turns, userTurn]);
-    setTurns((prev) => [...prev, userTurn]);
+    if (sending) return;
+    // 允许:纯文字 / 纯贴纸 / 贴纸+文字。三种都空就 return
+    if (!text && !pendingMeme) return;
+    const newTurns: Turn[] = [];
+    if (pendingMeme) {
+      newTurns.push({
+        id: uid(), role: 'user', content: '', reasoning: '', status: 'done',
+        meme: pendingMeme, at: Date.now(),
+      });
+    }
+    if (text) {
+      newTurns.push({
+        id: uid(), role: 'user', content: text, reasoning: '', status: 'done',
+        at: Date.now(),
+      });
+    }
+    const history = await toMessages([...turns, ...newTurns]);
+    setTurns((prev) => [...prev, ...newTurns]);
     setInput('');
+    setPendingMeme(null);
     await runAssistant(history);
   };
 
@@ -1529,6 +1555,22 @@ function ChatRoom({
       </div>
 
       <footer className="chat-input">
+        {/* 待发贴纸缩略图:钉在输入区上方,直到按发送或叉掉才走 */}
+        {pendingMeme ? (
+          <div className="pending-meme">
+            <PendingMemeThumb memeId={pendingMeme} />
+            <button
+              type="button"
+              className="pending-meme__remove"
+              onClick={() => setPendingMeme(null)}
+              aria-label="移除贴纸"
+              title="移除"
+            >
+              ×
+            </button>
+          </div>
+        ) : null}
+
         {/* + 更多：点开图片 / 红包 / 表情包菜单 */}
         <div className="chat-more-wrap">
           <button
@@ -1603,7 +1645,7 @@ function ChatRoom({
             type="button"
             className="chat-glass-btn cg-send"
             onClick={() => void send()}
-            disabled={!input.trim()}
+            disabled={!input.trim() && !pendingMeme}
             aria-label="发送"
           >
             <IconArrowUp />
