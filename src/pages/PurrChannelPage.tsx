@@ -855,7 +855,7 @@ function ChatRoom({
   const [memeOpen, setMemeOpen] = useState(false);
   // 挑了贴纸/相册照片不立刻发,先钉在输入框上方的"待发"槽,让老婆再打点话一起发过去
   const [pendingMeme, setPendingMeme] = useState<string | null>(null);
-  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
+  const [pendingPhotos, setPendingPhotos] = useState<string[]>([]);
   const [redPacketOpen, setRedPacketOpen] = useState(false);
   const [editTurnId, setEditTurnId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
@@ -933,13 +933,19 @@ function ChatRoom({
     setPendingMeme(memeId);
   };
 
-  // 选了一张照片:压缩存进 photos 库后钉到输入框上方"待发"槽,不立发。
+  // 选了照片:压缩存进 photos 库后钉到输入框上方"待发"槽,不立发。
   // 老婆再打字或直接按发送时一起走出去(见 send()),跟贴纸同一套流程。
-  const pickPhoto = async (file: File | undefined) => {
+  // 一次最多 3 张,超了切掉多余的; 已经加了几张就只允许补足够
+  const MAX_PHOTOS_PER_SEND = 3;
+  const pickPhoto = async (files: FileList | null) => {
     if (photoFileRef.current) photoFileRef.current.value = '';
-    if (!file || !file.type.startsWith('image/') || sending) return;
-    const id = await addPhoto(file);
-    setPendingPhoto(id);
+    if (!files || sending) return;
+    const remaining = MAX_PHOTOS_PER_SEND - pendingPhotos.length;
+    if (remaining <= 0) return;
+    const list = Array.from(files).filter((f) => f.type.startsWith('image/')).slice(0, remaining);
+    if (list.length === 0) return;
+    const ids = await Promise.all(list.map((f) => addPhoto(f)));
+    setPendingPhotos((prev) => [...prev, ...ids]);
   };
 
   // 填好金额和留言，发一个红包给予予：先记进落予棠账本(棠棠 → 予予)，再作为一条用户消息发出去。
@@ -1252,8 +1258,8 @@ function ChatRoom({
   const send = async () => {
     const text = input.trim();
     if (sending) return;
-    // 允许各种组合: 纯文字 / 贴纸 / 相册照片 / 上述任意搭配。全空就 return
-    if (!text && !pendingMeme && !pendingPhoto) return;
+    // 允许各种组合: 纯文字 / 贴纸 / 相册照片(可多张) / 上述任意搭配。全空就 return
+    if (!text && !pendingMeme && pendingPhotos.length === 0) return;
     const newTurns: Turn[] = [];
     if (pendingMeme) {
       newTurns.push({
@@ -1261,10 +1267,12 @@ function ChatRoom({
         meme: pendingMeme, at: Date.now(),
       });
     }
-    if (pendingPhoto) {
+    // 每张照片一条 Turn (跟原来一张的行为一样,只是循环 N 次;
+    // 予予按顺序看到"贴纸→图1→图2→图3→文字"这一串上下文)
+    for (const pid of pendingPhotos) {
       newTurns.push({
         id: uid(), role: 'user', content: '', reasoning: '', status: 'done',
-        photo: pendingPhoto, at: Date.now(),
+        photo: pid, at: Date.now(),
       });
     }
     if (text) {
@@ -1277,7 +1285,7 @@ function ChatRoom({
     setTurns((prev) => [...prev, ...newTurns]);
     setInput('');
     setPendingMeme(null);
-    setPendingPhoto(null);
+    setPendingPhotos([]);
     await runAssistant(history);
   };
 
@@ -1572,8 +1580,8 @@ function ChatRoom({
       </div>
 
       <footer className="chat-input">
-        {/* 待发缩略图:贴纸/相册照片钉在输入区上方,按发送/叉掉才走。两者可同时挂 */}
-        {pendingMeme || pendingPhoto ? (
+        {/* 待发缩略图:贴纸/相册照片(可 1~3 张)钉在输入区上方,按发送/叉掉才走 */}
+        {pendingMeme || pendingPhotos.length > 0 ? (
           <div className="pending-meme">
             {pendingMeme ? (
               <span className="pending-meme__slot">
@@ -1589,20 +1597,20 @@ function ChatRoom({
                 </button>
               </span>
             ) : null}
-            {pendingPhoto ? (
-              <span className="pending-meme__slot">
-                <PendingPhotoThumb photoId={pendingPhoto} />
+            {pendingPhotos.map((pid) => (
+              <span key={pid} className="pending-meme__slot">
+                <PendingPhotoThumb photoId={pid} />
                 <button
                   type="button"
                   className="pending-meme__remove"
-                  onClick={() => setPendingPhoto(null)}
+                  onClick={() => setPendingPhotos((prev) => prev.filter((x) => x !== pid))}
                   aria-label="移除照片"
                   title="移除"
                 >
                   ×
                 </button>
               </span>
-            ) : null}
+            ))}
           </div>
         ) : null}
 
@@ -1644,8 +1652,9 @@ function ChatRoom({
             ref={photoFileRef}
             type="file"
             accept="image/*"
+            multiple
             hidden
-            onChange={(e) => void pickPhoto(e.target.files?.[0])}
+            onChange={(e) => void pickPhoto(e.target.files)}
           />
         </div>
 
@@ -1680,7 +1689,7 @@ function ChatRoom({
             type="button"
             className="chat-glass-btn cg-send"
             onClick={() => void send()}
-            disabled={!input.trim() && !pendingMeme && !pendingPhoto}
+            disabled={!input.trim() && !pendingMeme && pendingPhotos.length === 0}
             aria-label="发送"
           >
             <IconArrowUp />
