@@ -51,32 +51,11 @@ type Turn = {
 const uid = () => Math.random().toString(36).slice(2, 10);
 const findMember = (id: string) => TABLE_MEMBERS.find((m) => m.id === id);
 
-// VisionOS 玻璃按键里的 SVG(跟呼噜频道那 4 枚保持一致的视觉尺寸)
-function IconArrowUp() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 18.5V6M6.5 11l5.5-5.2 5.5 5.2" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+// 停止用 SVG(老婆只给了 send/loop 两张玻璃图,stop 是短暂发送态,继续沿用 SVG)
 function IconStop() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <rect x="7" y="7" width="10" height="10" rx="2.5" fill="#fff" />
-    </svg>
-  );
-}
-// "再咕噜": 循环回旋箭头,暗示"再来一轮"接龙
-function IconLoop() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M6 8.5a6 6 0 0 1 10.5-3M18 15.5a6 6 0 0 1-10.5 3M17.5 4v4.5H13M6.5 20v-4.5H11"
-        stroke="#7a5fce"
-        strokeWidth="2.1"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
     </svg>
   );
 }
@@ -368,16 +347,16 @@ export function PurrTablePage() {
       </div>
 
       <footer className="chat-input pt-composer">
-        {/* 左键:再咕噜(让他们继续接龙 4 回合) */}
+        {/* 左键:再咕噜(让他们继续接龙 4 回合) — 循环玻璃图整颗当按钮 */}
         <button
           type="button"
-          className="chat-glass-btn cg-loop"
+          className="pt-imgbtn"
           onClick={purrMore}
           disabled={sending || turns.length === 0 || present.length === 0}
           title="让他们再接龙 4 回合"
           aria-label="再咕噜"
         >
-          <IconLoop />
+          <img src="/icons/pt-loop.webp" alt="" aria-hidden="true" />
         </button>
 
         <textarea
@@ -395,7 +374,7 @@ export function PurrTablePage() {
           }}
         />
 
-        {/* 右键:发送 / 停止 */}
+        {/* 右键:发送(纸飞机玻璃图整颗当按钮) / 停止(短暂用 SVG 玻璃座) */}
         {sending ? (
           <button type="button" className="chat-glass-btn cg-send is-stop" onClick={stop} aria-label="停止">
             <IconStop />
@@ -403,12 +382,12 @@ export function PurrTablePage() {
         ) : (
           <button
             type="button"
-            className="chat-glass-btn cg-send"
+            className="pt-imgbtn"
             onClick={() => void sendUser()}
             disabled={!input.trim() || present.length === 0}
             aria-label="发送"
           >
-            <IconArrowUp />
+            <img src="/icons/pt-send.webp" alt="" aria-hidden="true" />
           </button>
         )}
       </footer>

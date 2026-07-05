@@ -5142,6 +5142,34 @@ a {
   color: #9c3a5b !important;
 }
 
+/* 咕噜圆桌输入区图片按键: 直接把玻璃图整张当按钮,不叠 chat-glass-btn 的玻璃座 */
+.pt-imgbtn {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 0.16s ease, opacity 0.16s ease, filter 0.16s ease;
+  filter: drop-shadow(0 6px 12px rgba(126, 106, 200, 0.28));
+}
+.pt-imgbtn img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+.pt-imgbtn:active {
+  transform: scale(0.92);
+}
+.pt-imgbtn:disabled {
+  opacity: 0.42;
+  cursor: default;
+  filter: drop-shadow(0 3px 6px rgba(126, 106, 200, 0.14)) grayscale(0.15);
+}
+
 /* 错误横幅 */
 .pt-error {
   align-self: center;
