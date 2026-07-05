@@ -285,6 +285,22 @@ export function SweetiePocketPage() {
           </div>
         ) : (
           <div className="sweetie-sea" style={{ height: seaHeight }}>
+            {/* 海面动态海浪:两层 SVG 波峰错峰漂 + 一道月光光斑 */}
+            <div className="sea-waves" aria-hidden="true">
+              <svg className="wave wave-1" viewBox="0 0 1440 120" preserveAspectRatio="none">
+                <path
+                  d="M0,60 C180,100 360,20 540,60 C720,100 900,20 1080,60 C1260,100 1350,40 1440,60 L1440,120 L0,120 Z"
+                  fill="rgba(216,180,226,0.35)"
+                />
+              </svg>
+              <svg className="wave wave-2" viewBox="0 0 1440 120" preserveAspectRatio="none">
+                <path
+                  d="M0,70 C240,30 480,110 720,70 C960,30 1200,110 1440,70 L1440,120 L0,120 Z"
+                  fill="rgba(244,194,203,0.25)"
+                />
+              </svg>
+              <div className="sea-glint" />
+            </div>
             {packets.map((p, i) => (
               <FloatingVehicle
                 key={p.id}

@@ -4825,12 +4825,60 @@ a {
 .sweetie-sea {
   position: relative;
 }
+
+/* 海面动态海浪叠加层: 不改原背景图, 两层 SVG 波形错峰漂 + 一道月光光斑
+   波浪 path 首尾 y 相同(60/70) + 宽 200% 平移 -50% → 无缝循环
+   transform/opacity 动画 + pointer-events:none, 手机性能友好 */
+.sea-waves {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 0;
+  height: 38%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+.wave {
+  position: absolute;
+  bottom: 0;
+  width: 200%;
+  height: 100%;
+}
+.wave-1 { animation: waveDrift 12s linear infinite; }
+.wave-2 { animation: waveDriftBack 20s linear infinite; opacity: 0.8; }
+
+@keyframes waveDrift {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes waveDriftBack {
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
+}
+
+.sea-glint {
+  position: absolute;
+  top: 10%; left: -30%;
+  width: 60%; height: 18%;
+  background: linear-gradient(90deg, transparent, rgba(255, 240, 235, 0.22), transparent);
+  filter: blur(6px);
+  animation: glintMove 16s ease-in-out infinite;
+}
+@keyframes glintMove {
+  0%, 100% { transform: translateX(0); opacity: 0.1; }
+  50%      { transform: translateX(220%); opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wave-1, .wave-2, .sea-glint { animation: none; }
+}
 /* 之前这里有一层 sweetie-sea::after 半透明深紫渐变遮罩("越深越暗"营造海底
    感)——老婆说"夜晚版磨砂盖住载具看不清"，去掉。载具本身的"越深越小越
    淡"(每个 button 上写死的 static scale+saturate)完全保留,那是每个载具
    自己的样式不是遮罩,不受影响。 */
 .floatvic {
   position: absolute;
+  z-index: 1; /* 海浪叠加层 z:0, 载具明确坐在上面别被浪压 */
   width: 72px;
   height: 72px;
   margin: 0;
