@@ -3535,8 +3535,12 @@ a {
   overflow: hidden;
   padding: 9px 16px;
   color: #6b5a8e;
-  font-family: "ShunFeng", var(--round);
-  font-size: 0.92rem;
+  /* 跟顶栏 model-chip 同一颗 Quimil 衬线 + text-stroke 加粗, 秀气统一 */
+  font-family: "Quimil", "Marcellus", var(--round);
+  font-size: 0.95rem;
+  font-weight: 700;
+  -webkit-text-stroke: 0.35px currentColor;
+  letter-spacing: 0.02em;
   line-height: 1;
   white-space: nowrap;
   border: 1px solid rgba(255, 255, 255, 0.9);
@@ -3630,12 +3634,12 @@ a {
   padding: 6px 11px;
   color: #6b4a8e;
   /* Quimil 秀气衬线 + 描边加粗(Quimil Demo 单字重, 靠 -webkit-text-stroke
-     0.4px currentColor 描一圈干净假粗, 跟咕噜圆桌药丸/CC 头像徽章一致);
+     currentColor 描一圈干净假粗, 跟咕噜圆桌药丸/CC 头像徽章一致);
      这里没有 background-clip:text 渐变, stroke 不会跟渐变打架, 放心用 */
   font-family: "Quimil", "Marcellus", var(--round);
-  font-size: 0.9rem;
-  font-weight: 700;
-  -webkit-text-stroke: 0.4px currentColor;
+  font-size: 1.05rem;
+  font-weight: 800;
+  -webkit-text-stroke: 0.55px currentColor;
   letter-spacing: 0.02em;
   border: 1px solid rgba(255, 255, 255, 0.8);
   border-radius: 999px;
@@ -3683,8 +3687,11 @@ a {
 .model-pop__brand {
   padding-left: 2px;
   color: var(--muted);
-  font-family: var(--round);
-  font-size: 0.72rem;
+  /* 品牌分组标题 Gemini/GPT/Codex/Claude 也走 Quimil, 跟胶囊统一 */
+  font-family: "Quimil", "Marcellus", var(--round);
+  font-size: 0.85rem;
+  font-weight: 700;
+  -webkit-text-stroke: 0.3px currentColor;
   letter-spacing: 0.05em;
 }
 .model-pop__pills {
