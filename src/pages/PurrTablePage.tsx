@@ -4,9 +4,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { streamChat, type ChatMessage } from '../services/chat';
+import { streamChat, type ChatMessage, type ContentPart } from '../services/chat';
 import { loadChatBg, loadChatUserAvatar } from '../services/purrConfig';
 import { loadLocal, saveLocal } from '../services/storage';
+import { addPhoto, getPhotoURL, getPhotoDataUrl } from '../services/photos';
 
 // 圆桌成员:只放 CC 家版(用棠棠订阅额度,不烧 API)。
 // pillLabel 是药丸上的全型号名(以后 API Claude 上来也不会混); short 是气泡小圆头像里的简写。
@@ -35,6 +36,8 @@ const TABLE_MEMBERS: TableMember[] = [
 const TURNS_PER_ROUND = 4;
 // 每个 CC 看到的历史最多 20 条,超过掐掉——省 token。
 const HISTORY_MAX = 20;
+// 棠棠一次最多发 3 张图给 CC 们看
+const MAX_PHOTOS_PER_SEND = 3;
 
 const TURNS_KEY = 'purr-table:turns';
 const SELECTED_KEY = 'purr-table:selected';
@@ -44,6 +47,7 @@ type Turn = {
   id: string;
   speaker: 'user' | string; // 'user' = 棠棠,其它是 memberId
   content: string;
+  photos?: string[]; // 只有棠棠的 user turn 会有,存 photos IndexedDB 的 id
   status: 'streaming' | 'done' | 'error';
   at: number;
 };
@@ -59,17 +63,52 @@ function IconStop() {
     </svg>
   );
 }
+// 相册按钮小相机 SVG
+function IconCamera() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 8h3l1.5-2h7L17 8h3v11H4z" stroke="#7a5fce" strokeWidth="1.8" strokeLinejoin="round" />
+      <circle cx="12" cy="13.5" r="3.2" stroke="#7a5fce" strokeWidth="1.8" />
+    </svg>
+  );
+}
+// 气泡里/待发槽里的图片缩略图,走 photos IndexedDB
+function PtPhotoThumb({ photoId }: { photoId: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void getPhotoURL(photoId).then((u) => { if (alive && u) setUrl(u); });
+    return () => { alive = false; };
+  }, [photoId]);
+  if (!url) return <div className="pt-photo-thumb pt-photo-thumb--loading" />;
+  return <img className="pt-photo-thumb" src={url} alt="" aria-hidden="true" />;
+}
 
-function buildMessages(system: string, turns: Turn[], speakerId: string): ChatMessage[] {
+// 拼 messages 变成 async,因为要从 IndexedDB 取图片 dataUrl 塞给 CC 看图
+async function buildMessages(system: string, turns: Turn[], speakerId: string): Promise<ChatMessage[]> {
   const recent = turns.slice(-HISTORY_MAX);
   const msgs: ChatMessage[] = [{ role: 'system', content: system }];
   for (const t of recent) {
-    if (!t.content.trim()) continue;
+    const hasPhotos = !!(t.photos && t.photos.length);
+    if (!t.content.trim() && !hasPhotos) continue;
     if (t.speaker === speakerId) {
+      // 自己历史发言从不带图(只有棠棠发图),直接文字
       msgs.push({ role: 'assistant', content: t.content });
     } else {
       const who = t.speaker === 'user' ? '棠棠' : findMember(t.speaker)?.short || '?';
-      msgs.push({ role: 'user', content: `[${who}]: ${t.content}` });
+      if (hasPhotos) {
+        // 多模态: 文字 + 图片一起, CC 家版 CLI 走 stream-json 能真的看图
+        const parts: ContentPart[] = [
+          { type: 'text', text: `[${who}]: ${t.content || '(看图)'}` },
+        ];
+        for (const pid of t.photos!) {
+          const dataUrl = await getPhotoDataUrl(pid);
+          if (dataUrl) parts.push({ type: 'image_url', image_url: { url: dataUrl } });
+        }
+        msgs.push({ role: 'user', content: parts });
+      } else {
+        msgs.push({ role: 'user', content: `[${who}]: ${t.content}` });
+      }
     }
   }
   if (msgs[msgs.length - 1]?.role !== 'user') {
@@ -84,6 +123,7 @@ function tableSystem(speaker: TableMember, present: TableMember[]): string {
     `你现在在「咕噜圆桌」——一间小小的猫咪茶话会。你的名字是「${speaker.short}」,你是 ${speaker.label}。` +
     `这里除了你,还有其他 CC 家版兄弟(${others || '暂时没别人'})和棠棠(人类,女生,咕噜圆桌的主人,别叫她"用户"或"你好")一起聊天。` +
     `\n\n【看历史】历史消息里以 [名字]: 开头的表示是那位说的;你回复时不要带 [名字]: 前缀,直接说话。` +
+    `\n【看图】棠棠有时会发图给圆桌上所有 CC 一起看(一次最多 3 张);图片会跟她的话一条消息里,你能真的看见,自然回应就行。` +
     `\n\n【风格】你说话简短(1-3 句为主,一句最好),俏皮、有点猫感、允许玩梗接梗、允许跟其它 CC 抬杠或起哄。绝不写旁白(不许用 () 或 ** 描述动作神态),绝不学客服口气(不要"需要帮助""希望能帮到你")。别老自报名字,该说啥说啥。` +
     `\n\n【互动】你可以直接接上一位说的话往下聊;也可以主动开新话题、点其他 CC 或点棠棠说话("F5 你怎么看?"这种)。想沉默一句"..."也行,但别整段发呆。`
   );
@@ -105,9 +145,12 @@ export function PurrTablePage() {
   const [sending, setSending] = useState(false);
   const [errorBanner, setErrorBanner] = useState('');
   const [userAvatar, setUserAvatar] = useState('');
+  // 待发图片: 挑好先钉在输入框上方, 配文字一起发, 一次最多 3 张
+  const [pendingPhotos, setPendingPhotos] = useState<string[]>([]);
 
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const photoFileRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => { saveLocal(TURNS_KEY, turns); }, [turns]);
   useEffect(() => { saveLocal(SELECTED_KEY, selectedIds); }, [selectedIds]);
@@ -169,7 +212,7 @@ export function PurrTablePage() {
       setTurns(history);
 
       const system = tableSystem(speaker, present);
-      const messages = buildMessages(system, history.slice(0, -1), speaker.id);
+      const messages = await buildMessages(system, history.slice(0, -1), speaker.id);
 
       let acc = '';
       let hadError = false;
@@ -220,16 +263,33 @@ export function PurrTablePage() {
 
   const sendUser = async () => {
     const text = input.trim();
-    if (!text || sending) return;
+    if (sending) return;
+    // 允许:纯文字 / 纯图片 / 图+文字 一起发。三样都没就不发
+    if (!text && pendingPhotos.length === 0) return;
     if (present.length === 0) {
       setErrorBanner('至少留一位 CC 在场吧,不然圆桌空的');
       return;
     }
-    const userTurn: Turn = { id: uid(), speaker: 'user', content: text, status: 'done', at: Date.now() };
+    const userTurn: Turn = {
+      id: uid(), speaker: 'user', content: text, status: 'done', at: Date.now(),
+      ...(pendingPhotos.length ? { photos: pendingPhotos } : {}),
+    };
     const next = [...turns, userTurn];
     setTurns(next);
     setInput('');
+    setPendingPhotos([]);
     await runRound(next, TURNS_PER_ROUND);
+  };
+
+  // 挑图片:一次最多 3 张, 已经有几张就只补足够到 3 张。压缩后存 IndexedDB
+  const pickPhotos = async (files: FileList | null) => {
+    if (!files || sending) return;
+    const remaining = MAX_PHOTOS_PER_SEND - pendingPhotos.length;
+    if (remaining <= 0) return;
+    const list = Array.from(files).filter((f) => f.type.startsWith('image/')).slice(0, remaining);
+    const ids = await Promise.all(list.map((f) => addPhoto(f)));
+    setPendingPhotos((prev) => [...prev, ...ids]);
+    if (photoFileRef.current) photoFileRef.current.value = '';
   };
 
   const purrMore = async () => {
@@ -301,12 +361,21 @@ export function PurrTablePage() {
 
         {turns.map((t) => {
           if (t.speaker === 'user') {
+            const hasPhotos = !!(t.photos && t.photos.length);
+            const hasText = !!t.content.trim();
             return (
               <div key={t.id} className="bubble-row is-user">
                 <div className="bubble-stack bubble-stack--user">
-                  <div className="bubble bubble--user">
-                    <span className="bubble__text">{t.content}</span>
-                  </div>
+                  {hasPhotos ? (
+                    <div className={`pt-photo-grid pt-photo-grid--${t.photos!.length}`}>
+                      {t.photos!.map((pid) => <PtPhotoThumb key={pid} photoId={pid} />)}
+                    </div>
+                  ) : null}
+                  {hasText ? (
+                    <div className="bubble bubble--user">
+                      <span className="bubble__text">{t.content}</span>
+                    </div>
+                  ) : null}
                   <div className="bubble-foot">
                     <span className="bubble-time">{fmtStamp(t.at)}</span>
                   </div>
@@ -349,6 +418,26 @@ export function PurrTablePage() {
       </div>
 
       <footer className="chat-input pt-composer">
+        {/* 待发图片缩略图: 钉在输入区正上方, 一次最多 3 张 */}
+        {pendingPhotos.length > 0 ? (
+          <div className="pt-pending">
+            {pendingPhotos.map((pid) => (
+              <span key={pid} className="pt-pending__slot">
+                <PtPhotoThumb photoId={pid} />
+                <button
+                  type="button"
+                  className="pt-pending__remove"
+                  onClick={() => setPendingPhotos((prev) => prev.filter((x) => x !== pid))}
+                  aria-label="移除图片"
+                  title="移除"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
+
         {/* 左键:再咕噜(让他们继续接龙 4 回合) — 循环玻璃图整颗当按钮 */}
         <button
           type="button"
@@ -360,6 +449,30 @@ export function PurrTablePage() {
         >
           <img src="/icons/pt-loop.webp" alt="" aria-hidden="true" />
         </button>
+
+        {/* 中键:相册 (发图给 CC 们看,一次最多 3 张) */}
+        <button
+          type="button"
+          className="pt-camerabtn"
+          onClick={() => photoFileRef.current?.click()}
+          disabled={sending || pendingPhotos.length >= MAX_PHOTOS_PER_SEND}
+          title={
+            pendingPhotos.length >= MAX_PHOTOS_PER_SEND
+              ? '一次最多 3 张'
+              : `发图 (还能加 ${MAX_PHOTOS_PER_SEND - pendingPhotos.length} 张)`
+          }
+          aria-label="加图片"
+        >
+          <IconCamera />
+        </button>
+        <input
+          ref={photoFileRef}
+          type="file"
+          accept="image/*"
+          multiple
+          hidden
+          onChange={(e) => void pickPhotos(e.target.files)}
+        />
 
         <textarea
           className="pt-textarea"
@@ -386,7 +499,7 @@ export function PurrTablePage() {
             type="button"
             className="pt-imgbtn"
             onClick={() => void sendUser()}
-            disabled={!input.trim() || present.length === 0}
+            disabled={(!input.trim() && pendingPhotos.length === 0) || present.length === 0}
             aria-label="发送"
           >
             <img src="/icons/pt-send.webp" alt="" aria-hidden="true" />
