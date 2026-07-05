@@ -2089,6 +2089,12 @@ a {
   border-color: rgba(201, 184, 241, 0.8);
   box-shadow: 0 0 0 3px rgba(201, 184, 241, 0.22);
 }
+/* 占位符调小一点(可爱表情脸不占太多位),真正打字文字保持原尺寸 */
+.chat-input textarea::placeholder {
+  font-size: 0.86rem;
+  color: rgba(107, 74, 134, 0.55);
+  letter-spacing: 0.02em;
+}
 
 .chat-input__btn {
   flex-shrink: 0;

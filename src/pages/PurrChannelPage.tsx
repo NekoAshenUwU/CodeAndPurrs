@@ -1575,7 +1575,7 @@ function ChatRoom({
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="发消息…（点右边发送）"
+          placeholder="喵呜～≽^•༚• ྀི≼"
           rows={1}
         />
 
