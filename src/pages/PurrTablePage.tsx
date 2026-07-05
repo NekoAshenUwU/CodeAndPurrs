@@ -63,15 +63,6 @@ function IconStop() {
     </svg>
   );
 }
-// 相册按钮小相机 SVG
-function IconCamera() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M4 8h3l1.5-2h7L17 8h3v11H4z" stroke="#7a5fce" strokeWidth="1.8" strokeLinejoin="round" />
-      <circle cx="12" cy="13.5" r="3.2" stroke="#7a5fce" strokeWidth="1.8" />
-    </svg>
-  );
-}
 // 气泡里/待发槽里的图片缩略图,走 photos IndexedDB
 function PtPhotoThumb({ photoId }: { photoId: string }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -450,10 +441,10 @@ export function PurrTablePage() {
           <img src="/icons/pt-loop.webp" alt="" aria-hidden="true" />
         </button>
 
-        {/* 中键:相册 (发图给 CC 们看,一次最多 3 张) */}
+        {/* 中键:相册 (发图给 CC 们看,一次最多 3 张) — 玻璃相机图整颗当按钮 */}
         <button
           type="button"
-          className="pt-camerabtn"
+          className="pt-imgbtn"
           onClick={() => photoFileRef.current?.click()}
           disabled={sending || pendingPhotos.length >= MAX_PHOTOS_PER_SEND}
           title={
@@ -463,7 +454,7 @@ export function PurrTablePage() {
           }
           aria-label="加图片"
         >
-          <IconCamera />
+          <img src="/icons/pt-camera.webp" alt="" aria-hidden="true" />
         </button>
         <input
           ref={photoFileRef}
