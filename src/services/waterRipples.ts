@@ -166,13 +166,15 @@ void main() {
   vec3 n = normalize(vec3(normal * 45.0, 1.0));
   vec3 lightDir = normalize(vec3(-0.35, 0.75, 0.6));
   float spec = pow(max(dot(n, lightDir), 0.0), 24.0);
-  // "波光粼粼"是很多颗分散的碎光点,不是跟指腹一样大的一整块光晕——用固定的
-  // 屏幕空间网格给每个格子发一张"参不参与闪烁"的通行证,水面平滑的高光场
-  // 只有落在"通行"格子里的部分才画得出来,视觉上就变成成片但分散的碎光点。
-  // 波纹圈往外扩散、扫过不同格子,天然就会"这边闪一下、那边闪一下",
-  // 不需要额外的时间变量就有闪动感。
-  vec2 cell = floor(gl_FragCoord.xy / 13.0);
-  float grain = step(0.55, hash(cell));
+  // "波光粼粼"是很多颗分散的碎光点,不是跟指腹一样大的一整块光晕。上一版
+  // 格子(13px)+ step() 硬阈值,在 spec 本身大面积饱和的时候,大片相邻格子
+  // 同时"通行"、又都跟 spec 一样亮,直接连成一整块带硬直角边的方块——
+  // 截图里看到的"像素方块"就是这个。这次改两点:格子缩小到 4px(更细的
+  // 颗粒感,不容易连成大块);用哈希值本身做连续的 pow 曲线(不再是非 0 即 1
+  // 的硬开关),大部分格子哈希值偏低、pow 之后趋近 0,只有极少数格子的哈希值
+  // 本来就接近 1 才会亮起来,边缘是渐变的,不会再是方块的硬直角。
+  vec2 cell = floor(gl_FragCoord.xy / 4.0);
+  float grain = pow(hash(cell), 8.0);
   vec3 sparkleColor = vec3(1.0, 0.9608, 0.9412);
   bg.rgb += sparkleColor * spec * grain * uHighlight;
   gl_FragColor = bg;
