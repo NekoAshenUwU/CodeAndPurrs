@@ -12,6 +12,8 @@ import {
   type Vehicle,
 } from '../services/redPacket';
 import { createWaterRipples, type WaterRipples } from '../services/waterRipples';
+import { debugInfo, debugError } from '../services/debugLog';
+import { DebugOverlay } from '../components/DebugOverlay';
 
 const fmtStamp = (at: number): string => {
   const d = new Date(at);
@@ -293,17 +295,18 @@ export function SweetiePocketPage() {
 
     let cancelled = false;
     const bgUrl = parseBackgroundUrl(getComputedStyle(page).backgroundImage) ?? '/rooms/sweetie-pocket-bg.webp';
-    console.info('[落予棠] 初始化 WebGL 涟漪, 背景图:', bgUrl);
+    debugInfo(`[落予棠] 初始化 WebGL 涟漪, 背景图: ${bgUrl}`);
+    debugInfo(`[落予棠] prefers-reduced-motion: ${window.matchMedia('(prefers-reduced-motion: reduce)').matches}`);
     void createWaterRipples(canvas, bgUrl).then((engine) => {
       if (cancelled) {
         engine?.destroy();
         return;
       }
       if (!engine) {
-        console.error('[落予棠] WebGL 涟漪初始化失败或设备不支持,降级为纯焦散层(上面应该有一条更具体的原因日志)');
+        debugError('[落予棠] WebGL 涟漪初始化失败或设备不支持,降级为纯焦散层(上面应该有一条更具体的原因日志)');
         return;
       }
-      console.info('[落予棠] WebGL 涟漪已就绪');
+      debugInfo('[落予棠] WebGL 涟漪已就绪');
       engineRef.current = engine;
       engine.start();
       setRipplesReady(true);
@@ -323,11 +326,19 @@ export function SweetiePocketPage() {
   // 这样涟漪判定跟"点没点中某个元素"无关，只跟"按在这片区域的哪个坐标"有关。
   const onSeaPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     const canvas = canvasRef.current;
-    if (!canvas || !engineRef.current) return;
+    if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const u = (e.clientX - rect.left) / rect.width;
     const v = (e.clientY - rect.top) / rect.height;
-    if (u < 0 || u > 1 || v < 0 || v > 1) return;
+    if (!engineRef.current) {
+      debugError(`[落予棠] 点了一下(u=${u.toFixed(2)}, v=${v.toFixed(2)}) 但引擎还没就绪, 涟漪不会出现`);
+      return;
+    }
+    if (u < 0 || u > 1 || v < 0 || v > 1) {
+      debugError(`[落予棠] 点击坐标超出 canvas 范围 u=${u.toFixed(2)} v=${v.toFixed(2)}, 已跳过`);
+      return;
+    }
+    debugInfo(`[落予棠] drop(${u.toFixed(2)}, ${v.toFixed(2)})`);
     engineRef.current.drop(u, v);
   };
   const userBalance = useMemo(() => balanceOf('user', packets), [packets]);
@@ -345,6 +356,7 @@ export function SweetiePocketPage() {
         aria-hidden="true"
       />
       <div className="sweetie-caustics" aria-hidden="true" />
+      <DebugOverlay />
 
       <header className="chat-head">
         <Link to="/" className="chat-head__back" aria-label="回首页">

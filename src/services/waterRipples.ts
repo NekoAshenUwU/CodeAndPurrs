@@ -14,6 +14,8 @@
 // 而不是只看扩展字符串存不存在(某些设备扩展在但实际渲染不到该纹理格式)。
 // 任何一步失败都在构造期抛出,调用方 catch 到就整体退化(参见 createWaterRipples)。
 
+import { debugError } from './debugLog';
+
 export type RippleOptions = {
   resolution?: number; // 仿真纹理边长,默认 256(手机优先，越小越省)
   perturbance?: number; // 折射扰动强度，越大扭曲越明显
@@ -412,7 +414,9 @@ export async function createWaterRipples(
     await engine.loadImage(imageUrl);
     return engine;
   } catch (err) {
-    console.warn('[waterRipples] 不支持或初始化失败，降级为纯焦散层:', err);
+    debugError(
+      `[waterRipples] 不支持或初始化失败，降级为纯焦散层: ${err instanceof Error ? err.message : String(err)}`,
+    );
     return null;
   }
 }
