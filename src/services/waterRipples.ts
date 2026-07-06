@@ -142,26 +142,19 @@ void main() {
   float hD = decode16(texture2D(uState, vUv - vec2(0.0, uDelta.y)).rg, 2.0);
   float hU = decode16(texture2D(uState, vUv + vec2(0.0, uDelta.y)).rg, 2.0);
   vec2 normal = vec2(hL - hR, hD - hU);
+  // 折射位移是主视觉:用高度场的梯度偏移背景纹理采样 UV,让波纹"推开又复原"
+  // 背景本身的画面细节,这才是"水在动"的观感来源。之前主视觉是镜面高光
+  // (法线点积固定光源),读起来是"一闪一闪的光斑快速消散",不是水纹本身
+  // 在扭曲——现在数据链路已经用热力图+真实高度读数完全验证过没问题
+  // (读数在 0.13 左右,量级正常),可以放心把 uPerturbance 调大到能看出
+  // 明显扭曲的程度,不用再顾虑"是不是白费力气调一个还没验证过的效果"。
   vec2 bgUv = (vUv - 0.5) * uCoverScale + 0.5 + normal * uPerturbance;
   vec4 bg = texture2D(uBackground, clamp(bgUv, 0.001, 0.999));
-  // 纯折射位移在这张软渐变背景上只有几像素,肉眼几乎看不出来,根因是背景本身
-  // 低对比度,不是位移幅度不够——不再往上加 perturbance。改成真正的镜面高光:
-  // 把 2D 高度梯度当法线贴图用(乘一个放大系数,不然坡度太小、法线几乎总是
-  // 朝正上方),跟一个固定的虚拟光源方向做点积——只有"坡面正对光源"的地方
-  // 才会亮,这是水面反光真正的物理来源(不是单纯提亮,是模拟"这一点点朝不朝
-  // 光"),波纹边缘因此会带一道流动的亮光边,而不是整圈均匀发白。
-  // 这是方向性光照,不是各向同性——同一圈涟漪只有"迎光"那一侧会亮,这是
-  // 故意的(参考图里波纹本来就是一侧闪光、不是整圈均匀发光)。
-  // pow 指数太高(之前 24)会让高光变成"要不要不,要就极窄"的硬阈值——
-  // 2D 波纹本身随着波前变大、能量摊到更大周长上就会自然衰减,坡度很快掉到
-  // 阈值以下,亮光"啪"一下就没了,而不是渐渐淡出(实测过,真机反馈"点一下
-  // 亮一秒就消失,像是没在传播"——其实在传播,只是坡度不够陡就直接判定为
-  // "不够亮")。指数调低,亮/暗过渡更宽容,波纹传得远一点、弱一点也还留得住
-  // 一点高光,能一直跟着波纹走,而不是只抓得住刚落水那一瞬间。
-  vec3 n = normalize(vec3(normal * 55.0, 1.0));
-  vec3 lightDir = normalize(vec3(0.4, 0.65, 0.6));
-  float spec = pow(max(dot(n, lightDir), 0.0), 6.0);
-  bg.rgb += spec * uHighlight;
+  // 高光只做辅助,不做主视觉:改回各向同性的梯度模长提亮(不挑角度、不用
+  // 点积镜面高光那套),系数和上限都调得很小,只是给波纹边缘加一点点
+  // "反光感",视觉重心必须在上面的折射扭曲上。
+  float highlight = clamp(length(normal) * uHighlight, 0.0, 0.12);
+  bg.rgb += highlight;
   gl_FragColor = bg;
 }
 `;
@@ -262,15 +255,16 @@ export class WaterRipples {
   constructor(canvas: HTMLCanvasElement, opts: RippleOptions = {}) {
     this.canvas = canvas;
     this.resolution = opts.resolution ?? 256;
-    // 弱的根因是背景低对比、位移折射本来就看不清,不是位移幅度不够——
-    // 不再往上调 perturbance。
-    this.perturbance = opts.perturbance ?? 0.035;
-    // 镜面高光强度系数,初始 0.3(见 RENDER_FRAG_SRC 里的镜面高光实现)。
-    this.highlight = opts.highlight ?? 0.3;
+    // 数据链路现在已经用热力图+真实高度读数完全验证过没问题(读数 ~0.13,
+    // 量级正常),折射改回主视觉,可以放心调大——不再是"调了也不知道有没有
+    // 用"的阶段。
+    this.perturbance = opts.perturbance ?? 0.6;
+    // 高光只做辅助提亮,系数调小很多(配合 RENDER_FRAG_SRC 里改回的各向同性
+    // 梯度模长提亮,不再是主视觉)。
+    this.highlight = opts.highlight ?? 1.0;
     this.dropRadius = opts.dropRadius ?? (20 / this.resolution);
-    // damping 调高(更接近 1)配合上面波速调慢——真机反馈"圆形对了,但太快
-    // 消散,截图都来不及",参考图那种水面是要能晃悠好几圈才慢慢平复的。
-    this.damping = opts.damping ?? 0.997;
+    // damping 保持在接近 1 的一档,让单次点击的波多晃几圈再衰减完。
+    this.damping = opts.damping ?? 0.998;
 
     const gl = canvas.getContext('webgl', {
       alpha: false,
