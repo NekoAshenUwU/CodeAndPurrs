@@ -282,21 +282,28 @@ export function SweetiePocketPage() {
   // WebGL 不可用/扩展缺失/图片加载失败 → createWaterRipples 返回 null，
   // canvas 保持 opacity:0，底下 .sweetie-page 原本的 CSS 背景图照常显示，
   // 只是没有涟漪(焦散层不受影响，仍然叠着)。
-  // prefers-reduced-motion 直接跳过整个 WebGL 初始化，同样只剩焦散层。
+  // 不再拿 prefers-reduced-motion 挡这个初始化——它是"手指点哪儿哪儿起一圈"的
+  // 直接反馈动画，不是自动播放的环境动效(焦散平移/星光那种才该被 reduced-motion
+  // 挡，已经在 CSS 里单独处理了)；之前这条挡在这里，真机上 OS 层"减弱动态效果"
+  // 一开，涟漪直接整个不初始化，摸上去毫无反应，看着就是"涟漪坏了"。
   useEffect(() => {
     const canvas = canvasRef.current;
     const page = pageRef.current;
     if (!canvas || !page) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     let cancelled = false;
     const bgUrl = parseBackgroundUrl(getComputedStyle(page).backgroundImage) ?? '/rooms/sweetie-pocket-bg.webp';
+    console.info('[落予棠] 初始化 WebGL 涟漪, 背景图:', bgUrl);
     void createWaterRipples(canvas, bgUrl).then((engine) => {
       if (cancelled) {
         engine?.destroy();
         return;
       }
-      if (!engine) return; // 不支持，保持降级状态
+      if (!engine) {
+        console.error('[落予棠] WebGL 涟漪初始化失败或设备不支持,降级为纯焦散层(上面应该有一条更具体的原因日志)');
+        return;
+      }
+      console.info('[落予棠] WebGL 涟漪已就绪');
       engineRef.current = engine;
       engine.start();
       setRipplesReady(true);
@@ -308,16 +315,19 @@ export function SweetiePocketPage() {
     };
   }, []);
 
-  // 点击海面空白处 → 该点起真实涟漪(WebGL drop)。
-  // 只有点空白海面时触发;点载具 button 时 e.target !== e.currentTarget，跳过——
-  // 涟漪绑的是背景 canvas，跟漂流物的点击(打开红包详情)完全不冲突。
-  const onSeaTap = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target !== e.currentTarget) return;
+  // 手指/鼠标在海面这一整片滚动区域按下 → 该点起真实涟漪(WebGL drop)。
+  // 绑在最外层滚动容器上、用 pointerdown(不是 click),不管按下的是空白海面
+  // 还是漂流物按钮都会触发——事件继续正常冒泡，载具自己的 onClick(开红包详情)
+  // 完全不受影响，等于"点漂流物 = 开详情 + 落一圈涟漪"，两者独立互不干扰。
+  // 不用 canvas 自己接收指针事件(canvas 一直是 pointer-events:none)，
+  // 这样涟漪判定跟"点没点中某个元素"无关，只跟"按在这片区域的哪个坐标"有关。
+  const onSeaPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     const canvas = canvasRef.current;
     if (!canvas || !engineRef.current) return;
     const rect = canvas.getBoundingClientRect();
     const u = (e.clientX - rect.left) / rect.width;
     const v = (e.clientY - rect.top) / rect.height;
+    if (u < 0 || u > 1 || v < 0 || v > 1) return;
     engineRef.current.drop(u, v);
   };
   const userBalance = useMemo(() => balanceOf('user', packets), [packets]);
@@ -349,7 +359,7 @@ export function SweetiePocketPage() {
       <BalanceIsland who="棠棠的口袋" amount={userBalance} side="left" />
       <BalanceIsland who="予予的口袋" amount={aiBalance} side="right" />
 
-      <div className="memory-scroll sweetie-sea-scroll">
+      <div className="memory-scroll sweetie-sea-scroll" onPointerDown={onSeaPointerDown}>
         {packets.length === 0 ? (
           <div className="chat-empty">
             <div className="chat-empty__paw">🧧</div>
@@ -360,7 +370,6 @@ export function SweetiePocketPage() {
           <div
             className="sweetie-sea"
             style={{ height: seaHeight }}
-            onClick={onSeaTap}
           >
             {/* 海面随机星光: 12 颗小白点错峰闪烁 */}
             {SEA_SPARKLES.map((s, i) => (

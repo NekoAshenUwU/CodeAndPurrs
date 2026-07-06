@@ -4844,10 +4844,13 @@ a {
      宝箱这层稳稳浮在两层新背景之上，不改变任何已有视觉或行为，只是把层级说清楚。 */
   position: relative;
   z-index: 2;
+  /* 涟漪 pointerdown 现在绑在这一整片滚动容器上(不只是 .sweetie-sea 内部)，
+     点漂流物/宝箱也会顺带落一圈涟漪——手机上禁掉长按选中/高亮，别的都不变。 */
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 .sweetie-sea {
   position: relative;
-  /* 让点击有反馈:海面接受 tap 起涟漪, 手机上禁掉长按选中/高亮 */
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
