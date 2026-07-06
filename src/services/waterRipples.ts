@@ -129,7 +129,7 @@ void main() {
   // 沿垂直对角线直接掉到 0,一圈本该对称的涟漪就被压成"两头尖"的橄榄形
   // (实测过,真机截图上明显能看到)。改成梯度模长,不挑角度,任何方向的坡度
   // 都同样提亮,圆环才会是圆的。
-  float glow = clamp(length(normal) * uHighlight, 0.0, 0.42);
+  float glow = clamp(length(normal) * uHighlight, 0.0, 0.6);
   bg.rgb += glow;
   gl_FragColor = bg;
 }
@@ -239,10 +239,8 @@ export class WaterRipples {
     // 诊断值,回落到克制、耐看的观感数值(仍比最终目标稍强一档,留一点确认空间,
     // 等看着舒服了再收一收)。
     this.perturbance = opts.perturbance ?? 0.035;
-    // "两头尖"那个方向性 bug 顺带也解释了"微弱"——之前一圈里有小半圈角度
-    // 因为点积公式直接掉到 0,平均下来自然显弱。现在角度均匀了,系数还是
-    // 顺手调高一点,确保这一轮能看清楚。
-    this.highlight = opts.highlight ?? 2.6;
+    // 真机反馈要求更明显,系数再调高一档,配合上面 clamp 上限一起提亮。
+    this.highlight = opts.highlight ?? 4.2;
     this.dropRadius = opts.dropRadius ?? (20 / this.resolution);
     // damping 调高(更接近 1)配合上面波速调慢——真机反馈"圆形对了,但太快
     // 消散,截图都来不及",参考图那种水面是要能晃悠好几圈才慢慢平复的。
@@ -418,12 +416,14 @@ export class WaterRipples {
     const gl = this.gl;
     const src = this.srcIsA ? this.targetA : this.targetB;
     const dst = this.srcIsA ? this.targetB : this.targetA;
-    // deltaY 是仿真纹理自己的一格步长; deltaX 按画布宽高比放大/缩小,让 x/y
-    // 两个方向的取样步长对应到画布上的物理距离一致——不然波纹在竖屏上会沿
-    // 高的那个方向"跑得更快",扩散出来就是椭圆而不是圆(见 DROP_FRAG_SRC 顶部
-    // 同一个问题的注释)。
-    const deltaY = 1 / this.resolution;
-    const deltaX = deltaY / this.canvasAspect;
+    // 仿真纹理本身就是正方形存储(256x256),这里只是在读它自己格子里的邻居——
+    // 必须用对称步长(dx=dy=1/resolution)。之前在这里也套了宽高比校正,
+    // 结果在 NEAREST 采样下变成非整数格偏移(比如 x 方向偏移到 1.86 格,
+    // 取整变 2 格,y 方向还是 1 格),每帧都在递归的波动方程里累积这个方向性
+    // 偏差,晃几圈之后就演化成一圈"漩涡"而不是同心圆——回退成对称步长,
+    // 画布宽高比的修正只在"种子形状"(DROP_FRAG_SRC 的 uAspect)这个
+    // 一次性、不递归的地方做,不会累积出问题。
+    const delta = 1 / this.resolution;
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, dst.framebuffer);
     gl.viewport(0, 0, this.resolution, this.resolution);
@@ -432,7 +432,7 @@ export class WaterRipples {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, src.texture);
     gl.uniform1i(gl.getUniformLocation(this.updateProgram, 'uPrevState'), 0);
-    gl.uniform2f(gl.getUniformLocation(this.updateProgram, 'uDelta'), deltaX, deltaY);
+    gl.uniform2f(gl.getUniformLocation(this.updateProgram, 'uDelta'), delta, delta);
     gl.uniform1f(gl.getUniformLocation(this.updateProgram, 'uDamping'), this.damping);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
@@ -455,8 +455,9 @@ export class WaterRipples {
       );
     }
     const state = this.srcIsA ? this.targetA : this.targetB;
-    const deltaY = 1 / this.resolution;
-    const deltaX = deltaY / this.canvasAspect;
+    // 跟 step() 同理: 读的是同一张正方形仿真纹理自己的邻居格子,对称步长就好,
+    // 不需要(也不该)套宽高比。
+    const delta = 1 / this.resolution;
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
@@ -468,7 +469,7 @@ export class WaterRipples {
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.bgTexture);
     gl.uniform1i(gl.getUniformLocation(this.renderProgram, 'uBackground'), 1);
-    gl.uniform2f(gl.getUniformLocation(this.renderProgram, 'uDelta'), deltaX, deltaY);
+    gl.uniform2f(gl.getUniformLocation(this.renderProgram, 'uDelta'), delta, delta);
     gl.uniform2f(
       gl.getUniformLocation(this.renderProgram, 'uCoverScale'),
       this.coverScale.x,
