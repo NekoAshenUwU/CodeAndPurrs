@@ -68,10 +68,17 @@ uniform sampler2D uPrevState;
 uniform vec2 uCenter;
 uniform float uRadius;
 uniform float uStrength;
+uniform float uAspect;
 varying vec2 vUv;
 void main() {
   vec4 data = texture2D(uPrevState, vUv);
-  float dist = length(vUv - uCenter);
+  // 仿真状态存在一张正方形纹理里,但它的 UV 是直接当"画布上的比例坐标"用的——
+  // 手机画布是竖屏(高远大于宽),vUv 空间里的一个正圆落到画布上会被拉成竖着的
+  // 椭圆。用 uAspect(画布宽/高)把 x 方向的距离先放大抵消掉,水花落下的
+  // 那一下才是真正的圆,不是椭圆。
+  vec2 d = vUv - uCenter;
+  d.x *= uAspect;
+  float dist = length(d);
   float drop = max(0.0, 1.0 - dist / uRadius);
   drop = drop * drop * (3.0 - 2.0 * drop);
   gl_FragColor = vec4(data.r + drop * uStrength, data.g, 0.0, 1.0);
@@ -213,6 +220,7 @@ export class WaterRipples {
   private bgTexture: WebGLTexture | null = null;
   private bgImageSize = { w: 1, h: 1 };
   private coverScale = { x: 1, y: 1 };
+  private canvasAspect = 1; // canvas.width / canvas.height——手机竖屏时远小于 1
 
   private rafId: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
@@ -312,6 +320,7 @@ export class WaterRipples {
       this.canvas.width = w;
       this.canvas.height = h;
     }
+    this.canvasAspect = this.canvas.width / this.canvas.height;
     this.updateCoverScale();
   }
 
@@ -359,6 +368,7 @@ export class WaterRipples {
     gl.uniform2f(gl.getUniformLocation(this.dropProgram, 'uCenter'), u, 1 - v);
     gl.uniform1f(gl.getUniformLocation(this.dropProgram, 'uRadius'), this.dropRadius);
     gl.uniform1f(gl.getUniformLocation(this.dropProgram, 'uStrength'), strength);
+    gl.uniform1f(gl.getUniformLocation(this.dropProgram, 'uAspect'), this.canvasAspect);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     this.srcIsA = !this.srcIsA;
@@ -403,7 +413,12 @@ export class WaterRipples {
     const gl = this.gl;
     const src = this.srcIsA ? this.targetA : this.targetB;
     const dst = this.srcIsA ? this.targetB : this.targetA;
-    const delta = 1 / this.resolution;
+    // deltaY 是仿真纹理自己的一格步长; deltaX 按画布宽高比放大/缩小,让 x/y
+    // 两个方向的取样步长对应到画布上的物理距离一致——不然波纹在竖屏上会沿
+    // 高的那个方向"跑得更快",扩散出来就是椭圆而不是圆(见 DROP_FRAG_SRC 顶部
+    // 同一个问题的注释)。
+    const deltaY = 1 / this.resolution;
+    const deltaX = deltaY / this.canvasAspect;
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, dst.framebuffer);
     gl.viewport(0, 0, this.resolution, this.resolution);
@@ -412,7 +427,7 @@ export class WaterRipples {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, src.texture);
     gl.uniform1i(gl.getUniformLocation(this.updateProgram, 'uPrevState'), 0);
-    gl.uniform2f(gl.getUniformLocation(this.updateProgram, 'uDelta'), delta, delta);
+    gl.uniform2f(gl.getUniformLocation(this.updateProgram, 'uDelta'), deltaX, deltaY);
     gl.uniform1f(gl.getUniformLocation(this.updateProgram, 'uDamping'), this.damping);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
@@ -435,7 +450,8 @@ export class WaterRipples {
       );
     }
     const state = this.srcIsA ? this.targetA : this.targetB;
-    const delta = 1 / this.resolution;
+    const deltaY = 1 / this.resolution;
+    const deltaX = deltaY / this.canvasAspect;
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
@@ -447,7 +463,7 @@ export class WaterRipples {
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.bgTexture);
     gl.uniform1i(gl.getUniformLocation(this.renderProgram, 'uBackground'), 1);
-    gl.uniform2f(gl.getUniformLocation(this.renderProgram, 'uDelta'), delta, delta);
+    gl.uniform2f(gl.getUniformLocation(this.renderProgram, 'uDelta'), deltaX, deltaY);
     gl.uniform2f(
       gl.getUniformLocation(this.renderProgram, 'uCoverScale'),
       this.coverScale.x,
