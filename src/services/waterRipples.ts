@@ -19,6 +19,7 @@ import { debugError, debugInfo } from './debugLog';
 export type RippleOptions = {
   resolution?: number; // 仿真纹理边长,默认 256(手机优先，越小越省)
   perturbance?: number; // 折射扰动强度，越大扭曲越明显
+  highlight?: number; // 坡度仿高光强度，越大水面反光越明显
   dropRadius?: number; // 涟漪半径，仿真纹理空间的归一化值(0~1)
   damping?: number; // 波动衰减系数，越接近 1 波纹持续越久
 };
@@ -84,6 +85,7 @@ uniform sampler2D uBackground;
 uniform vec2 uDelta;
 uniform vec2 uCoverScale;
 uniform float uPerturbance;
+uniform float uHighlight;
 uniform int uDebugVisualize;
 varying vec2 vUv;
 void main() {
@@ -107,7 +109,14 @@ void main() {
   float hU = texture2D(uState, vUv + vec2(0.0, uDelta.y)).r;
   vec2 normal = vec2(hL - hR, hD - hU);
   vec2 bgUv = (vUv - 0.5) * uCoverScale + 0.5 + normal * uPerturbance;
-  gl_FragColor = texture2D(uBackground, clamp(bgUv, 0.001, 0.999));
+  vec4 bg = texture2D(uBackground, clamp(bgUv, 0.001, 0.999));
+  // 纯折射位移在这张软渐变背景上只有几像素,肉眼几乎看不出来(热力图已经证实
+  // 数据链路本身没问题)。加一条基于坡度的仿高光/阴影(水面反光的经典近似),
+  // 不管背景本身细节多寡都能看出涟漪轮廓——真正"看得见的水波纹"效果基本都靠
+  // 这条,不是单纯折射位移。
+  float highlight = clamp((normal.x + normal.y) * uHighlight, -0.6, 0.6);
+  bg.rgb += highlight;
+  gl_FragColor = bg;
 }
 `;
 
@@ -182,6 +191,7 @@ export class WaterRipples {
   private canvas: HTMLCanvasElement;
   private resolution: number;
   private perturbance: number;
+  private highlight: number;
   private dropRadius: number;
   private damping: number;
 
@@ -212,6 +222,9 @@ export class WaterRipples {
     // 确认"物理数据到底有没有传到画面上"——排查完真正的 bug 之后要调回克制的
     // 观感数值(比如 perturbance 0.02~0.03, dropRadius 20/resolution 那一档)。
     this.perturbance = opts.perturbance ?? 0.12;
+    // 仿高光强度: 单纯折射位移在低对比度背景上不够看,这个是新加的坡度高光项
+    // (见 RENDER_FRAG_SRC),先给个夸张值方便真机确认"加了之后终于能看见"。
+    this.highlight = opts.highlight ?? 3.5;
     this.dropRadius = opts.dropRadius ?? (34 / this.resolution);
     this.damping = opts.damping ?? 0.988;
 
@@ -434,6 +447,7 @@ export class WaterRipples {
       this.coverScale.y,
     );
     gl.uniform1f(gl.getUniformLocation(this.renderProgram, 'uPerturbance'), this.perturbance);
+    gl.uniform1f(gl.getUniformLocation(this.renderProgram, 'uHighlight'), this.highlight);
     gl.uniform1i(gl.getUniformLocation(this.renderProgram, 'uDebugVisualize'), this.debugVisualize ? 1 : 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
