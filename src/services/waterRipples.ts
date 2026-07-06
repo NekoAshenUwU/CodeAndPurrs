@@ -49,7 +49,10 @@ void main() {
     texture2D(uPrevState, vUv - dy).r +
     texture2D(uPrevState, vUv + dy).r
   ) * 0.25;
-  float velocity = data.g + (average - data.r) * 2.0;
+  // 耦合系数从 2.0 调低到 1.15——2D 波动方程本身就会随着波前变大、能量摊到
+  // 更大周长上而自然变暗,系数越大波纹跑得越快、扩散到视野外/衰减得也越快,
+  // 参考图那种"波光荡漾良久"的效果需要波跑得慢一点、多晃几下才行。
+  float velocity = data.g + (average - data.r) * 1.15;
   velocity *= uDamping;
   float height = data.r + velocity;
   gl_FragColor = vec4(height, velocity, 0.0, 1.0);
@@ -241,7 +244,9 @@ export class WaterRipples {
     // 顺手调高一点,确保这一轮能看清楚。
     this.highlight = opts.highlight ?? 2.6;
     this.dropRadius = opts.dropRadius ?? (20 / this.resolution);
-    this.damping = opts.damping ?? 0.988;
+    // damping 调高(更接近 1)配合上面波速调慢——真机反馈"圆形对了,但太快
+    // 消散,截图都来不及",参考图那种水面是要能晃悠好几圈才慢慢平复的。
+    this.damping = opts.damping ?? 0.997;
 
     const gl = canvas.getContext('webgl', {
       alpha: false,
