@@ -14,7 +14,7 @@
 // 而不是只看扩展字符串存不存在(某些设备扩展在但实际渲染不到该纹理格式)。
 // 任何一步失败都在构造期抛出,调用方 catch 到就整体退化(参见 createWaterRipples)。
 
-import { debugError } from './debugLog';
+import { debugError, debugInfo } from './debugLog';
 
 export type RippleOptions = {
   resolution?: number; // 仿真纹理边长,默认 256(手机优先，越小越省)
@@ -187,6 +187,7 @@ export class WaterRipples {
   private rafId: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private destroyed = false;
+  private loggedFirstRender = false; // 临时诊断: render() 真的跑起来了没有,只打一次
 
   constructor(canvas: HTMLCanvasElement, opts: RippleOptions = {}) {
     this.canvas = canvas;
@@ -352,7 +353,19 @@ export class WaterRipples {
 
   private render() {
     const gl = this.gl;
-    if (!this.bgTexture) return;
+    if (!this.bgTexture) {
+      if (!this.loggedFirstRender) {
+        this.loggedFirstRender = true;
+        debugError('[waterRipples] render() 跑起来了,但 bgTexture 还是空的——每帧都直接 return,画面不会更新');
+      }
+      return;
+    }
+    if (!this.loggedFirstRender) {
+      this.loggedFirstRender = true;
+      debugInfo(
+        `[waterRipples] render() 第一次真正执行, canvas 内部渲染尺寸=${this.canvas.width}x${this.canvas.height}`,
+      );
+    }
     const state = this.srcIsA ? this.targetA : this.targetB;
     const delta = 1 / this.resolution;
 

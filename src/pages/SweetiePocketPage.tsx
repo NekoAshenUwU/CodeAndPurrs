@@ -306,7 +306,11 @@ export function SweetiePocketPage() {
         debugError('[落予棠] WebGL 涟漪初始化失败或设备不支持,降级为纯焦散层(上面应该有一条更具体的原因日志)');
         return;
       }
-      debugInfo('[落予棠] WebGL 涟漪已就绪');
+      // canvas 实际渲染尺寸——如果这里是 0, 后面所有 drop()/render() 都在对着
+      // 一块 0x0 的画布空转, 屏幕上当然什么都看不见。
+      debugInfo(
+        `[落予棠] WebGL 涟漪已就绪, canvas CSS 尺寸=${canvas.offsetWidth}x${canvas.offsetHeight}, 内部渲染尺寸=${canvas.width}x${canvas.height}`,
+      );
       engineRef.current = engine;
       engine.start();
       setRipplesReady(true);
@@ -349,7 +353,16 @@ export function SweetiePocketPage() {
   const seaHeight = (maxRow + 1) * SLOT_HEIGHT + SLOT_HEIGHT;
 
   return (
-    <main className="sweetie-page" ref={pageRef}>
+    <main
+      className="sweetie-page"
+      ref={pageRef}
+      // WebGL 涟漪就绪后把 .sweetie-page 自己的 CSS 背景图关掉,只留 canvas 这一路
+      // 画面来源——之前两层同时开着,萬一 canvas 没真的盖上去(不管什么原因),
+      // 底下这张一模一样的静态图就会替 canvas"顶包",看着完全正常、实际上
+      // 涟漪压根没被看到过。关掉之后,canvas 不出画面就会露出空白/穿帮,
+      // 而不是被这张图悄悄挡住看不出来。
+      style={ripplesReady ? { backgroundImage: 'none' } : undefined}
+    >
       <canvas
         ref={canvasRef}
         className={`sweetie-ripples-canvas${ripplesReady ? ' is-ready' : ''}`}
