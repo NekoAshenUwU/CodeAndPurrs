@@ -55,19 +55,25 @@ void main() {
 }
 `;
 
-// 纯加法:输出的凸起量靠 gl.blendFunc(ONE, ONE) 叠到当前高度场上,
-// G/B/A 通道写 0 不影响已有速度分量。
+// 读旧状态 + 加凸起 + 写回(ping-pong 到另一张纹理),不靠硬件混合叠加——
+// WebGL1 对浮点渲染目标做加法混合需要 EXT_float_blend 扩展，这个扩展在
+// 不少手机 GPU 上并不支持，glEnable(BLEND) 会被静默忽略(不报错、不崩溃，
+// 就是什么也没发生)。实测过:真机上 drop() 坐标日志一切正常、WebGL 初始化
+// 成功、背景图正常渲染，但涟漪完全不出现——正是这种"混合被吃掉"的典型症状。
+// 改成跟 update 通道一样的读旧值+写新值套路，不依赖任何混合扩展。
 const DROP_FRAG_SRC = `
 precision mediump float;
+uniform sampler2D uPrevState;
 uniform vec2 uCenter;
 uniform float uRadius;
 uniform float uStrength;
 varying vec2 vUv;
 void main() {
+  vec4 data = texture2D(uPrevState, vUv);
   float dist = length(vUv - uCenter);
   float drop = max(0.0, 1.0 - dist / uRadius);
   drop = drop * drop * (3.0 - 2.0 * drop);
-  gl_FragColor = vec4(drop * uStrength, 0.0, 0.0, 0.0);
+  gl_FragColor = vec4(data.r + drop * uStrength, data.g, 0.0, 1.0);
 }
 `;
 
@@ -294,22 +300,26 @@ export class WaterRipples {
   }
 
   // 手指/鼠标在归一化坐标(0~1，画布局部)按下的位置起一圈涟漪。
-  // 直接对"当前最新状态"纹理做叠加渲染，不用等下一帧 rAF，触感更即时。
+  // 读当前状态、加凸起、写进另一张 ping-pong 纹理，不用等下一帧 rAF、
+  // 也不依赖硬件混合(见 DROP_FRAG_SRC 顶部注释)——触感依然即时,
+  // 下一次 step() 会从这个刚写入的状态继续演化。
   drop(u: number, v: number, strength = 0.09) {
     const gl = this.gl;
-    const cur = this.srcIsA ? this.targetA : this.targetB;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, cur.framebuffer);
+    const src = this.srcIsA ? this.targetA : this.targetB;
+    const dst = this.srcIsA ? this.targetB : this.targetA;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, dst.framebuffer);
     gl.viewport(0, 0, this.resolution, this.resolution);
     gl.useProgram(this.dropProgram);
     this.bindQuad(this.dropProgram);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, src.texture);
+    gl.uniform1i(gl.getUniformLocation(this.dropProgram, 'uPrevState'), 0);
     gl.uniform2f(gl.getUniformLocation(this.dropProgram, 'uCenter'), u, 1 - v);
     gl.uniform1f(gl.getUniformLocation(this.dropProgram, 'uRadius'), this.dropRadius);
     gl.uniform1f(gl.getUniformLocation(this.dropProgram, 'uStrength'), strength);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.ONE, gl.ONE);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    gl.disable(gl.BLEND);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    this.srcIsA = !this.srcIsA;
   }
 
   private bindQuad(program: WebGLProgram) {
