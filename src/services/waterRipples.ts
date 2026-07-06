@@ -129,7 +129,7 @@ void main() {
   // 沿垂直对角线直接掉到 0,一圈本该对称的涟漪就被压成"两头尖"的橄榄形
   // (实测过,真机截图上明显能看到)。改成梯度模长,不挑角度,任何方向的坡度
   // 都同样提亮,圆环才会是圆的。
-  float glow = clamp(length(normal) * uHighlight, 0.0, 0.6);
+  float glow = clamp(length(normal) * uHighlight, 0.0, 0.85);
   bg.rgb += glow;
   gl_FragColor = bg;
 }
@@ -239,8 +239,8 @@ export class WaterRipples {
     // 诊断值,回落到克制、耐看的观感数值(仍比最终目标稍强一档,留一点确认空间,
     // 等看着舒服了再收一收)。
     this.perturbance = opts.perturbance ?? 0.035;
-    // 真机反馈要求更明显,系数再调高一档,配合上面 clamp 上限一起提亮。
-    this.highlight = opts.highlight ?? 4.2;
+    // 真机反馈要求再更明显一档,系数和上面 clamp 上限一起继续调高。
+    this.highlight = opts.highlight ?? 6.5;
     this.dropRadius = opts.dropRadius ?? (20 / this.resolution);
     // damping 调高(更接近 1)配合上面波速调慢——真机反馈"圆形对了,但太快
     // 消散,截图都来不及",参考图那种水面是要能晃悠好几圈才慢慢平复的。
