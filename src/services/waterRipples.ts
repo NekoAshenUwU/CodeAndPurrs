@@ -124,6 +124,12 @@ uniform float uHighlight;
 uniform int uDebugVisualize;
 varying vec2 vUv;
 ${PACK_GLSL}
+// 屏幕空间网格哈希: 给每个固定大小的格子发一个稳定的伪随机数,用来决定
+// "这个格子参不参与闪烁"——高度场本身是连续光滑的函数,直接用它算出来的
+// 高光永远是一整片平滑的光晕,不可能自己变成"很多颗分散的碎光点"。
+float hash(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
 void main() {
   // 临时诊断分支: 直接把高度场当灰阶/红蓝热力图画出来,完全跳过背景折射合成——
   // 只要 drop() 真的把凸起写进纹理、update() 真的在传播,不管折射合成那步
@@ -160,8 +166,15 @@ void main() {
   vec3 n = normalize(vec3(normal * 45.0, 1.0));
   vec3 lightDir = normalize(vec3(-0.35, 0.75, 0.6));
   float spec = pow(max(dot(n, lightDir), 0.0), 24.0);
+  // "波光粼粼"是很多颗分散的碎光点,不是跟指腹一样大的一整块光晕——用固定的
+  // 屏幕空间网格给每个格子发一张"参不参与闪烁"的通行证,水面平滑的高光场
+  // 只有落在"通行"格子里的部分才画得出来,视觉上就变成成片但分散的碎光点。
+  // 波纹圈往外扩散、扫过不同格子,天然就会"这边闪一下、那边闪一下",
+  // 不需要额外的时间变量就有闪动感。
+  vec2 cell = floor(gl_FragCoord.xy / 13.0);
+  float grain = step(0.55, hash(cell));
   vec3 sparkleColor = vec3(1.0, 0.9608, 0.9412);
-  bg.rgb += sparkleColor * spec * uHighlight;
+  bg.rgb += sparkleColor * spec * grain * uHighlight;
   gl_FragColor = bg;
 }
 `;
