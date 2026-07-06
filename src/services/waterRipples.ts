@@ -58,7 +58,7 @@ float decode16(vec2 enc, float range) {
 `;
 
 const UPDATE_FRAG_SRC = `
-precision mediump float;
+precision highp float;
 uniform sampler2D uPrevState;
 uniform vec2 uDelta;
 uniform float uDamping;
@@ -87,7 +87,7 @@ void main() {
 `;
 
 const DROP_FRAG_SRC = `
-precision mediump float;
+precision highp float;
 uniform sampler2D uPrevState;
 uniform vec2 uCenter;
 uniform float uRadius;
@@ -114,7 +114,7 @@ void main() {
 `;
 
 const RENDER_FRAG_SRC = `
-precision mediump float;
+precision highp float;
 uniform sampler2D uState;
 uniform sampler2D uBackground;
 uniform vec2 uDelta;
@@ -282,6 +282,20 @@ export class WaterRipples {
     }) as WebGLRenderingContext | null;
     if (!gl) throw new Error('拿不到 WebGL 上下文');
     this.gl = gl;
+
+    // encode16/decode16 要把 0~65535 的整数原样存进/读出浮点数——这需要至少
+    // ~17 位有效精度。fragment shader 默认精度声明 mediump 在不少手机 GPU 上
+    // 实际就是 IEEE 半精度浮点(约 10 位尾数),连 2048 以上的整数都存不准,
+    // 高度编码在这种精度下会被悄悄舍入成错误值(实测过:真机上读回的高度
+    // 永远卡在编码范围的下限,不管有没有真的点过水面——就是这个精度坑)。
+    // 换成 highp 需要 GPU 支持,虽然 WebGL1 规范只是"建议"fragment shader
+    // 支持 highp、不强制,但绝大多数这十年内的手机 GPU 都支持——这里用
+    // getShaderPrecisionFormat 实测查一下，不支持就明确报错降级，而不是
+    // 沉默地算出错误数字。
+    const highpInfo = gl.getShaderPrecisionFormat?.(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT);
+    if (!highpInfo || highpInfo.precision === 0) {
+      throw new Error('设备 fragment shader 不支持 highp 精度,涟漪的高度编码需要更高精度,无法运行');
+    }
 
     // RGBA8 是 WebGL1 规范里唯一保证任何设备都能"渲染到纹理"的格式,不依赖
     // 任何扩展——理论上这里不该失败,除非 WebGL 上下文本身有问题。
