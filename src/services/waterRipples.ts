@@ -2,17 +2,22 @@
 // + 离散波动方程 + 法线折射采样),不依赖 jQuery/第三方库。
 //
 // 流程:
-//   1. 256x256 的 ping-pong 纹理对存(height, velocity)两个通道,每帧跑一次
+//   1. 256x256 的 ping-pong 纹理对存(height, velocity)两个量,每帧跑一次
 //      "update" 着色器(离散波动方程 + 阻尼)推进模拟。
-//   2. drop() 用叠加混合(ONE,ONE)往当前纹理里加一个平滑凸起(手指按下的水花)，
+//   2. drop() 读旧状态 + 加凸起 + 写回另一张纹理(手指按下的水花)，
 //      下一帧 update 会把这个凸起自然扩散成向外传播的波纹。
 //   3. render 通道从高度场算出法线(中心差分)，用法线对背景图 UV 做小幅偏移
-//      (折射),采样出扭曲的背景画面画到可见 canvas 上。
+//      (折射) + 镜面高光,采样出扭曲/发光的背景画面画到可见 canvas 上。
 //
-// 只用 NEAREST 采样(不需要 *_linear 扩展)、只需要 half-float 或 float 纹理
-// 中的一种支持渲染到帧缓冲——用真实创建+挂载+checkFramebufferStatus 验证，
-// 而不是只看扩展字符串存不存在(某些设备扩展在但实际渲染不到该纹理格式)。
-// 任何一步失败都在构造期抛出,调用方 catch 到就整体退化(参见 createWaterRipples)。
+// 仿真纹理固定用 RGBA8/UNSIGNED_BYTE——这是 WebGL1 规范里唯一保证 100% 支持
+// "渲染到纹理"的格式组合,不依赖 OES_texture_half_float / OES_texture_float
+// 这类扩展。之前用 half-float/float 纹理时,在某些真机上出现过"扩展存在、
+// checkFramebufferStatus 也报 COMPLETE,但 readPixels 读回来永远报错、
+// 热力图偶发看不到扩散"的情况——不能 100%排除是"看似支持、实际渲染不可靠"
+// 这类静默失败(跟之前 EXT_float_blend 静默不生效是同一类坑)。
+// height/velocity 各自编码成 16 位定点数,拆进 RGBA8 的两个通道里存
+// (RG=height, BA=velocity,见 encode16/decode16),精度足够(±2.0 范围下
+// 分辨率约 6e-5),换来的是任何 WebGL1 设备都不会在这一步就出问题。
 
 import { debugError, debugInfo } from './debugLog';
 
@@ -33,38 +38,54 @@ void main() {
 }
 `;
 
+// height/velocity 各自是一个可正可负的量,压进 RGBA8 的两个通道(每个量占
+// 用两个 8 位通道,拼成 16 位定点数),±range 范围内映射到 0~65535,
+// 四舍五入取整再拆高低字节——不做四舍五入的话 0 这个最常出现的值(静止水面)
+// 会因为浮点误差拆不成整数字节,导致"清成静止状态"这种最基础的操作都对不上。
+const PACK_GLSL = `
+vec2 encode16(float v, float range) {
+  float t = clamp(v / range * 0.5 + 0.5, 0.0, 1.0);
+  float v16 = floor(t * 65535.0 + 0.5);
+  float hi = floor(v16 / 256.0);
+  float lo = v16 - hi * 256.0;
+  return vec2(hi, lo) / 255.0;
+}
+float decode16(vec2 enc, float range) {
+  float v16 = enc.x * 255.0 * 256.0 + enc.y * 255.0;
+  float t = v16 / 65535.0;
+  return (t - 0.5) * 2.0 * range;
+}
+`;
+
 const UPDATE_FRAG_SRC = `
 precision mediump float;
 uniform sampler2D uPrevState;
 uniform vec2 uDelta;
 uniform float uDamping;
 varying vec2 vUv;
+${PACK_GLSL}
 void main() {
   vec4 data = texture2D(uPrevState, vUv);
+  float height = decode16(data.rg, 2.0);
+  float velocity = decode16(data.ba, 2.0);
   vec2 dx = vec2(uDelta.x, 0.0);
   vec2 dy = vec2(0.0, uDelta.y);
   float average = (
-    texture2D(uPrevState, vUv - dx).r +
-    texture2D(uPrevState, vUv + dx).r +
-    texture2D(uPrevState, vUv - dy).r +
-    texture2D(uPrevState, vUv + dy).r
+    decode16(texture2D(uPrevState, vUv - dx).rg, 2.0) +
+    decode16(texture2D(uPrevState, vUv + dx).rg, 2.0) +
+    decode16(texture2D(uPrevState, vUv - dy).rg, 2.0) +
+    decode16(texture2D(uPrevState, vUv + dy).rg, 2.0)
   ) * 0.25;
   // 耦合系数从 2.0 调低到 1.15——2D 波动方程本身就会随着波前变大、能量摊到
   // 更大周长上而自然变暗,系数越大波纹跑得越快、扩散到视野外/衰减得也越快,
   // 参考图那种"波光荡漾良久"的效果需要波跑得慢一点、多晃几下才行。
-  float velocity = data.g + (average - data.r) * 1.15;
+  velocity += (average - height) * 1.15;
   velocity *= uDamping;
-  float height = data.r + velocity;
-  gl_FragColor = vec4(height, velocity, 0.0, 1.0);
+  height += velocity;
+  gl_FragColor = vec4(encode16(height, 2.0), encode16(velocity, 2.0));
 }
 `;
 
-// 读旧状态 + 加凸起 + 写回(ping-pong 到另一张纹理),不靠硬件混合叠加——
-// WebGL1 对浮点渲染目标做加法混合需要 EXT_float_blend 扩展，这个扩展在
-// 不少手机 GPU 上并不支持，glEnable(BLEND) 会被静默忽略(不报错、不崩溃，
-// 就是什么也没发生)。实测过:真机上 drop() 坐标日志一切正常、WebGL 初始化
-// 成功、背景图正常渲染，但涟漪完全不出现——正是这种"混合被吃掉"的典型症状。
-// 改成跟 update 通道一样的读旧值+写新值套路，不依赖任何混合扩展。
 const DROP_FRAG_SRC = `
 precision mediump float;
 uniform sampler2D uPrevState;
@@ -73,8 +94,11 @@ uniform float uRadius;
 uniform float uStrength;
 uniform float uAspect;
 varying vec2 vUv;
+${PACK_GLSL}
 void main() {
   vec4 data = texture2D(uPrevState, vUv);
+  float height = decode16(data.rg, 2.0);
+  float velocity = decode16(data.ba, 2.0);
   // 仿真状态存在一张正方形纹理里,但它的 UV 是直接当"画布上的比例坐标"用的——
   // 手机画布是竖屏(高远大于宽),vUv 空间里的一个正圆落到画布上会被拉成竖着的
   // 椭圆。用 uAspect(画布宽/高)把 x 方向的距离先放大抵消掉,水花落下的
@@ -84,7 +108,8 @@ void main() {
   float dist = length(d);
   float drop = max(0.0, 1.0 - dist / uRadius);
   drop = drop * drop * (3.0 - 2.0 * drop);
-  gl_FragColor = vec4(data.r + drop * uStrength, data.g, 0.0, 1.0);
+  height += drop * uStrength;
+  gl_FragColor = vec4(encode16(height, 2.0), encode16(velocity, 2.0));
 }
 `;
 
@@ -98,14 +123,13 @@ uniform float uPerturbance;
 uniform float uHighlight;
 uniform int uDebugVisualize;
 varying vec2 vUv;
+${PACK_GLSL}
 void main() {
   // 临时诊断分支: 直接把高度场当灰阶/红蓝热力图画出来,完全跳过背景折射合成——
   // 只要 drop() 真的把凸起写进纹理、update() 真的在传播,不管折射合成那步
   // 有没有毛病,这里都该能看到一块明显的红色(凸起)往外扩散成红蓝相间的圈。
-  // 这条路径只依赖"着色器里 texture2D 采样"这个已经确认能用的能力(render()
-  // 采样背景图正常显示出来过),完全不经过 readPixels(已确认在这台设备上失败)。
   if (uDebugVisualize == 1) {
-    float h = texture2D(uState, vUv).r;
+    float h = decode16(texture2D(uState, vUv).rg, 2.0);
     if (h >= 0.0) {
       gl_FragColor = vec4(0.5 + h * 6.0, 0.5, 0.5, 1.0);
     } else {
@@ -113,10 +137,10 @@ void main() {
     }
     return;
   }
-  float hL = texture2D(uState, vUv - vec2(uDelta.x, 0.0)).r;
-  float hR = texture2D(uState, vUv + vec2(uDelta.x, 0.0)).r;
-  float hD = texture2D(uState, vUv - vec2(0.0, uDelta.y)).r;
-  float hU = texture2D(uState, vUv + vec2(0.0, uDelta.y)).r;
+  float hL = decode16(texture2D(uState, vUv - vec2(uDelta.x, 0.0)).rg, 2.0);
+  float hR = decode16(texture2D(uState, vUv + vec2(uDelta.x, 0.0)).rg, 2.0);
+  float hD = decode16(texture2D(uState, vUv - vec2(0.0, uDelta.y)).rg, 2.0);
+  float hU = decode16(texture2D(uState, vUv + vec2(0.0, uDelta.y)).rg, 2.0);
   vec2 normal = vec2(hL - hR, hD - hU);
   vec2 bgUv = (vUv - 0.5) * uCoverScale + 0.5 + normal * uPerturbance;
   vec4 bg = texture2D(uBackground, clamp(bgUv, 0.001, 0.999));
@@ -176,12 +200,10 @@ function linkProgram(gl: WebGLRenderingContext, vertSrc: string, fragSrc: string
 type SimTarget = { texture: WebGLTexture; framebuffer: WebGLFramebuffer };
 
 // 真正尝试创建一个"能渲染到"的纹理+FBO，用 checkFramebufferStatus 验证——
-// 扩展存在不代表这个纹理格式真能当渲染目标用，必须实测。
-function createRenderableTarget(
-  gl: WebGLRenderingContext,
-  size: number,
-  type: number,
-): SimTarget | null {
+// 固定用 RGBA8/UNSIGNED_BYTE,这是 WebGL1 规范里唯一保证任何设备都支持
+// "渲染到纹理"的格式,不依赖任何扩展,也就不存在"扩展看似存在、实际渲染
+// 不可靠"这类静默失败的可能。
+function createRenderableTarget(gl: WebGLRenderingContext, size: number): SimTarget | null {
   const texture = gl.createTexture();
   if (!texture) return null;
   gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -189,7 +211,7 @@ function createRenderableTarget(
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, type, null);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 
   const framebuffer = gl.createFramebuffer();
   if (!framebuffer) {
@@ -222,7 +244,6 @@ export class WaterRipples {
   private dropProgram: WebGLProgram;
   private renderProgram: WebGLProgram;
 
-  private simDataType: number;
   private targetA: SimTarget;
   private targetB: SimTarget;
   private srcIsA = true; // 当前"最新状态"在 A 还是 B
@@ -262,32 +283,23 @@ export class WaterRipples {
     if (!gl) throw new Error('拿不到 WebGL 上下文');
     this.gl = gl;
 
-    // half-float 优先(精度够、更省)，不行退 float；两个都不能渲染就彻底不支持。
-    const halfFloatExt = gl.getExtension('OES_texture_half_float');
-    let dataType: number | null = null;
-    let target = halfFloatExt
-      ? createRenderableTarget(gl, this.resolution, halfFloatExt.HALF_FLOAT_OES)
-      : null;
-    if (target) dataType = halfFloatExt!.HALF_FLOAT_OES;
-    if (!target) {
-      const floatExt = gl.getExtension('OES_texture_float');
-      target = floatExt ? createRenderableTarget(gl, this.resolution, gl.FLOAT) : null;
-      if (target) dataType = gl.FLOAT;
-    }
-    if (!target || dataType === null) throw new Error('设备不支持渲染到浮点纹理，涟漪不可用');
-    this.simDataType = dataType;
+    // RGBA8 是 WebGL1 规范里唯一保证任何设备都能"渲染到纹理"的格式,不依赖
+    // 任何扩展——理论上这里不该失败,除非 WebGL 上下文本身有问题。
+    const target = createRenderableTarget(gl, this.resolution);
+    if (!target) throw new Error('设备不支持渲染到纹理，涟漪不可用');
     this.targetA = target;
-    const targetB = createRenderableTarget(gl, this.resolution, dataType);
+    const targetB = createRenderableTarget(gl, this.resolution);
     if (!targetB) throw new Error('第二个 ping-pong 纹理创建失败');
     this.targetB = targetB;
 
     // texImage2D(..., null) 只分配显存,内容按 WebGL 规范是未定义的(不保证是 0)——
     // 实测过不清零会导致水面从第一帧就带着满屏"噪声波纹"，而不是静止的水面。
-    // 显式清成 (0,0,0,0)：height=0、velocity=0，水面在没人碰之前必须是静止的。
+    // height/velocity 现在编码进 RGBA8 的两个定点数(见 PACK_GLSL),"0" 不再是
+    // 裸的 (0,0,0,0)——按 encode16(0, 2.0) 算出来,静止状态对应 (128,0,128,0)/255。
     for (const t of [this.targetA, this.targetB]) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, t.framebuffer);
       gl.viewport(0, 0, this.resolution, this.resolution);
-      gl.clearColor(0, 0, 0, 0);
+      gl.clearColor(128 / 255, 0, 128 / 255, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
     }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -382,12 +394,14 @@ export class WaterRipples {
     this.srcIsA = !this.srcIsA;
   }
 
-  // 临时诊断: 读一下"当前最新状态"纹理在某个归一化坐标点的原始字节值,
+  // 诊断: 读一下"当前最新状态"纹理在某个归一化坐标点的真实高度值,
   // 用来验证 drop() 有没有真的把数据写进纹理里——比"眼睛看有没有涟漪"更
   // 直接客观,不受视觉强度/画面细节/截图压缩的干扰。
-  // 用 RGBA+UNSIGNED_BYTE 读取(WebGL 规范里唯一保证任何设备、任何帧缓冲
-  // 内部格式都支持的组合),数值会被裁到 0~1 再量化成 0~255——诊断"是不是
-  // 非零"完全够用,不需要精确的浮点原值。
+  // 现在仿真纹理固定是 RGBA8/UNSIGNED_BYTE(见文件顶部注释),readPixels 用
+  // RGBA+UNSIGNED_BYTE 读取是 WebGL 规范保证任何设备都支持的组合,不应该
+  // 再报错——之前用 half-float/float 纹理时这里会报错返回 null,换成 RGBA8
+  // 之后如果还是 null,说明问题比"纹理格式不支持读回"更底层。
+  // 读到的 R,G 两个字节按 encode16 的逆运算解出真实高度(不再是裸字节值)。
   debugReadHeightByteAt(u: number, v: number): number | null {
     const gl = this.gl;
     const state = this.srcIsA ? this.targetA : this.targetB;
@@ -399,7 +413,9 @@ export class WaterRipples {
     const err = gl.getError();
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     if (err !== gl.NO_ERROR) return null;
-    return pixel[0];
+    const v16 = pixel[0] * 256 + pixel[1];
+    const t = v16 / 65535;
+    return (t - 0.5) * 2 * 2.0;
   }
 
   // 临时诊断: 切换 render() 是否改画高度场热力图(灰底、凸起=红、凹陷=蓝)。

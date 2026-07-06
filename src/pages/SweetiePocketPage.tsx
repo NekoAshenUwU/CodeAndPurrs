@@ -346,12 +346,13 @@ export function SweetiePocketPage() {
     debugInfo(`[落予棠] drop(${u.toFixed(2)}, ${v.toFixed(2)})`);
     const engine = engineRef.current;
     engine.drop(u, v);
-    // 临时诊断: 200ms 后(给 update 通道跑几帧的时间)读一下该点高度场的原始
-    // 字节值——静止水面应该接近 0, 如果 drop 真的生效了这里会明显非 0。
+    // 诊断: 200ms 后(给 update 通道跑几帧的时间)读一下该点高度场的真实高度值
+    // ——仿真纹理现在固定是 RGBA8,readPixels 理论上不该再报错(null)了;
+    // 静止水面应该接近 0, 如果 drop 真的生效了这里会明显非 0。
     // 这比"眼睛看画面有没有变"更直接,不受视觉强度/截图压缩影响。
     window.setTimeout(() => {
-      const raw = engine.debugReadHeightByteAt(u, v);
-      debugInfo(`[落予棠] drop 后 200ms, 该点高度场字节值(0~255, 静止应接近0)= ${raw}`);
+      const height = engine.debugReadHeightByteAt(u, v);
+      debugInfo(`[落予棠] drop 后 200ms, 该点高度场真实高度值(静止应接近0)= ${height}`);
     }, 200);
   };
   const userBalance = useMemo(() => balanceOf('user', packets), [packets]);
