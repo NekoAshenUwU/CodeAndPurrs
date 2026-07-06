@@ -120,17 +120,18 @@ void main() {
   vec2 normal = vec2(hL - hR, hD - hU);
   vec2 bgUv = (vUv - 0.5) * uCoverScale + 0.5 + normal * uPerturbance;
   vec4 bg = texture2D(uBackground, clamp(bgUv, 0.001, 0.999));
-  // 纯折射位移在这张软渐变背景上只有几像素,肉眼几乎看不出来(热力图已经证实
-  // 数据链路本身没问题)。叠一层只会"提亮"、不会"压暗"的仿高光(水面反光的
-  // 经典近似,只加不减)——这张背景本身偏亮偏柔,加暗会读成一块脏兮兮的
-  // 阴影/黑影(实测过),只加亮才会读成"波光粼粼",不会有变脏的错觉。
-  // 用 length(normal) 而不是 normal.x+normal.y——后者等价于跟固定方向(1,1)
-  // 做点积,相当于假设了一个固定的"光源方向",导致沿(1,1)对角线最亮、
-  // 沿垂直对角线直接掉到 0,一圈本该对称的涟漪就被压成"两头尖"的橄榄形
-  // (实测过,真机截图上明显能看到)。改成梯度模长,不挑角度,任何方向的坡度
-  // 都同样提亮,圆环才会是圆的。
-  float glow = clamp(length(normal) * uHighlight, 0.0, 0.85);
-  bg.rgb += glow;
+  // 纯折射位移在这张软渐变背景上只有几像素,肉眼几乎看不出来,根因是背景本身
+  // 低对比度,不是位移幅度不够——不再往上加 perturbance。改成真正的镜面高光:
+  // 把 2D 高度梯度当法线贴图用(乘一个放大系数,不然坡度太小、法线几乎总是
+  // 朝正上方),跟一个固定的虚拟光源方向做点积——只有"坡面正对光源"的地方
+  // 才会亮,这是水面反光真正的物理来源(不是单纯提亮,是模拟"这一点点朝不朝
+  // 光"),波纹边缘因此会带一道流动的亮光边,而不是整圈均匀发白。
+  // 这是方向性光照,不是各向同性——同一圈涟漪只有"迎光"那一侧会亮,这是
+  // 故意的(参考图里波纹本来就是一侧闪光、不是整圈均匀发光)。
+  vec3 n = normalize(vec3(normal * 40.0, 1.0));
+  vec3 lightDir = normalize(vec3(0.4, 0.65, 0.6));
+  float spec = pow(max(dot(n, lightDir), 0.0), 24.0);
+  bg.rgb += spec * uHighlight;
   gl_FragColor = bg;
 }
 `;
@@ -234,13 +235,11 @@ export class WaterRipples {
   constructor(canvas: HTMLCanvasElement, opts: RippleOptions = {}) {
     this.canvas = canvas;
     this.resolution = opts.resolution ?? 256;
-    // 数据链路(drop→update→render 采样)已经用热力图确认没问题,"只加亮不压暗"
-    // 的仿高光技术也确认能让涟漪在这张软背景上看得见——不再需要刻意调夸张的
-    // 诊断值,回落到克制、耐看的观感数值(仍比最终目标稍强一档,留一点确认空间,
-    // 等看着舒服了再收一收)。
+    // 弱的根因是背景低对比、位移折射本来就看不清,不是位移幅度不够——
+    // 不再往上调 perturbance。
     this.perturbance = opts.perturbance ?? 0.035;
-    // 真机反馈要求再更明显一档,系数和上面 clamp 上限一起继续调高。
-    this.highlight = opts.highlight ?? 6.5;
+    // 镜面高光强度系数,初始 0.3(见 RENDER_FRAG_SRC 里的镜面高光实现)。
+    this.highlight = opts.highlight ?? 0.3;
     this.dropRadius = opts.dropRadius ?? (20 / this.resolution);
     // damping 调高(更接近 1)配合上面波速调慢——真机反馈"圆形对了,但太快
     // 消散,截图都来不及",参考图那种水面是要能晃悠好几圈才慢慢平复的。
