@@ -11,6 +11,7 @@ import {
   type RedPacket,
   type Vehicle,
 } from '../services/redPacket';
+import { createWaterRipples, type WaterRipples } from '../services/waterRipples';
 
 const fmtStamp = (at: number): string => {
   const d = new Date(at);
@@ -255,30 +256,69 @@ const SEA_SPARKLES = Array.from({ length: 12 }, () => ({
   dur: 2.4 + Math.random() * 1.8,
 }));
 
-type Ripple = { id: string; x: number; y: number };
+// 把 CSS 计算出来的 background-image: url("...") 解析出真实 URL,
+// 拿去喂给 WebGL 当背景纹理——这样默认图/调频页自定义图都不用重复判断一遍,
+// 跟着 CSS 已经解析好的结果走就行。
+function parseBackgroundUrl(cssValue: string): string | null {
+  const m = /url\(["']?(.*?)["']?\)/.exec(cssValue);
+  return m ? m[1] : null;
+}
 
 // 落予棠 —— 棠棠和予予各自的虚拟红包户口(互不混,各自只累积对方发来的)。
 // 发红包在呼噜频道「＋ → 红包」里(像微信一样能写留言)，这里看成"浮岛"：
 // 每笔红包记录随机领一个漂流瓶/贝壳/纸船/海星，越往下越早、海越深，
-// 点开看日期金额寄语。海面点哪儿哪儿起涟漪 + 星光闪闪。
+// 点开看日期金额寄语。海面接入真实 WebGL 触摸涟漪(帧缓冲波动方程+折射采样)，
+// 叠一层无缝焦散光纹，星光闪闪。
 export function SweetiePocketPage() {
   const [packets] = useState<RedPacket[]>(loadPackets);
   const [selected, setSelected] = useState<{ packet: RedPacket; vehicle: Vehicle } | null>(null);
   const [selectedChest, setSelectedChest] = useState<'user' | 'ai' | null>(null);
-  const [ripples, setRipples] = useState<Ripple[]>([]);
-  const seaRef = useRef<HTMLDivElement>(null);
+  const [ripplesReady, setRipplesReady] = useState(false);
+  const pageRef = useRef<HTMLElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const engineRef = useRef<WaterRipples | null>(null);
 
-  // 点击/触碰海面空白处 → 该点起涟漪, 1.6s 后自动清除
-  const spawnRipple = (x: number, y: number) => {
-    const id = Math.random().toString(36).slice(2, 8);
-    setRipples((prev) => [...prev, { id, x, y }]);
-    window.setTimeout(() => setRipples((prev) => prev.filter((r) => r.id !== id)), 1800);
-  };
+  // 背景海面接 WebGL 涟漪引擎: 只跑一次(整页背景是全局效果，不随红包列表变化)。
+  // WebGL 不可用/扩展缺失/图片加载失败 → createWaterRipples 返回 null，
+  // canvas 保持 opacity:0，底下 .sweetie-page 原本的 CSS 背景图照常显示，
+  // 只是没有涟漪(焦散层不受影响，仍然叠着)。
+  // prefers-reduced-motion 直接跳过整个 WebGL 初始化，同样只剩焦散层。
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const page = pageRef.current;
+    if (!canvas || !page) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    let cancelled = false;
+    const bgUrl = parseBackgroundUrl(getComputedStyle(page).backgroundImage) ?? '/rooms/sweetie-pocket-bg.webp';
+    void createWaterRipples(canvas, bgUrl).then((engine) => {
+      if (cancelled) {
+        engine?.destroy();
+        return;
+      }
+      if (!engine) return; // 不支持，保持降级状态
+      engineRef.current = engine;
+      engine.start();
+      setRipplesReady(true);
+    });
+    return () => {
+      cancelled = true;
+      engineRef.current?.destroy();
+      engineRef.current = null;
+    };
+  }, []);
+
+  // 点击海面空白处 → 该点起真实涟漪(WebGL drop)。
+  // 只有点空白海面时触发;点载具 button 时 e.target !== e.currentTarget，跳过——
+  // 涟漪绑的是背景 canvas，跟漂流物的点击(打开红包详情)完全不冲突。
   const onSeaTap = (e: React.MouseEvent<HTMLDivElement>) => {
-    // 只有点空白海面时触发;点载具 button 时 e.target !== e.currentTarget, 跳过
-    if (e.target !== e.currentTarget || !seaRef.current) return;
-    const rect = seaRef.current.getBoundingClientRect();
-    spawnRipple(e.clientX - rect.left, e.clientY - rect.top);
+    if (e.target !== e.currentTarget) return;
+    const canvas = canvasRef.current;
+    if (!canvas || !engineRef.current) return;
+    const rect = canvas.getBoundingClientRect();
+    const u = (e.clientX - rect.left) / rect.width;
+    const v = (e.clientY - rect.top) / rect.height;
+    engineRef.current.drop(u, v);
   };
   const userBalance = useMemo(() => balanceOf('user', packets), [packets]);
   const aiBalance = useMemo(() => balanceOf('ai', packets), [packets]);
@@ -288,7 +328,14 @@ export function SweetiePocketPage() {
   const seaHeight = (maxRow + 1) * SLOT_HEIGHT + SLOT_HEIGHT;
 
   return (
-    <main className="sweetie-page">
+    <main className="sweetie-page" ref={pageRef}>
+      <canvas
+        ref={canvasRef}
+        className={`sweetie-ripples-canvas${ripplesReady ? ' is-ready' : ''}`}
+        aria-hidden="true"
+      />
+      <div className="sweetie-caustics" aria-hidden="true" />
+
       <header className="chat-head">
         <Link to="/" className="chat-head__back" aria-label="回首页">
           ‹
@@ -313,7 +360,6 @@ export function SweetiePocketPage() {
           <div
             className="sweetie-sea"
             style={{ height: seaHeight }}
-            ref={seaRef}
             onClick={onSeaTap}
           >
             {/* 海面随机星光: 12 颗小白点错峰闪烁 */}
@@ -330,13 +376,6 @@ export function SweetiePocketPage() {
                   animationDuration: `${s.dur}s`,
                 }}
               />
-            ))}
-            {/* 点击涟漪: 双圈同心, 从点击处向外扩散淡出 */}
-            {ripples.map((r) => (
-              <span key={r.id} className="sea-ripple" style={{ left: r.x, top: r.y }}>
-                <span className="sea-ripple__ring sea-ripple__ring--1" />
-                <span className="sea-ripple__ring sea-ripple__ring--2" />
-              </span>
             ))}
             {packets.map((p, i) => (
               <FloatingVehicle

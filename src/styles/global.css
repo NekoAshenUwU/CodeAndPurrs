@@ -4838,6 +4838,12 @@ a {
 /* 165px 宽 * (1536/1024) 图片本身比例 ≈ 248px 高，留够净空才不会被面板挡住 */
 .sweetie-sea-scroll {
   padding-top: calc(56px + env(safe-area-inset-top) + 264px);
+  /* .sweetie-ripples-canvas/.sweetie-caustics 是 .sweetie-page 下 position:absolute
+     的新背景层(z-index 0/1)。position:static 的兄弟元素本来就会被"有定位+z-index"
+     的兄弟盖住(哪怕 z-index 只是 0)——这条补上 position+z-index 让浮岛/海面/
+     宝箱这层稳稳浮在两层新背景之上，不改变任何已有视觉或行为，只是把层级说清楚。 */
+  position: relative;
+  z-index: 2;
 }
 .sweetie-sea {
   position: relative;
@@ -4865,38 +4871,58 @@ a {
   50%      { opacity: 0.85; transform: translate(-50%, -50%) scale(1.15); }
 }
 
-/* ----- 点击涟漪 (双圈同心, 从点击处扩散) ----- */
-.sea-ripple {
-  position: absolute;
-  width: 0; height: 0;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  z-index: 2;
-}
-.sea-ripple__ring {
-  position: absolute;
-  top: 50%; left: 50%;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.75);
-  transform: translate(-50%, -50%) scale(0);
-  animation: rippleExpand 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  will-change: transform, opacity;
-}
-.sea-ripple__ring--2 {
-  border-color: rgba(255, 235, 240, 0.55);
-  animation-delay: 0.18s;
-  animation-duration: 1.5s;
-}
-@keyframes rippleExpand {
-  0%   { transform: translate(-50%, -50%) scale(0);  opacity: 0.9; border-width: 2.5px; }
-  60%  { opacity: 0.55; }
-  100% { transform: translate(-50%, -50%) scale(14); opacity: 0;   border-width: 0.4px; }
+@media (prefers-reduced-motion: reduce) {
+  .sea-sparkle { animation: none; }
 }
 
+/* ----- 背景层① WebGL 触摸涟漪画布 -----
+   position:absolute 铺满 .sweetie-page(它自己是 position:relative, 100dvh 不滚动,
+   跟 .chat-head/.balance-island 同一个参照系), z-index:0 垫最底。
+   pointer-events:none——点击交给 .sweetie-sea 的 onClick 处理, 算好归一化坐标后
+   手动调 engine.drop(), 不靠 canvas 自己接收事件(这样才能只在点"空白海面"时触发,
+   不影响点漂流物开红包详情)。
+   初始 opacity:0, 引擎加载完图片、真正跑起来才淡入(is-ready)——避免 WebGL
+   context alpha:false 导致的纯黑帧在图片加载完成前被看到。
+   WebGL 不支持/初始化失败时这层永远停在 opacity:0, 底下 .sweetie-page 自己
+   那条 CSS background 照常显示，纯降级，不会露出黑屏。 */
+.sweetie-ripples-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+.sweetie-ripples-canvas.is-ready {
+  opacity: 1;
+}
+
+/* ----- 背景层② 无缝焦散光纹 -----
+   叠在涟漪画布之上、浮岛海面内容之下(z-index:1, 介于 0 和 .sweetie-sea-scroll 的 2 之间)。
+   mix-blend-mode:screen + 低不透明度, 384px 贴图尺寸跟 PNG 原始像素一致(避免缩放模糊),
+   60s 线性平移正好移动一个贴图宽度, 循环无缝衔接。 */
+.sweetie-caustics {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image: url("/textures/caustics-seamless.png");
+  background-repeat: repeat;
+  background-size: 384px 384px;
+  mix-blend-mode: screen;
+  opacity: 0.25;
+  animation: sweetieCausticsPan 60s linear infinite;
+  will-change: background-position;
+}
+@keyframes sweetieCausticsPan {
+  from { background-position: 0 0; }
+  to   { background-position: 384px 384px; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .sea-sparkle, .sea-ripple__ring { animation: none; }
+  .sweetie-caustics { animation: none; }
 }
 
 /* 之前这里有一层 sweetie-sea::after 半透明深紫渐变遮罩("越深越暗"营造海底
