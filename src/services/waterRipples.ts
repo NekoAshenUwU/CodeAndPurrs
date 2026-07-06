@@ -192,8 +192,11 @@ export class WaterRipples {
   constructor(canvas: HTMLCanvasElement, opts: RippleOptions = {}) {
     this.canvas = canvas;
     this.resolution = opts.resolution ?? 256;
-    this.perturbance = opts.perturbance ?? 0.025;
-    this.dropRadius = opts.dropRadius ?? (20 / this.resolution);
+    // 临时诊断: perturbance/dropRadius 先调得远超正常审美, 只是为了在真机上
+    // 确认"物理数据到底有没有传到画面上"——排查完真正的 bug 之后要调回克制的
+    // 观感数值(比如 perturbance 0.02~0.03, dropRadius 20/resolution 那一档)。
+    this.perturbance = opts.perturbance ?? 0.12;
+    this.dropRadius = opts.dropRadius ?? (34 / this.resolution);
     this.damping = opts.damping ?? 0.988;
 
     const gl = canvas.getContext('webgl', {
@@ -304,7 +307,9 @@ export class WaterRipples {
   // 读当前状态、加凸起、写进另一张 ping-pong 纹理，不用等下一帧 rAF、
   // 也不依赖硬件混合(见 DROP_FRAG_SRC 顶部注释)——触感依然即时,
   // 下一次 step() 会从这个刚写入的状态继续演化。
-  drop(u: number, v: number, strength = 0.09) {
+  // strength 默认值临时调大(0.09→0.35)用来做"物理数据到底有没有生效"的
+  // 诊断,排查完要调回克制的数值。
+  drop(u: number, v: number, strength = 0.35) {
     const gl = this.gl;
     const src = this.srcIsA ? this.targetA : this.targetB;
     const dst = this.srcIsA ? this.targetB : this.targetA;
@@ -321,6 +326,26 @@ export class WaterRipples {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     this.srcIsA = !this.srcIsA;
+  }
+
+  // 临时诊断: 读一下"当前最新状态"纹理在某个归一化坐标点的原始字节值,
+  // 用来验证 drop() 有没有真的把数据写进纹理里——比"眼睛看有没有涟漪"更
+  // 直接客观,不受视觉强度/画面细节/截图压缩的干扰。
+  // 用 RGBA+UNSIGNED_BYTE 读取(WebGL 规范里唯一保证任何设备、任何帧缓冲
+  // 内部格式都支持的组合),数值会被裁到 0~1 再量化成 0~255——诊断"是不是
+  // 非零"完全够用,不需要精确的浮点原值。
+  debugReadHeightByteAt(u: number, v: number): number | null {
+    const gl = this.gl;
+    const state = this.srcIsA ? this.targetA : this.targetB;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
+    const x = Math.max(0, Math.min(this.resolution - 1, Math.round(u * this.resolution)));
+    const y = Math.max(0, Math.min(this.resolution - 1, Math.round((1 - v) * this.resolution)));
+    const pixel = new Uint8Array(4);
+    gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+    const err = gl.getError();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    if (err !== gl.NO_ERROR) return null;
+    return pixel[0];
   }
 
   private bindQuad(program: WebGLProgram) {
