@@ -111,11 +111,11 @@ void main() {
   vec2 bgUv = (vUv - 0.5) * uCoverScale + 0.5 + normal * uPerturbance;
   vec4 bg = texture2D(uBackground, clamp(bgUv, 0.001, 0.999));
   // 纯折射位移在这张软渐变背景上只有几像素,肉眼几乎看不出来(热力图已经证实
-  // 数据链路本身没问题)。加一条基于坡度的仿高光/阴影(水面反光的经典近似),
-  // 不管背景本身细节多寡都能看出涟漪轮廓——真正"看得见的水波纹"效果基本都靠
-  // 这条,不是单纯折射位移。
-  float highlight = clamp((normal.x + normal.y) * uHighlight, -0.6, 0.6);
-  bg.rgb += highlight;
+  // 数据链路本身没问题)。叠一层只会"提亮"、不会"压暗"的仿高光(水面反光的
+  // 经典近似,只加不减)——这张背景本身偏亮偏柔,加暗会读成一块脏兮兮的
+  // 阴影/黑影(实测过),只加亮才会读成"波光粼粼",不会有变脏的错觉。
+  float glow = clamp(abs(normal.x + normal.y) * uHighlight, 0.0, 0.3);
+  bg.rgb += glow;
   gl_FragColor = bg;
 }
 `;
@@ -218,14 +218,13 @@ export class WaterRipples {
   constructor(canvas: HTMLCanvasElement, opts: RippleOptions = {}) {
     this.canvas = canvas;
     this.resolution = opts.resolution ?? 256;
-    // 临时诊断: perturbance/dropRadius 先调得远超正常审美, 只是为了在真机上
-    // 确认"物理数据到底有没有传到画面上"——排查完真正的 bug 之后要调回克制的
-    // 观感数值(比如 perturbance 0.02~0.03, dropRadius 20/resolution 那一档)。
-    this.perturbance = opts.perturbance ?? 0.12;
-    // 仿高光强度: 单纯折射位移在低对比度背景上不够看,这个是新加的坡度高光项
-    // (见 RENDER_FRAG_SRC),先给个夸张值方便真机确认"加了之后终于能看见"。
-    this.highlight = opts.highlight ?? 3.5;
-    this.dropRadius = opts.dropRadius ?? (34 / this.resolution);
+    // 数据链路(drop→update→render 采样)已经用热力图确认没问题,"只加亮不压暗"
+    // 的仿高光技术也确认能让涟漪在这张软背景上看得见——不再需要刻意调夸张的
+    // 诊断值,回落到克制、耐看的观感数值(仍比最终目标稍强一档,留一点确认空间,
+    // 等看着舒服了再收一收)。
+    this.perturbance = opts.perturbance ?? 0.035;
+    this.highlight = opts.highlight ?? 1.6;
+    this.dropRadius = opts.dropRadius ?? (20 / this.resolution);
     this.damping = opts.damping ?? 0.988;
 
     const gl = canvas.getContext('webgl', {
@@ -336,9 +335,9 @@ export class WaterRipples {
   // 读当前状态、加凸起、写进另一张 ping-pong 纹理，不用等下一帧 rAF、
   // 也不依赖硬件混合(见 DROP_FRAG_SRC 顶部注释)——触感依然即时,
   // 下一次 step() 会从这个刚写入的状态继续演化。
-  // strength 默认值临时调大(0.09→0.35)用来做"物理数据到底有没有生效"的
-  // 诊断,排查完要调回克制的数值。
-  drop(u: number, v: number, strength = 0.35) {
+  // strength 从诊断期的夸张值(0.35)收回到比最终目标(0.09)稍强一档的数值——
+  // 数据链路和可见性技术都已确认没问题,不需要再刻意调夸张了。
+  drop(u: number, v: number, strength = 0.16) {
     const gl = this.gl;
     const src = this.srcIsA ? this.targetA : this.targetB;
     const dst = this.srcIsA ? this.targetB : this.targetA;
