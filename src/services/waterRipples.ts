@@ -150,11 +150,18 @@ void main() {
   // 明显扭曲的程度,不用再顾虑"是不是白费力气调一个还没验证过的效果"。
   vec2 bgUv = (vUv - 0.5) * uCoverScale + 0.5 + normal * uPerturbance;
   vec4 bg = texture2D(uBackground, clamp(bgUv, 0.001, 0.999));
-  // 高光只做辅助,不做主视觉:改回各向同性的梯度模长提亮(不挑角度、不用
-  // 点积镜面高光那套),系数和上限都调得很小,只是给波纹边缘加一点点
-  // "反光感",视觉重心必须在上面的折射扭曲上。
-  float highlight = clamp(length(normal) * uHighlight, 0.0, 0.12);
-  bg.rgb += highlight;
+  // 镜面高光(sparkle),折射扭曲之上的最后一层视觉:高度梯度当法线贴图,
+  // 跟一个固定的虚拟光源方向(画面左上方,呼应背景霞光的角度)做点积,
+  // pow 锐化成一条细高光带——静止水面法线接近正上方,点积后 pow 出来趋近
+  // 于 0,没有高光;只有波纹边缘坡度够陡、又刚好朝着光源的地方才会闪一下,
+  // 读起来是"波光粼粼",不是整片发光。
+  // 高光颜色用暖白偏粉,不用纯白——纯白在这张暖色调霞光背景上会显得突兀、
+  // 发假,暖白偏粉才融得进整体色调。
+  vec3 n = normalize(vec3(normal * 45.0, 1.0));
+  vec3 lightDir = normalize(vec3(-0.35, 0.75, 0.6));
+  float spec = pow(max(dot(n, lightDir), 0.0), 24.0);
+  vec3 sparkleColor = vec3(1.0, 0.9608, 0.9412);
+  bg.rgb += sparkleColor * spec * uHighlight;
   gl_FragColor = bg;
 }
 `;
@@ -259,9 +266,8 @@ export class WaterRipples {
     // 量级正常),折射改回主视觉,可以放心调大——不再是"调了也不知道有没有
     // 用"的阶段。
     this.perturbance = opts.perturbance ?? 0.6;
-    // 高光只做辅助提亮,系数调小很多(配合 RENDER_FRAG_SRC 里改回的各向同性
-    // 梯度模长提亮,不再是主视觉)。
-    this.highlight = opts.highlight ?? 1.0;
+    // 镜面高光(sparkle)强度系数,起步 0.4(见 RENDER_FRAG_SRC 里的镜面高光实现)。
+    this.highlight = opts.highlight ?? 0.4;
     this.dropRadius = opts.dropRadius ?? (20 / this.resolution);
     // damping 保持在接近 1 的一档,让单次点击的波多晃几圈再衰减完。
     this.damping = opts.damping ?? 0.998;
