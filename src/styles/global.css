@@ -4911,15 +4911,43 @@ a {
   pointer-events: none;
   background-image: url("/textures/caustics-seamless.png");
   background-repeat: repeat;
-  background-size: 384px 384px;
-  mix-blend-mode: screen;
-  opacity: 0.25;
+  /* 384px 原图放大约 2.5 倍(960px)——同一张贴图铺得更大, 网纹自然变粗变疏,
+     不用重新生成贴图 */
+  background-size: 960px 960px;
+  /* screen 会把亮线直接推向纯白,存在感太强；soft-light 只是"轻轻提亮"，
+     更像光透过水面洒下来，而不是叠了一层发光网 */
+  mix-blend-mode: soft-light;
+  opacity: 0.16;
+  /* 柔化细线,不许有锐利白边——CSS filter 是屏幕空间像素,不会随 background-size
+     放大跟着变粗,精确保持在"1~2px"这个量级 */
+  filter: blur(1.6px);
   animation: sweetieCausticsPan 60s linear infinite;
   will-change: background-position;
+  /* 纵向渐隐: 焦散是光透过水面才有的效果,天空区域不该有。
+     顶部(天空/晚霞)完全不显 → 海平线附近渐入 → 中段最强 → 页面底部(海最深处)
+     衰减到 30%,不是 0——只是"更弱"，不是"消失"。 */
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 26%,
+    rgba(0, 0, 0, 0.5) 38%,
+    #000 46%,
+    #000 74%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 26%,
+    rgba(0, 0, 0, 0.5) 38%,
+    #000 46%,
+    #000 74%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
 }
 @keyframes sweetieCausticsPan {
   from { background-position: 0 0; }
-  to   { background-position: 384px 384px; }
+  to   { background-position: 960px 960px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .sweetie-caustics { animation: none; }
