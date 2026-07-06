@@ -276,6 +276,7 @@ export function SweetiePocketPage() {
   const [selected, setSelected] = useState<{ packet: RedPacket; vehicle: Vehicle } | null>(null);
   const [selectedChest, setSelectedChest] = useState<'user' | 'ai' | null>(null);
   const [ripplesReady, setRipplesReady] = useState(false);
+  const [debugHeatmap, setDebugHeatmap] = useState(false); // 临时诊断: 高度场热力图开关
   const pageRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<WaterRipples | null>(null);
@@ -378,6 +379,31 @@ export function SweetiePocketPage() {
       />
       <div className="sweetie-caustics" aria-hidden="true" />
       <DebugOverlay />
+      {ripplesReady ? (
+        <button
+          type="button"
+          onClick={() => {
+            const next = !debugHeatmap;
+            setDebugHeatmap(next);
+            engineRef.current?.setDebugVisualize(next);
+            debugInfo(`[落予棠] 高度场热力图诊断 ${next ? '开启' : '关闭'}(灰底,红=凸起/蓝=凹陷,不经过折射合成)`);
+          }}
+          style={{
+            position: 'fixed',
+            left: 8,
+            bottom: 8,
+            zIndex: 999999,
+            background: debugHeatmap ? '#c0392b' : 'rgba(10,10,15,0.85)',
+            color: '#fff',
+            border: '1px solid rgba(255,255,255,0.2)',
+            borderRadius: 8,
+            padding: '6px 10px',
+            fontSize: 12,
+          }}
+        >
+          {debugHeatmap ? '✕ 关闭热力图' : '🌡 高度场热力图'}
+        </button>
+      ) : null}
 
       <header className="chat-head">
         <Link to="/" className="chat-head__back" aria-label="回首页">

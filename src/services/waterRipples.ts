@@ -84,8 +84,23 @@ uniform sampler2D uBackground;
 uniform vec2 uDelta;
 uniform vec2 uCoverScale;
 uniform float uPerturbance;
+uniform int uDebugVisualize;
 varying vec2 vUv;
 void main() {
+  // 临时诊断分支: 直接把高度场当灰阶/红蓝热力图画出来,完全跳过背景折射合成——
+  // 只要 drop() 真的把凸起写进纹理、update() 真的在传播,不管折射合成那步
+  // 有没有毛病,这里都该能看到一块明显的红色(凸起)往外扩散成红蓝相间的圈。
+  // 这条路径只依赖"着色器里 texture2D 采样"这个已经确认能用的能力(render()
+  // 采样背景图正常显示出来过),完全不经过 readPixels(已确认在这台设备上失败)。
+  if (uDebugVisualize == 1) {
+    float h = texture2D(uState, vUv).r;
+    if (h >= 0.0) {
+      gl_FragColor = vec4(0.5 + h * 6.0, 0.5, 0.5, 1.0);
+    } else {
+      gl_FragColor = vec4(0.5, 0.5, 0.5 - h * 6.0, 1.0);
+    }
+    return;
+  }
   float hL = texture2D(uState, vUv - vec2(uDelta.x, 0.0)).r;
   float hR = texture2D(uState, vUv + vec2(uDelta.x, 0.0)).r;
   float hD = texture2D(uState, vUv - vec2(0.0, uDelta.y)).r;
@@ -188,6 +203,7 @@ export class WaterRipples {
   private resizeObserver: ResizeObserver | null = null;
   private destroyed = false;
   private loggedFirstRender = false; // 临时诊断: render() 真的跑起来了没有,只打一次
+  private debugVisualize = false; // 临时诊断: 开启后 render() 直接画高度场热力图,不画折射背景
 
   constructor(canvas: HTMLCanvasElement, opts: RippleOptions = {}) {
     this.canvas = canvas;
@@ -348,6 +364,13 @@ export class WaterRipples {
     return pixel[0];
   }
 
+  // 临时诊断: 切换 render() 是否改画高度场热力图(灰底、凸起=红、凹陷=蓝)。
+  // 不靠 CPU 读回(readPixels 在这台设备上已确认失败),完全靠 GPU 自己采样自己画,
+  // 跟"背景图能正常显示"走的是同一条已确认可用的能力路径。
+  setDebugVisualize(on: boolean) {
+    this.debugVisualize = on;
+  }
+
   private bindQuad(program: WebGLProgram) {
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
@@ -378,7 +401,7 @@ export class WaterRipples {
 
   private render() {
     const gl = this.gl;
-    if (!this.bgTexture) {
+    if (!this.bgTexture && !this.debugVisualize) {
       if (!this.loggedFirstRender) {
         this.loggedFirstRender = true;
         debugError('[waterRipples] render() 跑起来了,但 bgTexture 还是空的——每帧都直接 return,画面不会更新');
@@ -411,6 +434,7 @@ export class WaterRipples {
       this.coverScale.y,
     );
     gl.uniform1f(gl.getUniformLocation(this.renderProgram, 'uPerturbance'), this.perturbance);
+    gl.uniform1i(gl.getUniformLocation(this.renderProgram, 'uDebugVisualize'), this.debugVisualize ? 1 : 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
