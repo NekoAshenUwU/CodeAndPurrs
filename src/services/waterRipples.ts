@@ -114,7 +114,12 @@ void main() {
   // 数据链路本身没问题)。叠一层只会"提亮"、不会"压暗"的仿高光(水面反光的
   // 经典近似,只加不减)——这张背景本身偏亮偏柔,加暗会读成一块脏兮兮的
   // 阴影/黑影(实测过),只加亮才会读成"波光粼粼",不会有变脏的错觉。
-  float glow = clamp(abs(normal.x + normal.y) * uHighlight, 0.0, 0.3);
+  // 用 length(normal) 而不是 normal.x+normal.y——后者等价于跟固定方向(1,1)
+  // 做点积,相当于假设了一个固定的"光源方向",导致沿(1,1)对角线最亮、
+  // 沿垂直对角线直接掉到 0,一圈本该对称的涟漪就被压成"两头尖"的橄榄形
+  // (实测过,真机截图上明显能看到)。改成梯度模长,不挑角度,任何方向的坡度
+  // 都同样提亮,圆环才会是圆的。
+  float glow = clamp(length(normal) * uHighlight, 0.0, 0.42);
   bg.rgb += glow;
   gl_FragColor = bg;
 }
@@ -223,7 +228,10 @@ export class WaterRipples {
     // 诊断值,回落到克制、耐看的观感数值(仍比最终目标稍强一档,留一点确认空间,
     // 等看着舒服了再收一收)。
     this.perturbance = opts.perturbance ?? 0.035;
-    this.highlight = opts.highlight ?? 1.6;
+    // "两头尖"那个方向性 bug 顺带也解释了"微弱"——之前一圈里有小半圈角度
+    // 因为点积公式直接掉到 0,平均下来自然显弱。现在角度均匀了,系数还是
+    // 顺手调高一点,确保这一轮能看清楚。
+    this.highlight = opts.highlight ?? 2.6;
     this.dropRadius = opts.dropRadius ?? (20 / this.resolution);
     this.damping = opts.damping ?? 0.988;
 
