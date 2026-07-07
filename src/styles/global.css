@@ -4819,20 +4819,36 @@ a {
      "偏右出框"。改用下面专属的 balanceAmountBreathe，把居中位移写进
      每一帧动画本身里，跟缩放合成在一起。 */
   isolation: isolate;
-  font-family: "TianTianQuanAmount", var(--round);
+  /* HFSoda 排第一——但注意目前项目里只有 Logo 那份 52 个字母的子集
+     (hfsoda-logo.woff2 没有数字和 $),数字会先落到甜甜圈兜底;等拿到
+     HFSoda 字体源文件切一份 $0-9 子集后,这里就自动生效,不用再改。 */
+  font-family: "HFSoda", "TianTianQuanAmount", var(--round);
   font-weight: 700;
   font-size: 1.45rem;
-  /* 原来的深紫→浅紫→淡粉整条都在背景海面的紫粉色系里,叠上去几乎同色隐形
-     (真机反馈过)。换成深紫→洋红→蜜金的"霞光"渐变:两端色相都跳出了背景
-     色系,金色呼应夕阳,渐变感一眼能读出来,又不会像纯白那样突兀。 */
-  background-image: linear-gradient(95deg, #312e81 0%, #a21caf 40%, #e0447c 70%, #d97706 100%);
+  padding: 2px 11px;
+  /* 深色系渐变试过两轮都泡在背景紫粉里看不清——反过来:字用浅色渐变
+     (奶白→樱粉→香槟金),深色底交给下面 ::before 的深紫药丸,浅字深底
+     对比拉满,渐变依然缓缓流动。 */
+  background-image: linear-gradient(95deg, #ffffff 0%, #ffd7ef 45%, #ffedbf 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
   background-size: 200% 100%;
   animation: gradSweep 4.6s ease-in-out infinite alternate, balanceAmountBreathe 2.6s ease-in-out infinite;
-  text-shadow: 0 1px 3px rgba(90, 50, 130, 0.25);
+}
+/* 数额底下的深色药丸——不能直接给数额本身加 background-color:
+   上面 background-clip:text 会把"所有"背景(包括纯色底)都裁成文字形状,
+   深底直接消失。所以底色放到 ::before 这层单独画;z-index:-1 配合数额
+   自己的 isolation:isolate,垫在文字后面、又不会掉到页面背景底下去。 */
+.balance-island__amount::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 999px;
+  background: rgba(56, 30, 92, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25), 0 2px 8px rgba(60, 30, 100, 0.3);
 }
 /* ---------- 浮岛海面：三条车道各自叠行，同一行常并排 2~3 个载具，
    纵向行号=时间(越下越早)，深度感靠外层静态 scale+saturate ---------- */
@@ -4849,6 +4865,25 @@ a {
      点漂流物/宝箱也会顺带落一圈涟漪——手机上禁掉长按选中/高亮，别的都不变。 */
   -webkit-tap-highlight-color: transparent;
   user-select: none;
+  /* 往下拉时载具会滚进顶部云朵/浮岛那一带,挤在数额旁边很乱——给滚动容器
+     顶部加一段渐隐 mask:云朵带(顶栏下约 250px)以内完全透明,往下 ~150px
+     渐入到完全不透明。mask 定在容器自己的盒子上不跟内容滚,所以效果是
+     "载具越靠近云朵越淡、进云朵带之前就淡没了",像沉进远处海雾里,
+     不会突兀地"啪"一下消失。 */
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(56px + env(safe-area-inset-top) + 108px),
+    #000 calc(56px + env(safe-area-inset-top) + 256px),
+    #000 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(56px + env(safe-area-inset-top) + 108px),
+    #000 calc(56px + env(safe-area-inset-top) + 256px),
+    #000 100%
+  );
 }
 .sweetie-sea {
   position: relative;
