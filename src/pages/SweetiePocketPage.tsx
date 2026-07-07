@@ -346,13 +346,12 @@ export function SweetiePocketPage() {
     debugInfo(`[落予棠] drop(${u.toFixed(2)}, ${v.toFixed(2)})`);
     const engine = engineRef.current;
     engine.drop(u, v);
-    // 诊断: 200ms 后(给 update 通道跑几帧的时间)读一下该点高度场的真实高度值
-    // ——仿真纹理现在固定是 RGBA8,readPixels 理论上不该再报错(null)了;
-    // 静止水面应该接近 0, 如果 drop 真的生效了这里会明显非 0。
-    // 这比"眼睛看画面有没有变"更直接,不受视觉强度/截图压缩影响。
+    // 诊断: 200ms 后读一下该点高度场的字节值。现在仿真纹理是 float/half-float
+    // (jquery.ripples 移植版),这台设备上 CPU 读回大概率失败返回 null——
+    // 那是已知设备限制,不代表涟漪坏了,以画面/热力图为准,这个数仅供参考。
     window.setTimeout(() => {
-      const height = engine.debugReadHeightByteAt(u, v);
-      debugInfo(`[落予棠] drop 后 200ms, 该点高度场真实高度值(静止应接近0)= ${height}`);
+      const raw = engine.debugReadHeightByteAt(u, v);
+      debugInfo(`[落予棠] drop 后 200ms, 该点高度场字节值= ${raw}(null=这台设备读不回,属正常,看画面为准)`);
     }, 200);
   };
   const userBalance = useMemo(() => balanceOf('user', packets), [packets]);

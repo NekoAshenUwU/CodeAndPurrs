@@ -1,141 +1,130 @@
-// 落予棠海面: 自写 WebGL 水面涟漪引擎(原理跟 jquery.ripples 一致——帧缓冲高度场
-// + 离散波动方程 + 法线折射采样),不依赖 jQuery/第三方库。
+// 落予棠海面: sirxemic/jquery.ripples 的 WebGL 涟漪逐行移植版(不带 jQuery)。
 //
-// 流程:
-//   1. 256x256 的 ping-pong 纹理对存(height, velocity)两个量,每帧跑一次
-//      "update" 着色器(离散波动方程 + 阻尼)推进模拟。
-//   2. drop() 读旧状态 + 加凸起 + 写回另一张纹理(手指按下的水花)，
-//      下一帧 update 会把这个凸起自然扩散成向外传播的波纹。
-//   3. render 通道从高度场算出法线(中心差分)，用法线对背景图 UV 做小幅偏移
-//      (折射) + 镜面高光,采样出扭曲/发光的背景画面画到可见 canvas 上。
+// 之前自研 shader 反复调不出参考效果,按老婆明确指示放弃自研,把 jquery.ripples
+// 的 drop / update / render 三个着色器 **原样** 搬进现有 canvas 框架:
+//   - 三个 fragment shader 与 render vertex shader 的 GLSL 一字未改
+//     (来源 https://github.com/sirxemic/jquery.ripples/blob/master/src/main.js);
+//   - 坐标系也照搬它的:仿真纹理对应"以画布长边为边长的正方形"区域
+//     (containerRatio),drop 坐标/半径都按长边归一化,圆天然是圆;
+//   - 背景纹理接入是唯一按我们项目改的部分:它原版从 jQuery 元素的
+//     background-size/position 计算 topLeft/bottomRight,我们这里固定按
+//     background-size:cover 的裁切数学来算(canvas 即整个可视区)。
 //
-// 仿真纹理固定用 RGBA8/UNSIGNED_BYTE——这是 WebGL1 规范里唯一保证 100% 支持
-// "渲染到纹理"的格式组合,不依赖 OES_texture_half_float / OES_texture_float
-// 这类扩展。之前用 half-float/float 纹理时,在某些真机上出现过"扩展存在、
-// checkFramebufferStatus 也报 COMPLETE,但 readPixels 读回来永远报错、
-// 热力图偶发看不到扩散"的情况——不能 100%排除是"看似支持、实际渲染不可靠"
-// 这类静默失败(跟之前 EXT_float_blend 静默不生效是同一类坑)。
-// height/velocity 各自编码成 16 位定点数,拆进 RGBA8 的两个通道里存
-// (RG=height, BA=velocity,见 encode16/decode16),精度足够(±2.0 范围下
-// 分辨率约 6e-5),换来的是任何 WebGL1 设备都不会在这一步就出问题。
+// 与原库不同、但属于工程接入(不是效果上的自由发挥)的点,都注释标明:
+//   1. 仿真纹理显式清零——原库 half-float 路径传 null data(内容未定义),
+//      真机上踩过"第一帧满屏噪声"的坑,必须清;
+//   2. render 不开 BLEND——原库 canvas 是叠在元素背景上的透明层,我们的
+//      canvas 是唯一画面来源(不透明),混合无意义还引入 alpha 歧义;
+//   3. render 采样"当前最新"的那张 ping-pong 纹理(原库固定采样 textures[0],
+//      隔帧才是最新——效果上等价,这里取正确的那张);
+//   4. 保留临时诊断:热力图分支(uDebugVisualize)/readPixels 读数/渲染帧计数。
 
 import { debugError, debugInfo } from './debugLog';
 
 export type RippleOptions = {
-  resolution?: number; // 仿真纹理边长,默认 256(手机优先，越小越省)
-  perturbance?: number; // 折射扰动强度，越大扭曲越明显
-  highlight?: number; // 坡度仿高光强度，越大水面反光越明显
-  dropRadius?: number; // 涟漪半径，仿真纹理空间的归一化值(0~1)
-  damping?: number; // 波动衰减系数，越接近 1 波纹持续越久
+  resolution?: number; // 仿真纹理边长,默认 256(与原库默认一致)
+  dropRadius?: number; // 水花半径,CSS 像素(原库默认 20)
+  perturbance?: number; // 折射扰动强度(原库默认 0.03)
 };
 
-const VERTEX_SRC = `
-attribute vec2 aPosition;
-varying vec2 vUv;
-void main() {
-  vUv = aPosition * 0.5 + 0.5;
-  gl_Position = vec4(aPosition, 0.0, 1.0);
-}
-`;
+// ── 以下 4 段 GLSL 逐字来自 jquery.ripples,不要改 ────────────────────────
 
-// height/velocity 各自是一个可正可负的量,压进 RGBA8 的两个通道(每个量占
-// 用两个 8 位通道,拼成 16 位定点数),±range 范围内映射到 0~65535,
-// 四舍五入取整再拆高低字节——不做四舍五入的话 0 这个最常出现的值(静止水面)
-// 会因为浮点误差拆不成整数字节,导致"清成静止状态"这种最基础的操作都对不上。
-const PACK_GLSL = `
-vec2 encode16(float v, float range) {
-  float t = clamp(v / range * 0.5 + 0.5, 0.0, 1.0);
-  float v16 = floor(t * 65535.0 + 0.5);
-  float hi = floor(v16 / 256.0);
-  float lo = v16 - hi * 256.0;
-  return vec2(hi, lo) / 255.0;
-}
-float decode16(vec2 enc, float range) {
-  float v16 = enc.x * 255.0 * 256.0 + enc.y * 255.0;
-  float t = v16 / 65535.0;
-  return (t - 0.5) * 2.0 * range;
-}
-`;
-
-const UPDATE_FRAG_SRC = `
-precision highp float;
-uniform sampler2D uPrevState;
-uniform vec2 uDelta;
-uniform float uDamping;
-varying vec2 vUv;
-${PACK_GLSL}
+const SIM_VERTEX_SRC = `
+attribute vec2 vertex;
+varying vec2 coord;
 void main() {
-  vec4 data = texture2D(uPrevState, vUv);
-  float height = decode16(data.rg, 2.0);
-  float velocity = decode16(data.ba, 2.0);
-  vec2 dx = vec2(uDelta.x, 0.0);
-  vec2 dy = vec2(0.0, uDelta.y);
-  float average = (
-    decode16(texture2D(uPrevState, vUv - dx).rg, 2.0) +
-    decode16(texture2D(uPrevState, vUv + dx).rg, 2.0) +
-    decode16(texture2D(uPrevState, vUv - dy).rg, 2.0) +
-    decode16(texture2D(uPrevState, vUv + dy).rg, 2.0)
-  ) * 0.25;
-  // 耦合系数从 2.0 调低到 1.15——2D 波动方程本身就会随着波前变大、能量摊到
-  // 更大周长上而自然变暗,系数越大波纹跑得越快、扩散到视野外/衰减得也越快,
-  // 参考图那种"波光荡漾良久"的效果需要波跑得慢一点、多晃几下才行。
-  velocity += (average - height) * 1.15;
-  velocity *= uDamping;
-  height += velocity;
-  gl_FragColor = vec4(encode16(height, 2.0), encode16(velocity, 2.0));
+  coord = vertex * 0.5 + 0.5;
+  gl_Position = vec4(vertex, 0.0, 1.0);
 }
 `;
 
 const DROP_FRAG_SRC = `
 precision highp float;
-uniform sampler2D uPrevState;
-uniform vec2 uCenter;
-uniform float uRadius;
-uniform float uStrength;
-uniform float uAspect;
-varying vec2 vUv;
-${PACK_GLSL}
+
+const float PI = 3.141592653589793;
+uniform sampler2D texture;
+uniform vec2 center;
+uniform float radius;
+uniform float strength;
+
+varying vec2 coord;
+
 void main() {
-  vec4 data = texture2D(uPrevState, vUv);
-  float height = decode16(data.rg, 2.0);
-  float velocity = decode16(data.ba, 2.0);
-  // 仿真状态存在一张正方形纹理里,但它的 UV 是直接当"画布上的比例坐标"用的——
-  // 手机画布是竖屏(高远大于宽),vUv 空间里的一个正圆落到画布上会被拉成竖着的
-  // 椭圆。用 uAspect(画布宽/高)把 x 方向的距离先放大抵消掉,水花落下的
-  // 那一下才是真正的圆,不是椭圆。
-  vec2 d = vUv - uCenter;
-  d.x *= uAspect;
-  float dist = length(d);
-  float drop = max(0.0, 1.0 - dist / uRadius);
-  drop = drop * drop * (3.0 - 2.0 * drop);
-  height += drop * uStrength;
-  gl_FragColor = vec4(encode16(height, 2.0), encode16(velocity, 2.0));
+  vec4 info = texture2D(texture, coord);
+
+  float drop = max(0.0, 1.0 - length(center * 0.5 + 0.5 - coord) / radius);
+  drop = 0.5 - cos(drop * PI) * 0.5;
+
+  info.r += drop * strength;
+
+  gl_FragColor = info;
 }
 `;
 
+const UPDATE_FRAG_SRC = `
+precision highp float;
+
+uniform sampler2D texture;
+uniform vec2 delta;
+
+varying vec2 coord;
+
+void main() {
+  vec4 info = texture2D(texture, coord);
+
+  vec2 dx = vec2(delta.x, 0.0);
+  vec2 dy = vec2(0.0, delta.y);
+
+  float average = (
+    texture2D(texture, coord - dx).r +
+    texture2D(texture, coord - dy).r +
+    texture2D(texture, coord + dx).r +
+    texture2D(texture, coord + dy).r
+  ) * 0.25;
+
+  info.g += (average - info.r) * 2.0;
+  info.g *= 0.995;
+  info.r += info.g;
+
+  gl_FragColor = info;
+}
+`;
+
+const RENDER_VERTEX_SRC = `
+precision highp float;
+
+attribute vec2 vertex;
+uniform vec2 topLeft;
+uniform vec2 bottomRight;
+uniform vec2 containerRatio;
+varying vec2 ripplesCoord;
+varying vec2 backgroundCoord;
+
+void main() {
+  backgroundCoord = mix(topLeft, bottomRight, vertex * 0.5 + 0.5);
+  backgroundCoord.y = 1.0 - backgroundCoord.y;
+  ripplesCoord = vec2(vertex.x, -vertex.y) * containerRatio * 0.5 + 0.5;
+  gl_Position = vec4(vertex.x, -vertex.y, 0.0, 1.0);
+}
+`;
+
+// 唯一的改动: 开头加了 uDebugVisualize 热力图分支(临时诊断用,开关关闭时
+// 走的就是原版逐字未动的那段)。
 const RENDER_FRAG_SRC = `
 precision highp float;
-uniform sampler2D uState;
-uniform sampler2D uBackground;
-uniform vec2 uDelta;
-uniform vec2 uCoverScale;
-uniform float uPerturbance;
-uniform float uHighlight;
+
+uniform sampler2D samplerBackground;
+uniform sampler2D samplerRipples;
+uniform vec2 delta;
+
+uniform float perturbance;
 uniform int uDebugVisualize;
-varying vec2 vUv;
-${PACK_GLSL}
-// 屏幕空间网格哈希: 给每个固定大小的格子发一个稳定的伪随机数,用来决定
-// "这个格子参不参与闪烁"——高度场本身是连续光滑的函数,直接用它算出来的
-// 高光永远是一整片平滑的光晕,不可能自己变成"很多颗分散的碎光点"。
-float hash(vec2 p) {
-  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-}
+varying vec2 ripplesCoord;
+varying vec2 backgroundCoord;
+
 void main() {
-  // 临时诊断分支: 直接把高度场当灰阶/红蓝热力图画出来,完全跳过背景折射合成——
-  // 只要 drop() 真的把凸起写进纹理、update() 真的在传播,不管折射合成那步
-  // 有没有毛病,这里都该能看到一块明显的红色(凸起)往外扩散成红蓝相间的圈。
   if (uDebugVisualize == 1) {
-    float h = decode16(texture2D(uState, vUv).rg, 2.0);
+    float h = texture2D(samplerRipples, ripplesCoord).r;
     if (h >= 0.0) {
       gl_FragColor = vec4(0.5 + h * 6.0, 0.5, 0.5, 1.0);
     } else {
@@ -143,43 +132,18 @@ void main() {
     }
     return;
   }
-  float hL = decode16(texture2D(uState, vUv - vec2(uDelta.x, 0.0)).rg, 2.0);
-  float hR = decode16(texture2D(uState, vUv + vec2(uDelta.x, 0.0)).rg, 2.0);
-  float hD = decode16(texture2D(uState, vUv - vec2(0.0, uDelta.y)).rg, 2.0);
-  float hU = decode16(texture2D(uState, vUv + vec2(0.0, uDelta.y)).rg, 2.0);
-  vec2 normal = vec2(hL - hR, hD - hU);
-  // 折射位移是主视觉:用高度场的梯度偏移背景纹理采样 UV,让波纹"推开又复原"
-  // 背景本身的画面细节,这才是"水在动"的观感来源。之前主视觉是镜面高光
-  // (法线点积固定光源),读起来是"一闪一闪的光斑快速消散",不是水纹本身
-  // 在扭曲——现在数据链路已经用热力图+真实高度读数完全验证过没问题
-  // (读数在 0.13 左右,量级正常),可以放心把 uPerturbance 调大到能看出
-  // 明显扭曲的程度,不用再顾虑"是不是白费力气调一个还没验证过的效果"。
-  vec2 bgUv = (vUv - 0.5) * uCoverScale + 0.5 + normal * uPerturbance;
-  vec4 bg = texture2D(uBackground, clamp(bgUv, 0.001, 0.999));
-  // 镜面高光(sparkle),折射扭曲之上的最后一层视觉:高度梯度当法线贴图,
-  // 跟一个固定的虚拟光源方向(画面左上方,呼应背景霞光的角度)做点积,
-  // pow 锐化成一条细高光带——静止水面法线接近正上方,点积后 pow 出来趋近
-  // 于 0,没有高光;只有波纹边缘坡度够陡、又刚好朝着光源的地方才会闪一下,
-  // 读起来是"波光粼粼",不是整片发光。
-  // 高光颜色用暖白偏粉,不用纯白——纯白在这张暖色调霞光背景上会显得突兀、
-  // 发假,暖白偏粉才融得进整体色调。
-  vec3 n = normalize(vec3(normal * 45.0, 1.0));
-  vec3 lightDir = normalize(vec3(-0.35, 0.75, 0.6));
-  float spec = pow(max(dot(n, lightDir), 0.0), 24.0);
-  // "波光粼粼"是很多颗分散的碎光点,不是跟指腹一样大的一整块光晕。上一版
-  // 格子(13px)+ step() 硬阈值,在 spec 本身大面积饱和的时候,大片相邻格子
-  // 同时"通行"、又都跟 spec 一样亮,直接连成一整块带硬直角边的方块——
-  // 截图里看到的"像素方块"就是这个。这次改两点:格子缩小到 4px(更细的
-  // 颗粒感,不容易连成大块);用哈希值本身做连续的 pow 曲线(不再是非 0 即 1
-  // 的硬开关),大部分格子哈希值偏低、pow 之后趋近 0,只有极少数格子的哈希值
-  // 本来就接近 1 才会亮起来,边缘是渐变的,不会再是方块的硬直角。
-  vec2 cell = floor(gl_FragCoord.xy / 4.0);
-  float grain = pow(hash(cell), 8.0);
-  vec3 sparkleColor = vec3(1.0, 0.9608, 0.9412);
-  bg.rgb += sparkleColor * spec * grain * uHighlight;
-  gl_FragColor = bg;
+  float height = texture2D(samplerRipples, ripplesCoord).r;
+  float heightX = texture2D(samplerRipples, vec2(ripplesCoord.x + delta.x, ripplesCoord.y)).r;
+  float heightY = texture2D(samplerRipples, vec2(ripplesCoord.x, ripplesCoord.y + delta.y)).r;
+  vec3 dx = vec3(delta.x, heightX - height, 0.0);
+  vec3 dy = vec3(0.0, heightY - height, delta.y);
+  vec2 offset = -normalize(cross(dy, dx)).xz;
+  float specular = pow(max(0.0, dot(offset, normalize(vec2(-0.6, 1.0)))), 4.0);
+  gl_FragColor = texture2D(samplerBackground, backgroundCoord + offset * perturbance) + specular;
 }
 `;
+
+// ── GLSL 到此为止,下面是接入框架 ─────────────────────────────────────────
 
 function compileShader(gl: WebGLRenderingContext, type: number, src: string): WebGLShader {
   const shader = gl.createShader(type);
@@ -214,19 +178,57 @@ function linkProgram(gl: WebGLRenderingContext, vertSrc: string, fragSrc: string
 
 type SimTarget = { texture: WebGLTexture; framebuffer: WebGLFramebuffer };
 
-// 真正尝试创建一个"能渲染到"的纹理+FBO，用 checkFramebufferStatus 验证——
-// 固定用 RGBA8/UNSIGNED_BYTE,这是 WebGL1 规范里唯一保证任何设备都支持
-// "渲染到纹理"的格式,不依赖任何扩展,也就不存在"扩展看似存在、实际渲染
-// 不可靠"这类静默失败的可能。
-function createRenderableTarget(gl: WebGLRenderingContext, size: number): SimTarget | null {
+// 跟原库一样的浮点纹理格式探测,只是把"真的能渲染到这个格式"用
+// checkFramebufferStatus 实测出来(扩展字符串在≠真能用,这个坑踩过)。
+// LINEAR 过滤是 jquery.ripples 顺滑观感的关键一环,对应 *_linear 扩展;
+// 没有就退 NEAREST(原库也是这么退的,只是糙一点)。
+type SimConfig = { type: number; linear: boolean };
+
+function detectSimConfig(gl: WebGLRenderingContext, size: number): SimConfig | null {
+  const candidates: Array<{ ext: string; linearExt: string; type: () => number | null }> = [
+    {
+      ext: 'OES_texture_float',
+      linearExt: 'OES_texture_float_linear',
+      type: () => (gl.getExtension('OES_texture_float') ? gl.FLOAT : null),
+    },
+    {
+      ext: 'OES_texture_half_float',
+      linearExt: 'OES_texture_half_float_linear',
+      type: () => {
+        const ext = gl.getExtension('OES_texture_half_float') as { HALF_FLOAT_OES: number } | null;
+        return ext ? ext.HALF_FLOAT_OES : null;
+      },
+    },
+  ];
+  for (const c of candidates) {
+    const type = c.type();
+    if (type === null) continue;
+    const probe = createSimTarget(gl, size, type, false);
+    if (!probe) continue;
+    gl.deleteFramebuffer(probe.framebuffer);
+    gl.deleteTexture(probe.texture);
+    const linear = !!gl.getExtension(c.linearExt);
+    debugInfo(`[waterRipples] 仿真纹理格式: ${c.ext}${linear ? ' + linear 过滤' : '(NEAREST 过滤)'}`);
+    return { type, linear };
+  }
+  return null;
+}
+
+function createSimTarget(
+  gl: WebGLRenderingContext,
+  size: number,
+  type: number,
+  linear: boolean,
+): SimTarget | null {
   const texture = gl.createTexture();
   if (!texture) return null;
+  const filter = linear ? gl.LINEAR : gl.NEAREST;
   gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, type, null);
 
   const framebuffer = gl.createFramebuffer();
   if (!framebuffer) {
@@ -249,14 +251,12 @@ export class WaterRipples {
   private gl: WebGLRenderingContext;
   private canvas: HTMLCanvasElement;
   private resolution: number;
-  private perturbance: number;
-  private highlight: number;
   private dropRadius: number;
-  private damping: number;
+  private perturbance: number;
 
   private quadBuffer: WebGLBuffer;
-  private updateProgram: WebGLProgram;
   private dropProgram: WebGLProgram;
+  private updateProgram: WebGLProgram;
   private renderProgram: WebGLProgram;
 
   private targetA: SimTarget;
@@ -265,27 +265,22 @@ export class WaterRipples {
 
   private bgTexture: WebGLTexture | null = null;
   private bgImageSize = { w: 1, h: 1 };
-  private coverScale = { x: 1, y: 1 };
-  private canvasAspect = 1; // canvas.width / canvas.height——手机竖屏时远小于 1
+  private dpr = 1;
 
   private rafId: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private destroyed = false;
   private loggedFirstRender = false; // 临时诊断: render() 真的跑起来了没有,只打一次
-  private debugVisualize = false; // 临时诊断: 开启后 render() 直接画高度场热力图,不画折射背景
+  private debugVisualize = false; // 临时诊断: 高度场热力图开关
+  private frameCount = 0; // 临时诊断: 渲染帧计数,验证"点击后渲染循环持续在跑"
 
   constructor(canvas: HTMLCanvasElement, opts: RippleOptions = {}) {
     this.canvas = canvas;
+    // 三个默认值都取 jquery.ripples 的默认(resolution 256 / dropRadius 20 /
+    // perturbance 0.03),官网 demo 就是这组参数的观感。
     this.resolution = opts.resolution ?? 256;
-    // 数据链路现在已经用热力图+真实高度读数完全验证过没问题(读数 ~0.13,
-    // 量级正常),折射改回主视觉,可以放心调大——不再是"调了也不知道有没有
-    // 用"的阶段。
-    this.perturbance = opts.perturbance ?? 0.6;
-    // 镜面高光(sparkle)强度系数,起步 0.4(见 RENDER_FRAG_SRC 里的镜面高光实现)。
-    this.highlight = opts.highlight ?? 0.4;
-    this.dropRadius = opts.dropRadius ?? (20 / this.resolution);
-    // damping 保持在接近 1 的一档,让单次点击的波多晃几圈再衰减完。
-    this.damping = opts.damping ?? 0.998;
+    this.dropRadius = opts.dropRadius ?? 20;
+    this.perturbance = opts.perturbance ?? 0.03;
 
     const gl = canvas.getContext('webgl', {
       alpha: false,
@@ -298,79 +293,47 @@ export class WaterRipples {
     if (!gl) throw new Error('拿不到 WebGL 上下文');
     this.gl = gl;
 
-    // encode16/decode16 要把 0~65535 的整数原样存进/读出浮点数——这需要至少
-    // ~17 位有效精度。fragment shader 默认精度声明 mediump 在不少手机 GPU 上
-    // 实际就是 IEEE 半精度浮点(约 10 位尾数),连 2048 以上的整数都存不准,
-    // 高度编码在这种精度下会被悄悄舍入成错误值(实测过:真机上读回的高度
-    // 永远卡在编码范围的下限,不管有没有真的点过水面——就是这个精度坑)。
-    // 换成 highp 需要 GPU 支持,虽然 WebGL1 规范只是"建议"fragment shader
-    // 支持 highp、不强制,但绝大多数这十年内的手机 GPU 都支持——这里用
-    // getShaderPrecisionFormat 实测查一下，不支持就明确报错降级，而不是
-    // 沉默地算出错误数字。
-    const highpInfo = gl.getShaderPrecisionFormat?.(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT);
-    if (!highpInfo || highpInfo.precision === 0) {
-      throw new Error('设备 fragment shader 不支持 highp 精度,涟漪的高度编码需要更高精度,无法运行');
-    }
+    const config = detectSimConfig(gl, this.resolution);
+    if (!config) throw new Error('设备不支持渲染到浮点纹理,涟漪不可用');
 
-    // RGBA8 是 WebGL1 规范里唯一保证任何设备都能"渲染到纹理"的格式,不依赖
-    // 任何扩展——理论上这里不该失败,除非 WebGL 上下文本身有问题。
-    const target = createRenderableTarget(gl, this.resolution);
-    if (!target) throw new Error('设备不支持渲染到纹理，涟漪不可用');
-    this.targetA = target;
-    const targetB = createRenderableTarget(gl, this.resolution);
-    if (!targetB) throw new Error('第二个 ping-pong 纹理创建失败');
+    const targetA = createSimTarget(gl, this.resolution, config.type, config.linear);
+    const targetB = createSimTarget(gl, this.resolution, config.type, config.linear);
+    if (!targetA || !targetB) throw new Error('ping-pong 纹理创建失败');
+    this.targetA = targetA;
     this.targetB = targetB;
 
-    // texImage2D(..., null) 只分配显存,内容按 WebGL 规范是未定义的(不保证是 0)——
-    // 实测过不清零会导致水面从第一帧就带着满屏"噪声波纹"，而不是静止的水面。
-    // height/velocity 现在编码进 RGBA8 的两个定点数(见 PACK_GLSL),"0" 不再是
-    // 裸的 (0,0,0,0)——按 encode16(0, 2.0) 算出来,静止状态对应 (128,0,128,0)/255。
+    // 原库对 half-float 传 null data,内容按规范是未定义的——真机踩过
+    // "第一帧满屏噪声"的坑,这里显式清成静止水面(全 0)。
     for (const t of [this.targetA, this.targetB]) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, t.framebuffer);
       gl.viewport(0, 0, this.resolution, this.resolution);
-      gl.clearColor(128 / 255, 0, 128 / 255, 0);
+      gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
     }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
     this.quadBuffer = gl.createBuffer()!;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
-    gl.bufferData(
-      gl.ARRAY_BUFFER,
-      new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
-      gl.STATIC_DRAW,
-    );
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
 
-    this.updateProgram = linkProgram(gl, VERTEX_SRC, UPDATE_FRAG_SRC);
-    this.dropProgram = linkProgram(gl, VERTEX_SRC, DROP_FRAG_SRC);
-    this.renderProgram = linkProgram(gl, VERTEX_SRC, RENDER_FRAG_SRC);
+    this.dropProgram = linkProgram(gl, SIM_VERTEX_SRC, DROP_FRAG_SRC);
+    this.updateProgram = linkProgram(gl, SIM_VERTEX_SRC, UPDATE_FRAG_SRC);
+    this.renderProgram = linkProgram(gl, RENDER_VERTEX_SRC, RENDER_FRAG_SRC);
 
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(canvas);
     this.resize();
   }
 
-  // 背景图跟其它房间一样走 background-size:cover 的裁切逻辑，算出采样窗口比例。
-  private updateCoverScale() {
-    const canvasAspect = this.canvas.width / this.canvas.height;
-    const imageAspect = this.bgImageSize.w / this.bgImageSize.h;
-    this.coverScale = {
-      x: Math.min(1, canvasAspect / imageAspect),
-      y: Math.min(1, imageAspect / canvasAspect),
-    };
-  }
-
   private resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
     const rect = this.canvas.getBoundingClientRect();
-    const w = Math.max(1, Math.round(rect.width * dpr));
-    const h = Math.max(1, Math.round(rect.height * dpr));
+    const w = Math.max(1, Math.round(rect.width * this.dpr));
+    const h = Math.max(1, Math.round(rect.height * this.dpr));
     if (this.canvas.width !== w || this.canvas.height !== h) {
       this.canvas.width = w;
       this.canvas.height = h;
     }
-    this.canvasAspect = this.canvas.width / this.canvas.height;
-    this.updateCoverScale();
   }
 
   async loadImage(url: string): Promise<void> {
@@ -386,51 +349,59 @@ export class WaterRipples {
     const texture = gl.createTexture();
     if (!texture) throw new Error('createTexture 失败');
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    // 不翻转 Y——render vertex shader(原版)自己做了 backgroundCoord.y = 1-y,
+    // 背景按 DOM 常规方向上传才对得上。
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     this.bgTexture = texture;
-    this.updateCoverScale();
   }
 
-  // 手指/鼠标在归一化坐标(0~1，画布局部)按下的位置起一圈涟漪。
-  // 读当前状态、加凸起、写进另一张 ping-pong 纹理，不用等下一帧 rAF、
-  // 也不依赖硬件混合(见 DROP_FRAG_SRC 顶部注释)——触感依然即时,
-  // 下一次 step() 会从这个刚写入的状态继续演化。
-  // strength 从诊断期的夸张值(0.35)收回到比最终目标(0.09)稍强一档的数值——
-  // 数据链路和可见性技术都已确认没问题,不需要再刻意调夸张了。
-  drop(u: number, v: number, strength = 0.16) {
+  // 手指在画布归一化坐标(0~1)按下 → 起一圈涟漪。
+  // 坐标换算照搬原库 drop():以画布长边为归一化基准,center 在 [-1,1] 区间,
+  // drop shader 里再 *0.5+0.5 映射回纹理空间——正方形仿真纹理对应画布上
+  // "长边 x 长边"的正方形区域,圆就是圆,不需要额外的宽高比补丁。
+  // radius/strength 默认取原库 mousedown 的档位(dropRadius*1.5, 0.14)。
+  drop(u: number, v: number, radiusScale = 1.5, strength = 0.14) {
     const gl = this.gl;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    const longestSide = Math.max(w, h);
+    const x = u * w;
+    const y = v * h;
+    const radius = (this.dropRadius * this.dpr * radiusScale) / longestSide;
+    const center = [(2 * x - w) / longestSide, (h - 2 * y) / longestSide];
+
     const src = this.srcIsA ? this.targetA : this.targetB;
     const dst = this.srcIsA ? this.targetB : this.targetA;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, dst.framebuffer);
     gl.viewport(0, 0, this.resolution, this.resolution);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, dst.framebuffer);
     gl.useProgram(this.dropProgram);
     this.bindQuad(this.dropProgram);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, src.texture);
-    gl.uniform1i(gl.getUniformLocation(this.dropProgram, 'uPrevState'), 0);
-    gl.uniform2f(gl.getUniformLocation(this.dropProgram, 'uCenter'), u, 1 - v);
-    gl.uniform1f(gl.getUniformLocation(this.dropProgram, 'uRadius'), this.dropRadius);
-    gl.uniform1f(gl.getUniformLocation(this.dropProgram, 'uStrength'), strength);
-    gl.uniform1f(gl.getUniformLocation(this.dropProgram, 'uAspect'), this.canvasAspect);
+    gl.uniform1i(gl.getUniformLocation(this.dropProgram, 'texture'), 0);
+    gl.uniform2f(gl.getUniformLocation(this.dropProgram, 'center'), center[0], center[1]);
+    gl.uniform1f(gl.getUniformLocation(this.dropProgram, 'radius'), radius);
+    gl.uniform1f(gl.getUniformLocation(this.dropProgram, 'strength'), strength);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     this.srcIsA = !this.srcIsA;
+
+    // 临时诊断: 验证"点击后渲染循环持续在跑"(验收标准是 2 秒 ≥ 100 帧上下,
+    // 60fps 屏是 ~120 帧)。
+    const framesAtDrop = this.frameCount;
+    window.setTimeout(() => {
+      if (this.destroyed) return;
+      debugInfo(`[waterRipples] drop 后 2 秒内渲染了 ${this.frameCount - framesAtDrop} 帧(60fps 屏应 ~120)`);
+    }, 2000);
   }
 
-  // 诊断: 读一下"当前最新状态"纹理在某个归一化坐标点的真实高度值,
-  // 用来验证 drop() 有没有真的把数据写进纹理里——比"眼睛看有没有涟漪"更
-  // 直接客观,不受视觉强度/画面细节/截图压缩的干扰。
-  // 现在仿真纹理固定是 RGBA8/UNSIGNED_BYTE(见文件顶部注释),readPixels 用
-  // RGBA+UNSIGNED_BYTE 读取是 WebGL 规范保证任何设备都支持的组合,不应该
-  // 再报错——之前用 half-float/float 纹理时这里会报错返回 null,换成 RGBA8
-  // 之后如果还是 null,说明问题比"纹理格式不支持读回"更底层。
-  // 读到的 R,G 两个字节按 encode16 的逆运算解出真实高度(不再是裸字节值)。
+  // 临时诊断: readPixels 读一个点的高度字节值。float/half-float 帧缓冲在这台
+  // 设备上 CPU 读回会失败(返回 null)——这是已知设备限制,不代表渲染有问题,
+  // 看热力图/画面就行,这个读数仅供参考。
   debugReadHeightByteAt(u: number, v: number): number | null {
     const gl = this.gl;
     const state = this.srcIsA ? this.targetA : this.targetB;
@@ -442,14 +413,10 @@ export class WaterRipples {
     const err = gl.getError();
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     if (err !== gl.NO_ERROR) return null;
-    const v16 = pixel[0] * 256 + pixel[1];
-    const t = v16 / 65535;
-    return (t - 0.5) * 2 * 2.0;
+    return pixel[0];
   }
 
   // 临时诊断: 切换 render() 是否改画高度场热力图(灰底、凸起=红、凹陷=蓝)。
-  // 不靠 CPU 读回(readPixels 在这台设备上已确认失败),完全靠 GPU 自己采样自己画,
-  // 跟"背景图能正常显示"走的是同一条已确认可用的能力路径。
   setDebugVisualize(on: boolean) {
     this.debugVisualize = on;
   }
@@ -457,36 +424,46 @@ export class WaterRipples {
   private bindQuad(program: WebGLProgram) {
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
-    const loc = gl.getAttribLocation(program, 'aPosition');
+    const loc = gl.getAttribLocation(program, 'vertex');
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
   }
 
-  private step() {
+  private update() {
     const gl = this.gl;
     const src = this.srcIsA ? this.targetA : this.targetB;
     const dst = this.srcIsA ? this.targetB : this.targetA;
-    // 仿真纹理本身就是正方形存储(256x256),这里只是在读它自己格子里的邻居——
-    // 必须用对称步长(dx=dy=1/resolution)。之前在这里也套了宽高比校正,
-    // 结果在 NEAREST 采样下变成非整数格偏移(比如 x 方向偏移到 1.86 格,
-    // 取整变 2 格,y 方向还是 1 格),每帧都在递归的波动方程里累积这个方向性
-    // 偏差,晃几圈之后就演化成一圈"漩涡"而不是同心圆——回退成对称步长,
-    // 画布宽高比的修正只在"种子形状"(DROP_FRAG_SRC 的 uAspect)这个
-    // 一次性、不递归的地方做,不会累积出问题。
     const delta = 1 / this.resolution;
 
-    gl.bindFramebuffer(gl.FRAMEBUFFER, dst.framebuffer);
     gl.viewport(0, 0, this.resolution, this.resolution);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, dst.framebuffer);
     gl.useProgram(this.updateProgram);
     this.bindQuad(this.updateProgram);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, src.texture);
-    gl.uniform1i(gl.getUniformLocation(this.updateProgram, 'uPrevState'), 0);
-    gl.uniform2f(gl.getUniformLocation(this.updateProgram, 'uDelta'), delta, delta);
-    gl.uniform1f(gl.getUniformLocation(this.updateProgram, 'uDamping'), this.damping);
+    gl.uniform1i(gl.getUniformLocation(this.updateProgram, 'texture'), 0);
+    gl.uniform2f(gl.getUniformLocation(this.updateProgram, 'delta'), delta, delta);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     this.srcIsA = !this.srcIsA;
+  }
+
+  // 对应原库 computeTextureBoundaries:算 topLeft/bottomRight(背景图按
+  // background-size:cover 裁切后,画布对应到图片 UV 的窗口)和 containerRatio
+  // (画布相对"长边正方形"的比例,决定仿真纹理如何铺到画布上)。
+  private computeUniforms(): { topLeft: [number, number]; bottomRight: [number, number]; containerRatio: [number, number] } {
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    const scale = Math.max(w / this.bgImageSize.w, h / this.bgImageSize.h);
+    const dispW = this.bgImageSize.w * scale;
+    const dispH = this.bgImageSize.h * scale;
+    const left = (dispW - w) / 2;
+    const top = (dispH - h) / 2;
+    const topLeft: [number, number] = [left / dispW, top / dispH];
+    const bottomRight: [number, number] = [topLeft[0] + w / dispW, topLeft[1] + h / dispH];
+    const maxSide = Math.max(w, h);
+    const containerRatio: [number, number] = [w / maxSide, h / maxSide];
+    return { topLeft, bottomRight, containerRatio };
   }
 
   private render() {
@@ -504,38 +481,41 @@ export class WaterRipples {
         `[waterRipples] render() 第一次真正执行, canvas 内部渲染尺寸=${this.canvas.width}x${this.canvas.height}`,
       );
     }
+    this.frameCount++;
     const state = this.srcIsA ? this.targetA : this.targetB;
-    // 跟 step() 同理: 读的是同一张正方形仿真纹理自己的邻居格子,对称步长就好,
-    // 不需要(也不该)套宽高比。
     const delta = 1 / this.resolution;
+    const { topLeft, bottomRight, containerRatio } = this.computeUniforms();
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.useProgram(this.renderProgram);
     this.bindQuad(this.renderProgram);
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, state.texture);
-    gl.uniform1i(gl.getUniformLocation(this.renderProgram, 'uState'), 0);
-    gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.bgTexture);
-    gl.uniform1i(gl.getUniformLocation(this.renderProgram, 'uBackground'), 1);
-    gl.uniform2f(gl.getUniformLocation(this.renderProgram, 'uDelta'), delta, delta);
+    gl.uniform1i(gl.getUniformLocation(this.renderProgram, 'samplerBackground'), 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, state.texture);
+    gl.uniform1i(gl.getUniformLocation(this.renderProgram, 'samplerRipples'), 1);
+    gl.uniform2f(gl.getUniformLocation(this.renderProgram, 'delta'), delta, delta);
+    gl.uniform1f(gl.getUniformLocation(this.renderProgram, 'perturbance'), this.perturbance);
+    gl.uniform2f(gl.getUniformLocation(this.renderProgram, 'topLeft'), topLeft[0], topLeft[1]);
+    gl.uniform2f(gl.getUniformLocation(this.renderProgram, 'bottomRight'), bottomRight[0], bottomRight[1]);
     gl.uniform2f(
-      gl.getUniformLocation(this.renderProgram, 'uCoverScale'),
-      this.coverScale.x,
-      this.coverScale.y,
+      gl.getUniformLocation(this.renderProgram, 'containerRatio'),
+      containerRatio[0],
+      containerRatio[1],
     );
-    gl.uniform1f(gl.getUniformLocation(this.renderProgram, 'uPerturbance'), this.perturbance);
-    gl.uniform1f(gl.getUniformLocation(this.renderProgram, 'uHighlight'), this.highlight);
     gl.uniform1i(gl.getUniformLocation(this.renderProgram, 'uDebugVisualize'), this.debugVisualize ? 1 : 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
+  // 跟原库一样: rAF 循环常开(update+render 每帧都跑),不做"drop 才渲染一帧"
+  // 的省电小聪明——波在传播期间必须持续渲染,不然光纹不会跟着波走。
   start() {
     if (this.rafId !== null) return;
     const loop = () => {
       if (this.destroyed) return;
-      this.step();
+      this.update();
       this.render();
       this.rafId = requestAnimationFrame(loop);
     };
@@ -555,8 +535,8 @@ export class WaterRipples {
     this.resizeObserver?.disconnect();
     const gl = this.gl;
     gl.deleteBuffer(this.quadBuffer);
-    gl.deleteProgram(this.updateProgram);
     gl.deleteProgram(this.dropProgram);
+    gl.deleteProgram(this.updateProgram);
     gl.deleteProgram(this.renderProgram);
     gl.deleteFramebuffer(this.targetA.framebuffer);
     gl.deleteTexture(this.targetA.texture);
@@ -566,9 +546,9 @@ export class WaterRipples {
   }
 }
 
-// 供 React 组件调用的安全入口:构造+加载图片全程 try/catch，任何一步失败
-// (WebGL 不可用/扩展缺失/渲染到浮点纹理不支持/图片加载失败)都返回 null，
-// 调用方据此走"只保留焦散层，涟漪关闭"的降级路径。
+// 供 React 组件调用的安全入口:构造+加载图片全程 try/catch,任何一步失败
+// (WebGL 不可用/浮点纹理渲染不支持/图片加载失败)都返回 null,
+// 调用方据此走"只保留焦散层,涟漪关闭"的降级路径。
 export async function createWaterRipples(
   canvas: HTMLCanvasElement,
   imageUrl: string,
