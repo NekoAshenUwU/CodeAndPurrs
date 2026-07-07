@@ -12,8 +12,6 @@ import {
   type Vehicle,
 } from '../services/redPacket';
 import { createWaterRipples, type WaterRipples } from '../services/waterRipples';
-import { debugInfo, debugError } from '../services/debugLog';
-import { DebugOverlay } from '../components/DebugOverlay';
 
 const fmtStamp = (at: number): string => {
   const d = new Date(at);
@@ -276,7 +274,6 @@ export function SweetiePocketPage() {
   const [selected, setSelected] = useState<{ packet: RedPacket; vehicle: Vehicle } | null>(null);
   const [selectedChest, setSelectedChest] = useState<'user' | 'ai' | null>(null);
   const [ripplesReady, setRipplesReady] = useState(false);
-  const [debugHeatmap, setDebugHeatmap] = useState(false); // 临时诊断: 高度场热力图开关
   const pageRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<WaterRipples | null>(null);
@@ -296,22 +293,12 @@ export function SweetiePocketPage() {
 
     let cancelled = false;
     const bgUrl = parseBackgroundUrl(getComputedStyle(page).backgroundImage) ?? '/rooms/sweetie-pocket-bg.webp';
-    debugInfo(`[落予棠] 初始化 WebGL 涟漪, 背景图: ${bgUrl}`);
-    debugInfo(`[落予棠] prefers-reduced-motion: ${window.matchMedia('(prefers-reduced-motion: reduce)').matches}`);
     void createWaterRipples(canvas, bgUrl).then((engine) => {
       if (cancelled) {
         engine?.destroy();
         return;
       }
-      if (!engine) {
-        debugError('[落予棠] WebGL 涟漪初始化失败或设备不支持,降级为纯焦散层(上面应该有一条更具体的原因日志)');
-        return;
-      }
-      // canvas 实际渲染尺寸——如果这里是 0, 后面所有 drop()/render() 都在对着
-      // 一块 0x0 的画布空转, 屏幕上当然什么都看不见。
-      debugInfo(
-        `[落予棠] WebGL 涟漪已就绪, canvas CSS 尺寸=${canvas.offsetWidth}x${canvas.offsetHeight}, 内部渲染尺寸=${canvas.width}x${canvas.height}`,
-      );
+      if (!engine) return; // 不支持就静默降级为纯焦散层,waterRipples 里已有 console.error
       engineRef.current = engine;
       engine.start();
       setRipplesReady(true);
@@ -331,28 +318,12 @@ export function SweetiePocketPage() {
   // 这样涟漪判定跟"点没点中某个元素"无关，只跟"按在这片区域的哪个坐标"有关。
   const onSeaPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !engineRef.current) return;
     const rect = canvas.getBoundingClientRect();
     const u = (e.clientX - rect.left) / rect.width;
     const v = (e.clientY - rect.top) / rect.height;
-    if (!engineRef.current) {
-      debugError(`[落予棠] 点了一下(u=${u.toFixed(2)}, v=${v.toFixed(2)}) 但引擎还没就绪, 涟漪不会出现`);
-      return;
-    }
-    if (u < 0 || u > 1 || v < 0 || v > 1) {
-      debugError(`[落予棠] 点击坐标超出 canvas 范围 u=${u.toFixed(2)} v=${v.toFixed(2)}, 已跳过`);
-      return;
-    }
-    debugInfo(`[落予棠] drop(${u.toFixed(2)}, ${v.toFixed(2)})`);
-    const engine = engineRef.current;
-    engine.drop(u, v);
-    // 诊断: 200ms 后读一下该点高度场的字节值。现在仿真纹理是 float/half-float
-    // (jquery.ripples 移植版),这台设备上 CPU 读回大概率失败返回 null——
-    // 那是已知设备限制,不代表涟漪坏了,以画面/热力图为准,这个数仅供参考。
-    window.setTimeout(() => {
-      const raw = engine.debugReadHeightByteAt(u, v);
-      debugInfo(`[落予棠] drop 后 200ms, 该点高度场字节值= ${raw}(null=这台设备读不回,属正常,看画面为准)`);
-    }, 200);
+    if (u < 0 || u > 1 || v < 0 || v > 1) return;
+    engineRef.current.drop(u, v);
   };
   const userBalance = useMemo(() => balanceOf('user', packets), [packets]);
   const aiBalance = useMemo(() => balanceOf('ai', packets), [packets]);
@@ -378,32 +349,6 @@ export function SweetiePocketPage() {
         aria-hidden="true"
       />
       <div className="sweetie-caustics" aria-hidden="true" />
-      <DebugOverlay />
-      {ripplesReady ? (
-        <button
-          type="button"
-          onClick={() => {
-            const next = !debugHeatmap;
-            setDebugHeatmap(next);
-            engineRef.current?.setDebugVisualize(next);
-            debugInfo(`[落予棠] 高度场热力图诊断 ${next ? '开启' : '关闭'}(灰底,红=凸起/蓝=凹陷,不经过折射合成)`);
-          }}
-          style={{
-            position: 'fixed',
-            left: 8,
-            bottom: 8,
-            zIndex: 999999,
-            background: debugHeatmap ? '#c0392b' : 'rgba(10,10,15,0.85)',
-            color: '#fff',
-            border: '1px solid rgba(255,255,255,0.2)',
-            borderRadius: 8,
-            padding: '6px 10px',
-            fontSize: 12,
-          }}
-        >
-          {debugHeatmap ? '✕ 关闭热力图' : '🌡 高度场热力图'}
-        </button>
-      ) : null}
 
       <header className="chat-head">
         <Link to="/" className="chat-head__back" aria-label="回首页">

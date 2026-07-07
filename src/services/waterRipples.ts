@@ -16,10 +16,7 @@
 //   2. render 不开 BLEND——原库 canvas 是叠在元素背景上的透明层,我们的
 //      canvas 是唯一画面来源(不透明),混合无意义还引入 alpha 歧义;
 //   3. render 采样"当前最新"的那张 ping-pong 纹理(原库固定采样 textures[0],
-//      隔帧才是最新——效果上等价,这里取正确的那张);
-//   4. 保留临时诊断:热力图分支(uDebugVisualize)/readPixels 读数/渲染帧计数。
-
-import { debugError, debugInfo } from './debugLog';
+//      隔帧才是最新——效果上等价,这里取正确的那张)。
 
 export type RippleOptions = {
   resolution?: number; // 仿真纹理边长,默认 256(与原库默认一致)
@@ -83,7 +80,10 @@ void main() {
   ) * 0.25;
 
   info.g += (average - info.r) * 2.0;
-  info.g *= 0.995;
+  // 阻尼从原库的 0.995 调到 0.99: 原库那档波能荡很久,几下连点之后整片海
+  // 会一直"翻腾"很久不平复——水的高级感在于不碰它时温柔平静,这档衰减
+  // 单圈波纹仍有 2 秒左右的完整荡开,但松手后海面能明显更快回归原图。
+  info.g *= 0.99;
   info.r += info.g;
 
   gl_FragColor = info;
@@ -108,8 +108,11 @@ void main() {
 }
 `;
 
-// 唯一的改动: 开头加了 uDebugVisualize 热力图分支(临时诊断用,开关关闭时
-// 走的就是原版逐字未动的那段)。
+// 相对原版仅两处观感精修(验收后按老婆要求拧的半圈,不是返工):
+//   1. specular 的 pow 指数 4→64、强度乘 0.25——原版那档高光又宽又白,
+//      在这张浅色海面上像探照灯扫过;指数调高后光带碎成细小的"光鳞",
+//      "波光粼粼"要的是鳞,不是带。
+//   2. 无(其余每个字都和原版一致)。
 const RENDER_FRAG_SRC = `
 precision highp float;
 
@@ -118,28 +121,18 @@ uniform sampler2D samplerRipples;
 uniform vec2 delta;
 
 uniform float perturbance;
-uniform int uDebugVisualize;
 varying vec2 ripplesCoord;
 varying vec2 backgroundCoord;
 
 void main() {
-  if (uDebugVisualize == 1) {
-    float h = texture2D(samplerRipples, ripplesCoord).r;
-    if (h >= 0.0) {
-      gl_FragColor = vec4(0.5 + h * 6.0, 0.5, 0.5, 1.0);
-    } else {
-      gl_FragColor = vec4(0.5, 0.5, 0.5 - h * 6.0, 1.0);
-    }
-    return;
-  }
   float height = texture2D(samplerRipples, ripplesCoord).r;
   float heightX = texture2D(samplerRipples, vec2(ripplesCoord.x + delta.x, ripplesCoord.y)).r;
   float heightY = texture2D(samplerRipples, vec2(ripplesCoord.x, ripplesCoord.y + delta.y)).r;
   vec3 dx = vec3(delta.x, heightX - height, 0.0);
   vec3 dy = vec3(0.0, heightY - height, delta.y);
   vec2 offset = -normalize(cross(dy, dx)).xz;
-  float specular = pow(max(0.0, dot(offset, normalize(vec2(-0.6, 1.0)))), 4.0);
-  gl_FragColor = texture2D(samplerBackground, backgroundCoord + offset * perturbance) + specular;
+  float specular = pow(max(0.0, dot(offset, normalize(vec2(-0.6, 1.0)))), 64.0);
+  gl_FragColor = texture2D(samplerBackground, backgroundCoord + offset * perturbance) + specular * 0.25;
 }
 `;
 
@@ -208,7 +201,6 @@ function detectSimConfig(gl: WebGLRenderingContext, size: number): SimConfig | n
     gl.deleteFramebuffer(probe.framebuffer);
     gl.deleteTexture(probe.texture);
     const linear = !!gl.getExtension(c.linearExt);
-    debugInfo(`[waterRipples] 仿真纹理格式: ${c.ext}${linear ? ' + linear 过滤' : '(NEAREST 过滤)'}`);
     return { type, linear };
   }
   return null;
@@ -270,9 +262,6 @@ export class WaterRipples {
   private rafId: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private destroyed = false;
-  private loggedFirstRender = false; // 临时诊断: render() 真的跑起来了没有,只打一次
-  private debugVisualize = false; // 临时诊断: 高度场热力图开关
-  private frameCount = 0; // 临时诊断: 渲染帧计数,验证"点击后渲染循环持续在跑"
 
   constructor(canvas: HTMLCanvasElement, opts: RippleOptions = {}) {
     this.canvas = canvas;
@@ -389,36 +378,6 @@ export class WaterRipples {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     this.srcIsA = !this.srcIsA;
-
-    // 临时诊断: 验证"点击后渲染循环持续在跑"(验收标准是 2 秒 ≥ 100 帧上下,
-    // 60fps 屏是 ~120 帧)。
-    const framesAtDrop = this.frameCount;
-    window.setTimeout(() => {
-      if (this.destroyed) return;
-      debugInfo(`[waterRipples] drop 后 2 秒内渲染了 ${this.frameCount - framesAtDrop} 帧(60fps 屏应 ~120)`);
-    }, 2000);
-  }
-
-  // 临时诊断: readPixels 读一个点的高度字节值。float/half-float 帧缓冲在这台
-  // 设备上 CPU 读回会失败(返回 null)——这是已知设备限制,不代表渲染有问题,
-  // 看热力图/画面就行,这个读数仅供参考。
-  debugReadHeightByteAt(u: number, v: number): number | null {
-    const gl = this.gl;
-    const state = this.srcIsA ? this.targetA : this.targetB;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
-    const x = Math.max(0, Math.min(this.resolution - 1, Math.round(u * this.resolution)));
-    const y = Math.max(0, Math.min(this.resolution - 1, Math.round((1 - v) * this.resolution)));
-    const pixel = new Uint8Array(4);
-    gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-    const err = gl.getError();
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    if (err !== gl.NO_ERROR) return null;
-    return pixel[0];
-  }
-
-  // 临时诊断: 切换 render() 是否改画高度场热力图(灰底、凸起=红、凹陷=蓝)。
-  setDebugVisualize(on: boolean) {
-    this.debugVisualize = on;
   }
 
   private bindQuad(program: WebGLProgram) {
@@ -468,20 +427,7 @@ export class WaterRipples {
 
   private render() {
     const gl = this.gl;
-    if (!this.bgTexture && !this.debugVisualize) {
-      if (!this.loggedFirstRender) {
-        this.loggedFirstRender = true;
-        debugError('[waterRipples] render() 跑起来了,但 bgTexture 还是空的——每帧都直接 return,画面不会更新');
-      }
-      return;
-    }
-    if (!this.loggedFirstRender) {
-      this.loggedFirstRender = true;
-      debugInfo(
-        `[waterRipples] render() 第一次真正执行, canvas 内部渲染尺寸=${this.canvas.width}x${this.canvas.height}`,
-      );
-    }
-    this.frameCount++;
+    if (!this.bgTexture) return;
     const state = this.srcIsA ? this.targetA : this.targetB;
     const delta = 1 / this.resolution;
     const { topLeft, bottomRight, containerRatio } = this.computeUniforms();
@@ -505,7 +451,6 @@ export class WaterRipples {
       containerRatio[0],
       containerRatio[1],
     );
-    gl.uniform1i(gl.getUniformLocation(this.renderProgram, 'uDebugVisualize'), this.debugVisualize ? 1 : 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
@@ -559,7 +504,7 @@ export async function createWaterRipples(
     await engine.loadImage(imageUrl);
     return engine;
   } catch (err) {
-    debugError(
+    console.error(
       `[waterRipples] 不支持或初始化失败，降级为纯焦散层: ${err instanceof Error ? err.message : String(err)}`,
     );
     return null;
