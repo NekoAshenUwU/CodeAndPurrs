@@ -336,12 +336,9 @@ export function SweetiePocketPage() {
     <main
       className="sweetie-page"
       ref={pageRef}
-      // WebGL 涟漪就绪后把 .sweetie-page 自己的 CSS 背景图关掉,只留 canvas 这一路
-      // 画面来源——之前两层同时开着,萬一 canvas 没真的盖上去(不管什么原因),
-      // 底下这张一模一样的静态图就会替 canvas"顶包",看着完全正常、实际上
-      // 涟漪压根没被看到过。关掉之后,canvas 不出画面就会露出空白/穿帮,
-      // 而不是被这张图悄悄挡住看不出来。
-      style={ripplesReady ? { backgroundImage: 'none' } : undefined}
+      // 静态 CSS 背景常开:canvas 现在被 mask 裁成只覆盖海面区域(涟漪不上天空/
+      // 浮岛,老婆定的),天空/夕阳那一带看到的就是底下这张原图。canvas 的 cover
+      // 采样和 CSS 的 background:cover 数学一致,两层像素对齐,接缝看不出来。
     >
       <canvas
         ref={canvasRef}

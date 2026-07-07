@@ -4828,23 +4828,21 @@ a {
      点漂流物/宝箱也会顺带落一圈涟漪——手机上禁掉长按选中/高亮，别的都不变。 */
   -webkit-tap-highlight-color: transparent;
   user-select: none;
-  /* 往下拉时载具会滚进顶部云朵/浮岛那一带,挤在数额旁边很乱——给滚动容器
-     顶部加一段渐隐 mask:云朵带(顶栏下约 250px)以内完全透明,往下 ~150px
-     渐入到完全不透明。mask 定在容器自己的盒子上不跟内容滚,所以效果是
-     "载具越靠近云朵越淡、进云朵带之前就淡没了",像沉进远处海雾里,
-     不会突兀地"啪"一下消失。 */
+  /* 往上推时载具到"浮岛尖下"(浮岛图 165px 宽 × 1536/1024 比例 = 248px 高,
+     尖底=顶栏 56px+安全区+248px)才开始渐渐隐身,再往上 80px 内淡完——
+     完全不会飘进浮岛/云朵区。mask 定在容器自己的盒子上不跟内容滚。 */
   mask-image: linear-gradient(
     to bottom,
     transparent 0,
-    transparent calc(56px + env(safe-area-inset-top) + 108px),
-    #000 calc(56px + env(safe-area-inset-top) + 256px),
+    transparent calc(56px + env(safe-area-inset-top) + 168px),
+    #000 calc(56px + env(safe-area-inset-top) + 248px),
     #000 100%
   );
   -webkit-mask-image: linear-gradient(
     to bottom,
     transparent 0,
-    transparent calc(56px + env(safe-area-inset-top) + 108px),
-    #000 calc(56px + env(safe-area-inset-top) + 256px),
+    transparent calc(56px + env(safe-area-inset-top) + 168px),
+    #000 calc(56px + env(safe-area-inset-top) + 248px),
     #000 100%
   );
 }
@@ -4897,6 +4895,13 @@ a {
   opacity: 0;
   transition: opacity 0.6s ease;
   pointer-events: none;
+  /* 涟漪只留在海面:canvas 用竖向 mask 裁掉天空/浮岛那一带(海平线约在
+     视口 40% 处,浮岛尖约 45%),被裁掉的区域露出底下 .sweetie-page 的
+     静态 CSS 背景——canvas 的 cover 采样数学和 CSS 的 background:cover
+     完全一致,两层像素对得上,接缝看不出来;于是涟漪扭曲最多荡到海平线,
+     天空、夕阳、浮岛永远是稳稳的原图。 */
+  mask-image: linear-gradient(to bottom, transparent 40%, #000 50%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 40%, #000 50%);
 }
 .sweetie-ripples-canvas.is-ready {
   opacity: 1;
