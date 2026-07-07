@@ -86,6 +86,11 @@ cd /var/www/codeandpurrs && git pull origin claude/codepurrs-progress-docs-7tcqk
   还是别的什么），proxy 自己也能兜底读到 `CLAUDE_CODE_OAUTH_TOKEN`。
 - 日记文件路径 `server/data/diary.md`，前端 `/api/diary` GET/POST 接口，调频页有上传 UI
 - 棠予酿 MCP（实时记忆库）走 OAuth，无头 CC 加载不了；目前用静态 diary.md 替代
+- **落予棠水波模块已定稿锁定（2026-07-08 真机验收）**：`src/services/waterRipples.ts` 是
+  jquery.ripples 的逐行移植版，文件头有完整的"禁改区+真机踩坑硬约束清单"
+  （EXT_float_blend 静默无效 / readPixels 浮点帧缓冲读不回 / mediump 精度坑 /
+  背景必须 UNPACK_FLIP_Y / 纹理格式必须 FBO 实测 + RGBA8 打包兜底在 commit 2fe1382）——
+  **动它之前先读文件头,并遵守"视觉资产改动先报备"新规,别自作聪明去"优化"**
 
 ## systemd 影子部署坑（2026-07-01 踩过，查了快 3 小时）
 

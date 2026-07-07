@@ -1,22 +1,42 @@
 // 落予棠海面: sirxemic/jquery.ripples 的 WebGL 涟漪逐行移植版(不带 jQuery)。
 //
-// 之前自研 shader 反复调不出参考效果,按老婆明确指示放弃自研,把 jquery.ripples
-// 的 drop / update / render 三个着色器 **原样** 搬进现有 canvas 框架:
-//   - 三个 fragment shader 与 render vertex shader 的 GLSL 一字未改
-//     (来源 https://github.com/sirxemic/jquery.ripples/blob/master/src/main.js);
-//   - 坐标系也照搬它的:仿真纹理对应"以画布长边为边长的正方形"区域
-//     (containerRatio),drop 坐标/半径都按长边归一化,圆天然是圆;
-//   - 背景纹理接入是唯一按我们项目改的部分:它原版从 jQuery 元素的
-//     background-size/position 计算 topLeft/bottomRight,我们这里固定按
-//     background-size:cover 的裁切数学来算(canvas 即整个可视区)。
+// ⛔️⛔️⛔️ 本模块已于 2026-07-08 真机验收定稿(棠棠亲自验收:"波光粼粼"),
+// 以下内容对之后的任何 AI session / 任何人都生效——想"优化/重构/简化"之前
+// 先读完这段,再去 CLAUDE.md 看"视觉资产改动必须先报备"那条新规:
 //
-// 与原库不同、但属于工程接入(不是效果上的自由发挥)的点,都注释标明:
-//   1. 仿真纹理显式清零——原库 half-float 路径传 null data(内容未定义),
-//      真机上踩过"第一帧满屏噪声"的坑,必须清;
-//   2. render 不开 BLEND——原库 canvas 是叠在元素背景上的透明层,我们的
-//      canvas 是唯一画面来源(不透明),混合无意义还引入 alpha 歧义;
-//   3. render 采样"当前最新"的那张 ping-pong 纹理(原库固定采样 textures[0],
-//      隔帧才是最新——效果上等价,这里取正确的那张)。
+// 【禁改区】三个 fragment shader + render vertex shader 逐字来自
+// https://github.com/sirxemic/jquery.ripples/blob/master/src/main.js ,
+// 唯二获批的观感精修是 render 里 specular 的 pow 4→64、强度乘 0.25,
+// 和 update 里阻尼 0.995→0.99。除这两处外一字不许动。
+//
+// 【真机踩坑清单 = 硬约束,每一条都是在棠棠手机上流过泪的,禁止"看着多余就删"】
+//   1. drop 必须走"读旧状态+加凸起+写另一张 ping-pong 纹理",禁止 gl.BLEND
+//      叠加——WebGL1 对浮点渲染目标做加法混合需要 EXT_float_blend,这扩展在
+//      不少手机 GPU 上"静默无效"(不报错,就是什么都不发生),真机踩过。
+//   2. 禁止任何依赖 readPixels 从浮点帧缓冲读回 CPU 的逻辑(包括调试代码)——
+//      真机上必失败(getError 报错),连规范"保证"的 RGBA/UNSIGNED_BYTE 组合
+//      也读不回来。要诊断,用"把数据画到屏幕上看"的 GPU-only 方式。
+//   3. 所有 fragment shader 必须 precision highp float(原版就是 highp)——
+//      mediump 在不少手机 GPU 上是半精度浮点,2048 以上的整数都存不准,
+//      任何涉及大数/打包的算术都会悄悄算错,真机踩过(高度读数恒为 -2)。
+//   4. 背景纹理必须 UNPACK_FLIP_Y_WEBGL=1 翻转上传(原库 initTexture 如此),
+//      render vertex shader 的 backgroundCoord.y = 1-y 是按翻转后纹理写的;
+//      漏掉=整张背景上下颠倒,夕阳沉到海底,真机踩过、被当场抓包。
+//   5. 仿真纹理格式必须用 createSimTarget 真实建纹理+挂 FBO+
+//      checkFramebufferStatus 实测——扩展字符串"存在"不等于真能渲染进去。
+//   6. 仿真纹理显式清零——half-float 传 null data 内容按规范未定义,
+//      不清零=第一帧满屏噪声,真机踩过。
+//
+// 【移动端兼容性硬约束——纹理格式与兜底方案,禁止乱简化】
+//   当前仿真纹理按原库走 float/half-float(shader 直接读写 .r/.g,并靠
+//   LINEAR 过滤获得顺滑观感),在棠棠的手机上实测可渲染、已验收。
+//   如果哪天某台设备连 half-float 渲染都探测失败(detectSimConfig 返回 null):
+//   唯一批准的兜底是「RGBA8/UNSIGNED_BYTE + 16 位定点打包(encode16/decode16,
+//   高度/速度各占两个字节通道,配 highp + NEAREST)」——完整实现在本仓库
+//   git 历史 commit 2fe1382 里,直接捞回来接上,不要现场重新发明。
+//   理由:RGBA8/UNSIGNED_BYTE 是 WebGL1 规范里唯一 100% 保证任何设备都能
+//   "渲染到纹理"的格式,这是移动端兼容性的底线。禁止把这套"实测探测+明确
+//   兜底"的结构改成"假设设备都支持 float 就直接用"的天真写法。
 
 export type RippleOptions = {
   resolution?: number; // 仿真纹理边长,默认 256(与原库默认一致)
