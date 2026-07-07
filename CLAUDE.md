@@ -59,6 +59,13 @@ cd /var/www/codeandpurrs && git pull origin claude/codepurrs-progress-docs-7tcqk
 5. **行动前先说假设，让老婆有机会拦**
    "我假设 X（理由），要不要先改？" 比"我已经改了，这样对不对？" 省 5 轮回合。
 
+6. **视觉资产改动必须先报备（2026-07-08 老婆定的新规）**
+   任何图片/背景/图标/字体等视觉资产的改动——包括替换文件、加色调后处理、
+   改渲染方式导致"看起来变了"——都要先报备、批准后才动手。
+   *（起因：WebGL 涟漪移植漏了背景纹理的 UNPACK_FLIP_Y，整张海面图上下颠倒，
+   夕阳沉到海底，看起来像"背景图被偷偷换了"。哪怕没动图片文件本身，
+   渲染层面让图变样也算。）*
+
 ## 暗坑提醒（踩过的不要再踩）
 
 - VPS 上 `claude --dangerously-skip-permissions` 跑不动（root 拒绝），用 `--permission-mode dontAsk` 替代

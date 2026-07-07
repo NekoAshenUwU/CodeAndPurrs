@@ -338,13 +338,17 @@ export class WaterRipples {
     const texture = gl.createTexture();
     if (!texture) throw new Error('createTexture 失败');
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    // 不翻转 Y——render vertex shader(原版)自己做了 backgroundCoord.y = 1-y,
-    // 背景按 DOM 常规方向上传才对得上。
+    // 原库 initTexture 里有一行 gl.pixelStorei(UNPACK_FLIP_Y_WEBGL, 1)——
+    // 背景纹理必须翻转上传,render vertex shader 的 backgroundCoord.y = 1-y
+    // 是按"翻转过的纹理"写的。移植时漏了这行,背景整个上下颠倒:夕阳(图的
+    // 顶部)跑到海底,顶上只剩深海紫,被老婆抓到"我的夕阳呢"。
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0);
     this.bgTexture = texture;
   }
 

@@ -648,22 +648,6 @@ a {
   }
 }
 
-/* 跟 textBreathe 效果一样，只是把 .balance-island__amount 自己需要的
-   translate(-50%,-50%) 居中位移也编进每一帧里，两个 transform 函数合成
-   一份，不会互相覆盖(textBreathe 本身不能直接改，首页标语也在用，没有
-   那个居中需求)。 */
-@keyframes balanceAmountBreathe {
-  0%,
-  100% {
-    transform: translate(-50%, -50%) scale(1);
-    filter: brightness(1);
-  }
-  50% {
-    transform: translate(-50%, -50%) scale(1.025);
-    filter: brightness(1.06);
-  }
-}
-
 @keyframes heroGlowPulse {
   0%,
   100% {
@@ -4812,43 +4796,22 @@ a {
   position: absolute;
   top: 23%;
   left: 50%;
-  /* 注意：不能在这里静态写 transform:translate(-50%,-50%) 再叠
-     textBreathe 的 scale 动画——同一个元素上 transform 只有一份计算值，
-     动画会整个替换掉静态声明(不是叠加)，一旦动画跑起来，居中用的
-     translate(-50%,-50%) 就凭空消失，数额直接顶到锚点右下方，出现过
-     "偏右出框"。改用下面专属的 balanceAmountBreathe，把居中位移写进
-     每一帧动画本身里，跟缩放合成在一起。 */
-  isolation: isolate;
-  /* HFSoda 排第一——但注意目前项目里只有 Logo 那份 52 个字母的子集
-     (hfsoda-logo.woff2 没有数字和 $),数字会先落到甜甜圈兜底;等拿到
-     HFSoda 字体源文件切一份 $0-9 子集后,这里就自动生效,不用再改。 */
-  font-family: "HFSoda", "TianTianQuanAmount", var(--round);
+  /* 药丸/呼吸动画都撤了(老婆定稿:文字直接置于云朵中空处)——没有 transform
+     动画之后,居中用静态 translate 就行,不再有"动画覆盖静态 transform"的坑。 */
+  transform: translate(-50%, -50%);
+  /* "花字" = 汉仪花仙子,子集里 $0-9. 都有(验证过),各房间顶栏同款。 */
+  font-family: "HuaXianZi", "TianTianQuanAmount", var(--round);
   font-weight: 700;
   font-size: 1.45rem;
-  padding: 2px 11px;
-  /* 深色系渐变试过两轮都泡在背景紫粉里看不清——反过来:字用浅色渐变
-     (奶白→樱粉→香槟金),深色底交给下面 ::before 的深紫药丸,浅字深底
-     对比拉满,渐变依然缓缓流动。 */
-  background-image: linear-gradient(95deg, #ffffff 0%, #ffd7ef 45%, #ffedbf 100%);
+  /* 老婆定稿的样式,照抄:紫→洋红 135° 渐变裁进文字 + 柔和白色光晕。
+     text-shadow 配合透明填充会从字形里透出来一点,数字像云心里透出的光,
+     融进云而不是贴在云上——这正是要的效果,别当 bug 修。 */
+  background-image: linear-gradient(135deg, #8b5cf6, #d946ef);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  background-size: 200% 100%;
-  animation: gradSweep 4.6s ease-in-out infinite alternate, balanceAmountBreathe 2.6s ease-in-out infinite;
-}
-/* 数额底下的深色药丸——不能直接给数额本身加 background-color:
-   上面 background-clip:text 会把"所有"背景(包括纯色底)都裁成文字形状,
-   深底直接消失。所以底色放到 ::before 这层单独画;z-index:-1 配合数额
-   自己的 isolation:isolate,垫在文字后面、又不会掉到页面背景底下去。 */
-.balance-island__amount::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: 999px;
-  background: rgba(56, 30, 92, 0.6);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25), 0 2px 8px rgba(60, 30, 100, 0.3);
+  text-shadow: 0 0 14px rgba(255, 255, 255, 0.55);
 }
 /* ---------- 浮岛海面：三条车道各自叠行，同一行常并排 2~3 个载具，
    纵向行号=时间(越下越早)，深度感靠外层静态 scale+saturate ---------- */
