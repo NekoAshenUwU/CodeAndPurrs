@@ -84,6 +84,16 @@ export const rooms: Room[] = [
     scene: true,
   },
   {
+    id: 'murmurs',
+    name: '倾棠予梦',
+    englishName: 'Our Murmurs',
+    emoji: '🪷',
+    status: 'ready',
+    summary: '安静说说心里话的地方，先挂了一张溪水风景，别的还在装修。',
+    actionLabel: '去看看',
+    scene: true,
+  },
+  {
     id: 'little-star-notes',
     name: '日历上の星星',
     englishName: 'Little Star Notes',

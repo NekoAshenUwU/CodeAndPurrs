@@ -58,6 +58,10 @@ export function HomePage() {
       navigate('/sweetie-pocket');
       return;
     }
+    if (room.id === 'murmurs') {
+      navigate('/murmurs');
+      return;
+    }
     setSelectedRoom(room);
   };
 
