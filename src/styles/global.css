@@ -1136,7 +1136,7 @@ a {
   font-family: var(--serif-en);
   font-size: 0.76rem;
   font-style: italic;
-  font-weight: 500;
+  font-weight: 700;
   letter-spacing: 0.02em;
 }
 
@@ -1523,6 +1523,7 @@ a {
   color: var(--muted);
   font-family: var(--round);
   font-size: 0.64rem;
+  font-weight: 700;
   letter-spacing: 0.04em;
 }
 
