@@ -54,13 +54,13 @@ const FLOWER_COLOR_TAGS: Record<string, { h: number; s: number; l: number }> = {
   'flower-peony-pearl-lilac-2.webp': { h: 280, s: 38, l: 80 },
   'flower-peony-pearl-blush-1.webp': { h: 15, s: 45, l: 84 },
   'flower-peony-pearl-blush-2.webp': { h: 10, s: 48, l: 82 },
-  'flower-carnation-blush-ruffle.webp': { h: 340, s: 30, l: 90 },
-  'flower-carnation-turquoise-ruffle.webp': { h: 185, s: 45, l: 85 },
-  'flower-rose-violet-dew.webp': { h: 285, s: 32, l: 88 },
+  'flower-lisianthus-blush-ruffle.webp': { h: 340, s: 30, l: 90 },
+  'flower-lisianthus-turquoise-ruffle.webp': { h: 185, s: 45, l: 85 },
+  'flower-lisianthus-violet-dew.webp': { h: 285, s: 32, l: 88 },
   'flower-hydrangea-rainbow-pastel.webp': { h: 260, s: 30, l: 88 },
   'flower-hydrangea-pink-gold.webp': { h: 25, s: 40, l: 87 },
   'flower-hydrangea-lavender-mist.webp': { h: 250, s: 28, l: 90 },
-  'flower-rose-blush-dew.webp': { h: 320, s: 32, l: 90 },
+  'flower-lisianthus-blush-dew.webp': { h: 320, s: 32, l: 90 },
 };
 const FLOWER_FILES = Object.keys(FLOWER_COLOR_TAGS);
 
