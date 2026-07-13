@@ -114,6 +114,18 @@ const fmtDate = (iso: string | null): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+// 棠予酿 diary 的 title 字段本身常以日期开头(比如"2026-06-12 三个字，就是
+// 她递回来的手。棠…")，卡片又单独渲染了一行日期，会重复——只在 title 确实
+// 以这条记录自己的日期开头时才剥掉，剥不掉(格式不一样/没有)就原样显示，
+// 不瞎猜。
+function stripLeadingDatePrefix(title: string, dateIso: string | null): string {
+  const trimmed = title.trim();
+  const ymd = fmtDate(dateIso);
+  if (!ymd || !trimmed.startsWith(ymd)) return trimmed;
+  const rest = trimmed.slice(ymd.length).replace(/^[\s、,，.。·:：\-—]+/, '').trim();
+  return rest || trimmed;
+}
+
 // 真机验收反馈(2026-07-13)：花只能画在水面以下，背景图水面起始线约在屏幕
 // 45% 高度处——WATER_LINE_PERCENT 留了 3% 余量，花的落点(含抖动)不会贴到
 // 岸边/拱门/树梢那一侧。FAR/NEAR 是"远景(旧记忆)→近景(新记忆)"落点带，
@@ -125,8 +137,9 @@ const NEAR_TOP_PERCENT = 90;
 // 纵深透视：远景小、压扁多、略透明，模拟贴着水面看过去的视角；近景大、
 // 压扁少、更实——两组区间由 position(0~1，远→近)插值，同一深度带内再按
 // size(importance) 在区间内取值，重要的记忆即使在远景也能开得靠近上限。
-const FAR_SIZE_PX: [number, number] = [20, 36];
-const NEAR_SIZE_PX: [number, number] = [48, 72];
+// 真机验收反馈(2026-07-13 第二轮)：新背景水面开阔，整体调大一档。
+const FAR_SIZE_PX: [number, number] = [36, 48];
+const NEAR_SIZE_PX: [number, number] = [88, 96];
 const FAR_SQUASH_Y = 0.65;
 const NEAR_SQUASH_Y = 0.8;
 const FAR_OPACITY = 0.78;
@@ -149,8 +162,16 @@ function perspectiveForFlower(flower: MurmursFlower) {
 }
 
 // 横向"车道"布局：把画面分成几条车道，同屏花朵按 id 哈希稳定分配车道，
-// 车道内部再按 position(远→近)从上到下排开——保证同屏(轮换后最多 12 朵)
-// 彼此之间有基本间距，不会像之前那样二三十朵互相堆成一坨。
+// 减少互相堆叠的概率。
+//
+// 真机验收反馈(2026-07-13 第二轮)踩过的坑："花朵会突然消失闪现"——根源是
+// 这里原来按"同车道内当前排第几个"(rankT = i/(n-1))算 top，这个排名会
+// 随着 visible 数组的增减而变("车道邻居"变了，排名跟着变)，导致轮换时
+// 明明没换掉的花朵也会被重新计算出一个不同的 top，且 top 是内联样式直接改
+// 值、没有 transition，于是同屏其他花朵会跟着"瞬间跳位置"，看起来像闪烁。
+// 现在改成 top 只由这朵花自己的 position + id 决定，跟 visible 里还有谁、
+// 有几个完全无关——同一朵花只要还在场上，left/top 永远是同一个值，不会因为
+// 别的花轮换而被连带挪动。
 const LANES = 5;
 const LANE_MARGIN_PERCENT = 10;
 
@@ -166,22 +187,16 @@ function laneCenterPercent(lane: number): number {
 type FlowerLayout = { left: number; top: number };
 
 function layoutVisibleFlowers(visible: MurmursFlower[]): Map<string, FlowerLayout> {
-  const lanes = new Map<number, MurmursFlower[]>();
+  const layout = new Map<string, FlowerLayout>();
   for (const f of visible) {
     const lane = laneIndexFor(f.id);
-    const group = lanes.get(lane);
-    if (group) group.push(f);
-    else lanes.set(lane, [f]);
-  }
-  const layout = new Map<string, FlowerLayout>();
-  for (const [lane, group] of lanes) {
-    group.sort((a, b) => a.position - b.position); // 同车道内远→近从上到下
-    const n = group.length;
-    group.forEach((f, i) => {
-      const rankT = n > 1 ? i / (n - 1) : clamp01(f.position);
-      const top = FAR_TOP_PERCENT + rankT * (NEAR_TOP_PERCENT - FAR_TOP_PERCENT);
-      const jitterLeft = (hashStr(`${f.id}-x`) % 500) / 100 - 2.5; // ±2.5% 车道内小范围抖动
-      layout.set(f.id, { left: laneCenterPercent(lane) + jitterLeft, top });
+    const depthT = clamp01(f.position);
+    const top = FAR_TOP_PERCENT + depthT * (NEAR_TOP_PERCENT - FAR_TOP_PERCENT);
+    const jitterTop = (hashStr(`${f.id}-y`) % 400) / 100 - 2; // ±2%，车道已经分开了，小抖动够用
+    const jitterLeft = (hashStr(`${f.id}-x`) % 500) / 100 - 2.5; // ±2.5%
+    layout.set(f.id, {
+      left: laneCenterPercent(lane) + jitterLeft,
+      top: Math.max(FAR_TOP_PERCENT, Math.min(NEAR_TOP_PERCENT, top + jitterTop)),
     });
   }
   return layout;
@@ -272,9 +287,11 @@ function FlowerBloom({
 // 密度控制：同屏最多 12 朵，花比 12 朵多时按 created_at 顺序轮换——每隔
 // ROTATION_INTERVAL_MS 换掉最早入场的一朵(先淡出 EXIT_MS，动画播完再真正
 // 摘掉)，同时按顺序请下一朵入场，循环往复，不会 30+ 朵同屏堆积。
+// EXIT_MS 要跟 CSS 里 murmursFlowerExit 的动画时长(global.css)保持一致——
+// 真机验收要求"缓缓沉入水中"而不是瞬间消失，1.8s 落在反馈给的 1.5~2s 区间。
 const ROTATION_MAX_VISIBLE = 12;
-const ROTATION_INTERVAL_MS = 5200;
-const EXIT_MS = 850;
+const ROTATION_INTERVAL_MS = 6000;
+const EXIT_MS = 1800;
 
 function useFlowerRotation(flowers: MurmursFlower[] | null) {
   const [visible, setVisible] = useState<MurmursFlower[]>([]);
@@ -385,7 +402,7 @@ export function MurmursPage() {
         {isEmpty ? (
           <div
             className="murmurs-flower murmurs-flower--placeholder"
-            style={{ top: '48%', left: '50%', width: '64px', height: '64px' }}
+            style={{ top: '48%', left: '50%', width: '44px', height: '44px' }}
             aria-hidden="true"
           >
             <img
@@ -409,7 +426,7 @@ export function MurmursPage() {
               ×
             </button>
             {selected.moodLabel ? <span className="murmurs-detail__mood">{selected.moodLabel}</span> : null}
-            <span className="murmurs-detail__title">{selected.title}</span>
+            <span className="murmurs-detail__title">{stripLeadingDatePrefix(selected.title, selected.date)}</span>
             <span className="murmurs-detail__date">{fmtDate(selected.date)}</span>
           </div>
         </div>

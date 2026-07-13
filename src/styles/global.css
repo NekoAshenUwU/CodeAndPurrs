@@ -4800,24 +4800,27 @@ a {
   padding: 0;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  /* 尺寸硬上限兜底：JS 算出来的 sizePx 理论上不会超过近景 72px 上限，这里
+  /* 尺寸硬上限兜底：JS 算出来的 sizePx 理论上不会超过近景 96px 上限，这里
      再加一道 CSS 兜底——万一哪天数据异常/计算出错，视觉上也不会炸出一朵
      远超屏宽的巨型花。 */
-  max-width: 72px;
-  max-height: 72px;
+  max-width: 96px;
+  max-height: 96px;
   /* 入场"从上游漂入": 从目标位置上方飘落到位、由透明显形——上游=远景=
      画面偏上方向，跟 position 的"远/近"映射方向一致。按 index 错开延迟，
-     一朵接一朵地漂进来，不是齐刷刷同时冒出。 */
-  animation: murmursFlowerDrift 900ms ease-out backwards;
+     一朵接一朵地漂进来，不是齐刷刷同时冒出。真机验收要求"缓缓浮出水面"，
+     900ms 太快改成 1800ms，跟退场的 murmursFlowerExit 时长对称。 */
+  animation: murmursFlowerDrift 1800ms ease-out backwards;
   animation-delay: var(--murmurs-drift-delay, 0ms);
 }
 .murmurs-flower:active .murmurs-flower__bob {
   transform: scale(0.94);
 }
 /* 密度轮换换下场时的淡出——组合选择器比单独 .murmurs-flower 特异性更高，
-   会整份覆盖上面那条 animation 简写(含 delay)，从当前透明度/位置淡出到隐形。 */
+   会整份覆盖上面那条 animation 简写(含 delay)，从当前透明度/位置淡出到隐形。
+   1800ms 要跟 JS 里 EXIT_MS(MurmursPage.tsx)保持一致——那边靠这个时长
+   算"动画播完再真正把元素摘掉"，两处对不上就会露出没播完动画就消失的破绽。 */
 .murmurs-flower.murmurs-flower--exiting {
-  animation: murmursFlowerExit 850ms ease-in forwards;
+  animation: murmursFlowerExit 1800ms ease-in forwards;
   pointer-events: none;
 }
 .murmurs-flower__reflection {
@@ -4853,7 +4856,7 @@ a {
 }
 @keyframes murmursFlowerDrift {
   from {
-    transform: translate(-50%, calc(-50% - 48px));
+    transform: translate(-50%, calc(-50% - 60px));
     opacity: 0;
   }
   to {
@@ -4866,7 +4869,7 @@ a {
    到消失，不会有跳变。 */
 @keyframes murmursFlowerExit {
   to {
-    transform: translate(-50%, calc(-50% + 26px));
+    transform: translate(-50%, calc(-50% + 40px));
     opacity: 0;
   }
 }
@@ -4914,6 +4917,10 @@ a {
   -webkit-backdrop-filter: blur(3px);
   padding: 24px;
 }
+/* 真机验收反馈(2026-07-13 第二轮)：纯白圆角卡片太"系统组件"了，改成半透明
+   毛玻璃——底色带极淡的紫粉渐变、边缘一圈柔光描边、阴影放柔，跟页面梦幻
+   水彩风统一。背后 .murmurs-detail-backdrop 已经把水面场景压暗+模糊过一层，
+   卡片本身即使半透明文字也还读得清楚。 */
 .murmurs-detail {
   position: relative;
   display: flex;
@@ -4924,28 +4931,40 @@ a {
   width: 100%;
   padding: 28px 24px 22px;
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 12px 40px rgba(60, 30, 100, 0.25);
+  background: linear-gradient(135deg, rgba(255, 240, 250, 0.4), rgba(224, 205, 250, 0.34));
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 10px 36px rgba(140, 90, 190, 0.22), 0 0 22px rgba(255, 255, 255, 0.2);
   text-align: center;
 }
 .murmurs-detail__x {
   position: absolute;
   top: 10px;
-  right: 12px;
-  background: none;
-  border: none;
-  font-size: 1.3rem;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  font-size: 1.05rem;
   line-height: 1;
-  color: #9c86c4;
+  color: rgba(134, 92, 176, 0.8);
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
 }
+/* 标题/正文/日期统一用页面标题同款字体(HuaXianZi，跟 .chat-head 一致)，
+   只用字号/字重分级，不再多种字体混排。 */
 .murmurs-detail__mood {
-  font-family: var(--round);
-  font-size: 0.72rem;
+  font-family: "HuaXianZi", var(--display);
+  font-weight: 400;
+  font-size: 0.74rem;
   line-height: 1;
   color: #a06fd6;
-  background: rgba(180, 130, 220, 0.14);
+  background: rgba(180, 130, 220, 0.16);
   padding: 3px 12px;
   border-radius: 999px;
   letter-spacing: 0.04em;
@@ -4953,11 +4972,13 @@ a {
 }
 .murmurs-detail__title {
   font-family: "HuaXianZi", var(--display);
-  font-size: 1.05rem;
+  font-weight: 700;
+  font-size: 1.08rem;
   color: var(--ink);
 }
 .murmurs-detail__date {
-  font-family: var(--round);
+  font-family: "HuaXianZi", var(--display);
+  font-weight: 400;
   font-size: 0.76rem;
   color: #9c86c4;
   letter-spacing: 0.03em;
