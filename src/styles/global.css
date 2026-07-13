@@ -4876,7 +4876,9 @@ a {
   left: 0;
   top: 0;
   will-change: transform;
-  filter: drop-shadow(0 4px 6px rgba(90, 50, 140, 0.22));
+  /* 第八轮"太卡通"返工：深紫投影换成一圈柔白微光——琉璃翼的蝴蝶是"光里
+     飞出来的"，落在画面上是发光体不是贴纸。 */
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.55));
 }
 /* tilt 层管朝向(左右翻转+俯仰角，rAF 写)；perspective 给翅膀的 rotateY
    提供三维透视，没有它扇动看起来只是宽度伸缩，不像真的开合。 */

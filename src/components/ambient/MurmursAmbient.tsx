@@ -24,7 +24,8 @@ const BFLY_PALETTES = [
   { a: '#cdb6f0', b: '#ab90da', edge: '#977dc9', spot: '#f1e9fc' },
   { a: '#b3d3f2', b: '#93bae8', edge: '#7fa9dc', spot: '#ebf4fd' },
 ];
-const BFLY_SIZES = [40, 34, 37];
+// 稍微收小一号(第八轮"太卡通"返工的一部分)：环境点缀不该比记忆花朵抢眼。
+const BFLY_SIZES = [34, 29, 32];
 
 // 水面/飞行区域(百分比坐标)，跟 MurmursPage 的 WATER_LINE_PERCENT=45 对齐：
 // 蝴蝶可以飞进天空但主要绕着水面转；点水/花瓣落水只在水面线以下。
@@ -246,11 +247,14 @@ export function MurmursAmbient({
               <path
                 d="M10 34 C7 22 3 14 0 8 M10 34 C13 22 17 14 20 8"
                 stroke={pal.edge}
-                strokeWidth="2"
+                strokeWidth="1.4"
                 strokeLinecap="round"
                 fill="none"
+                opacity="0.75"
               />
-              <ellipse cx="10" cy="60" rx="4" ry="27" fill={pal.edge} />
+              {/* 身体也走半透明琉璃质感，不再是实心色块 */}
+              <ellipse cx="10" cy="60" rx="3" ry="26" fill={pal.edge} opacity="0.7" />
+              <ellipse cx="10" cy="52" rx="1.6" ry="14" fill="#ffffff" opacity="0.55" />
             </svg>
           </div>
         </div>
@@ -297,28 +301,48 @@ function ButterflyWing({
       preserveAspectRatio="none"
     >
       <defs>
-        <linearGradient id={gid} x1="1" y1="0" x2="0" y2="0.6">
-          <stop offset="0%" stopColor={pal.a} />
-          <stop offset="100%" stopColor={pal.b} />
+        {/* 琉璃翼(2026-07-13 真机反馈"太卡通了"返工)：贴身处几乎透白、越往
+            翅尖颜色越透出来，全程半透明——让背景的湖光从翅膀里透过去，才能
+            跟这张朦胧梦幻的背景融在一起。描边全部去掉(硬轮廓是"贴纸感"的
+            最大来源)。 */}
+        <linearGradient id={gid} x1="1" y1="0.1" x2="0" y2="0.7">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.92" />
+          <stop offset="45%" stopColor={pal.a} stopOpacity="0.78" />
+          <stop offset="100%" stopColor={pal.b} stopOpacity="0.62" />
         </linearGradient>
+        <filter id={`${gid}Glow`} x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="5" />
+        </filter>
       </defs>
       <g transform={side === 'r' ? 'translate(100 0) scale(-1 1)' : undefined}>
-        <g stroke={pal.edge} strokeWidth="2" strokeLinejoin="round">
-          {/* 前翅：斜向外上方舒展的大瓣 */}
+        {/* 底层光晕：同形状模糊放一份在下面，翅膀像是自己在发一点微光 */}
+        <g filter={`url(#${gid}Glow)`} opacity="0.45">
+          <path d="M96 88 C92 40 70 6 36 4 C14 3 4 16 10 34 C18 56 52 78 96 88 Z" fill={pal.b} />
           <path
-            d="M96 90 C90 44 64 8 32 6 C12 5 2 22 9 42 C17 63 50 82 96 90 Z"
-            fill={`url(#${gid})`}
-          />
-          {/* 后翅：小一号，带一点垂尾 */}
-          <path
-            d="M96 98 C64 100 40 110 32 128 C24 146 34 168 50 170 C58 171 60 180 56 188 C68 184 90 150 96 98 Z"
-            fill={`url(#${gid})`}
-            opacity="0.92"
+            d="M96 96 C64 98 40 108 32 126 C24 144 34 166 50 168 C58 169 60 178 56 186 C68 182 90 148 96 96 Z"
+            fill={pal.b}
           />
         </g>
-        <circle cx="36" cy="36" r="7" fill={pal.spot} opacity="0.9" />
-        <circle cx="56" cy="60" r="4.5" fill={pal.spot} opacity="0.75" />
-        <circle cx="48" cy="138" r="5" fill={pal.spot} opacity="0.8" />
+        {/* 前翅：斜向外上方舒展，翅尖略尖 */}
+        <path
+          d="M96 88 C92 40 70 6 36 4 C14 3 4 16 10 34 C18 56 52 78 96 88 Z"
+          fill={`url(#${gid})`}
+        />
+        {/* 后翅：小一号，带一点垂尾 */}
+        <path
+          d="M96 96 C64 98 40 108 32 126 C24 144 34 166 50 168 C58 169 60 178 56 186 C68 182 90 148 96 96 Z"
+          fill={`url(#${gid})`}
+          opacity="0.9"
+        />
+        {/* 翅脉：从翅根放射出去的几根细白线，半透明——琉璃翼的"筋" */}
+        <g stroke="#ffffff" strokeWidth="1.1" strokeLinecap="round" fill="none" opacity="0.5">
+          <path d="M92 84 C74 62 52 34 34 18" />
+          <path d="M92 86 C70 72 46 54 26 40" />
+          <path d="M92 100 C72 110 54 124 44 142" />
+        </g>
+        {/* 翅尖一点珠光，不再用卡通圆斑 */}
+        <circle cx="30" cy="22" r="3.2" fill={pal.spot} opacity="0.85" />
+        <circle cx="46" cy="150" r="2.6" fill={pal.spot} opacity="0.7" />
       </g>
     </svg>
   );
