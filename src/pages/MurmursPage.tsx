@@ -114,6 +114,19 @@ const fmtDate = (iso: string | null): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+// 弹窗里的日期改成右下角落款式小角标，6 位 YYMMDD(比如 260713)——不用
+// Unicode 上下标字符(避免字体 fallback 到系统字体，跟卡片其它文字对不上)，
+// "缩小+下沉"完全靠 CSS(font-size/位置)做，这里只管拼数字。
+const fmtDateStamp = (iso: string | null): string => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const yy = String(d.getFullYear()).slice(-2);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yy}${mm}${dd}`;
+};
+
 // 棠予酿 diary 的 title 字段本身常以日期开头(比如"2026-06-12 三个字，就是
 // 她递回来的手。棠…")，卡片又单独渲染了一行日期，会重复——只在 title 确实
 // 以这条记录自己的日期开头时才剥掉，剥不掉(格式不一样/没有)就原样显示，
@@ -285,13 +298,14 @@ function FlowerBloom({
 }
 
 // 密度控制：同屏最多 12 朵，花比 12 朵多时按 created_at 顺序轮换——每隔
-// ROTATION_INTERVAL_MS 换掉最早入场的一朵(先淡出 EXIT_MS，动画播完再真正
-// 摘掉)，同时按顺序请下一朵入场，循环往复，不会 30+ 朵同屏堆积。
+// ROTATION_INTERVAL_MS 换掉最早入场的一朵(先播"沉入水中"退场动画 EXIT_MS，
+// 播完再真正摘掉)，同时按顺序请下一朵从上游边缘淡入漂入，循环往复，
+// 不会 30+ 朵同屏堆积。
 // EXIT_MS 要跟 CSS 里 murmursFlowerExit 的动画时长(global.css)保持一致——
-// 真机验收要求"缓缓沉入水中"而不是瞬间消失，1.8s 落在反馈给的 1.5~2s 区间。
+// 两处对不上就会露出"动画没播完元素就没了"的破绽。
 const ROTATION_MAX_VISIBLE = 12;
-const ROTATION_INTERVAL_MS = 6000;
-const EXIT_MS = 1800;
+const ROTATION_INTERVAL_MS = 6200;
+const EXIT_MS = 2000;
 
 function useFlowerRotation(flowers: MurmursFlower[] | null) {
   const [visible, setVisible] = useState<MurmursFlower[]>([]);
@@ -307,10 +321,24 @@ function useFlowerRotation(flowers: MurmursFlower[] | null) {
 
   useEffect(() => {
     if (!flowers) return;
-    const initial = flowers.slice(0, Math.min(ROTATION_MAX_VISIBLE, flowers.length));
+    // 真机验收发现的堆叠 bug：原来直接取 flowers 的前 12 个，而 flowers 是按
+    // created_at 从旧到新排的——"前 12 个"永远是最旧的一小撮，position 值挤在
+    // 一段很窄的区间里，纵深透视+车道分布再怎么算也救不了(挤在同一小段窄带
+    // 里，抖动幅度盖不住)。改成按下标等距抽样，一开始就横跨整条时间线，
+    // 远景近景都有，跟原本"旧记忆越飘越远、新记忆在眼前"的设计意图也更符。
+    const count = Math.min(ROTATION_MAX_VISIBLE, flowers.length);
+    const step = flowers.length / count;
+    const initial: MurmursFlower[] = [];
+    const usedIdx = new Set<number>();
+    for (let i = 0; i < count; i++) {
+      let idx = Math.floor(i * step);
+      while (usedIdx.has(idx) && idx < flowers.length - 1) idx++;
+      usedIdx.add(idx);
+      initial.push(flowers[idx]);
+    }
     visibleRef.current = initial;
     setVisible(initial);
-    cursorRef.current = initial.length;
+    cursorRef.current = count;
     setExitingId(null);
   }, [flowers]);
 
@@ -427,7 +455,9 @@ export function MurmursPage() {
             </button>
             {selected.moodLabel ? <span className="murmurs-detail__mood">{selected.moodLabel}</span> : null}
             <span className="murmurs-detail__title">{stripLeadingDatePrefix(selected.title, selected.date)}</span>
-            <span className="murmurs-detail__date">{fmtDate(selected.date)}</span>
+            {fmtDateStamp(selected.date) ? (
+              <span className="murmurs-detail__stamp">{fmtDateStamp(selected.date)}</span>
+            ) : null}
           </div>
         </div>
       ) : null}

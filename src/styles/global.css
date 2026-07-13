@@ -4808,19 +4808,19 @@ a {
   /* 入场"从上游漂入": 从目标位置上方飘落到位、由透明显形——上游=远景=
      画面偏上方向，跟 position 的"远/近"映射方向一致。按 index 错开延迟，
      一朵接一朵地漂进来，不是齐刷刷同时冒出。真机验收要求"缓缓浮出水面"，
-     900ms 太快改成 1800ms，跟退场的 murmursFlowerExit 时长对称。 */
-  animation: murmursFlowerDrift 1800ms ease-out backwards;
+     900ms 太快改成 2000ms，跟退场的 murmursFlowerExit 时长对称。 */
+  animation: murmursFlowerDrift 2000ms ease-out backwards;
   animation-delay: var(--murmurs-drift-delay, 0ms);
 }
 .murmurs-flower:active .murmurs-flower__bob {
   transform: scale(0.94);
 }
-/* 密度轮换换下场时的淡出——组合选择器比单独 .murmurs-flower 特异性更高，
-   会整份覆盖上面那条 animation 简写(含 delay)，从当前透明度/位置淡出到隐形。
-   1800ms 要跟 JS 里 EXIT_MS(MurmursPage.tsx)保持一致——那边靠这个时长
-   算"动画播完再真正把元素摘掉"，两处对不上就会露出没播完动画就消失的破绽。 */
+/* 密度轮换换下场时的"沉入水中"退场——组合选择器比单独 .murmurs-flower
+   特异性更高，会整份覆盖上面那条 animation 简写(含 delay)。2000ms 要跟
+   JS 里 EXIT_MS(MurmursPage.tsx)保持一致——那边靠这个时长算"动画播完再
+   真正把元素摘掉"，两处对不上就会露出没播完动画就消失的破绽。 */
 .murmurs-flower.murmurs-flower--exiting {
-  animation: murmursFlowerExit 1800ms ease-in forwards;
+  animation: murmursFlowerExit 2000ms ease-in forwards;
   pointer-events: none;
 }
 .murmurs-flower__reflection {
@@ -4864,13 +4864,17 @@ a {
     opacity: 1;
   }
 }
-/* 只写 to，没写 from——from 隐式取动画开始那一刻元素当前的计算值(此时的
-   opacity 是深度透视给的值，不一定是 1)，淡出会从"它当下的样子"顺滑过渡
-   到消失，不会有跳变。 */
+/* "沉入水中"：透明度渐降 + 轻微 blur + 色调略偏蓝(sepia+hue-rotate(180deg)
+   是给图片"整体调向蓝色"的常见 CSS 组合，比直接 hue-rotate 更可控，不会把
+   花本身的固有色相搅乱成奇怪的颜色) + 缩小到 0.85 + 只下移几像素(不是大幅
+   位移，沉下去的感觉靠 blur/变蓝/变透明，不是靠飘走)。只写 to 不写 from——
+   from 隐式取动画开始那一刻元素当前的计算值(此时的 opacity 是深度透视给的
+   值，不一定是 1)，退场会从"它当下的样子"顺滑过渡到沉没，不会有跳变。 */
 @keyframes murmursFlowerExit {
   to {
-    transform: translate(-50%, calc(-50% + 40px));
+    transform: translate(-50%, calc(-50% + 12px)) scale(0.85);
     opacity: 0;
+    filter: blur(4px) sepia(0.55) hue-rotate(180deg) saturate(1.6);
   }
 }
 /* 水面自然漂浮的小幅晃动——跟落予棠漂流物的 floatvicBob 同一个思路
@@ -4912,15 +4916,15 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(40, 20, 60, 0.35);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  background: rgba(32, 16, 52, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   padding: 24px;
 }
 /* 真机验收反馈(2026-07-13 第二轮)：纯白圆角卡片太"系统组件"了，改成半透明
-   毛玻璃——底色带极淡的紫粉渐变、边缘一圈柔光描边、阴影放柔，跟页面梦幻
-   水彩风统一。背后 .murmurs-detail-backdrop 已经把水面场景压暗+模糊过一层，
-   卡片本身即使半透明文字也还读得清楚。 */
+   毛玻璃。第三轮反馈：第二轮那版透明度太高，字被背景(水面反光+花朵)糊得
+   看不清——这版把底色不透明度、模糊半径都调高了一截，backdrop 那层也加深，
+   两层叠加才压得住背景的高对比度，同时保留"玻璃"质感不是纯色卡片。 */
 .murmurs-detail {
   position: relative;
   display: flex;
@@ -4929,13 +4933,13 @@ a {
   gap: 6px;
   max-width: 320px;
   width: 100%;
-  padding: 28px 24px 22px;
+  padding: 30px 26px 30px;
   border-radius: 22px;
-  background: linear-gradient(135deg, rgba(255, 240, 250, 0.4), rgba(224, 205, 250, 0.34));
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  box-shadow: 0 10px 36px rgba(140, 90, 190, 0.22), 0 0 22px rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, rgba(255, 246, 253, 0.68), rgba(226, 208, 248, 0.62));
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 12px 40px rgba(90, 50, 140, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.18) inset;
   text-align: center;
 }
 .murmurs-detail__x {
@@ -4947,24 +4951,26 @@ a {
   justify-content: center;
   width: 24px;
   height: 24px;
-  background: rgba(255, 255, 255, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: 50%;
   font-size: 1.05rem;
   line-height: 1;
-  color: rgba(134, 92, 176, 0.8);
+  color: rgba(96, 60, 140, 0.85);
   cursor: pointer;
   padding: 0;
 }
-/* 标题/正文/日期统一用页面标题同款字体(HuaXianZi，跟 .chat-head 一致)，
-   只用字号/字重分级，不再多种字体混排。 */
+/* 标题/心情/日期统一用页面标题同款字体(HuaXianZi，跟 .chat-head 一致)，
+   只用字号/字重分级，不再多种字体混排。文字都加一点白色 text-shadow"托底"，
+   卡片本身半透明，托底能让字在背景亮/暗交界处也不糊。 */
 .murmurs-detail__mood {
   font-family: "HuaXianZi", var(--display);
-  font-weight: 400;
+  font-weight: 500;
   font-size: 0.74rem;
   line-height: 1;
-  color: #a06fd6;
-  background: rgba(180, 130, 220, 0.16);
+  color: #7a3fb8;
+  background: rgba(180, 130, 220, 0.3);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
   padding: 3px 12px;
   border-radius: 999px;
   letter-spacing: 0.04em;
@@ -4974,14 +4980,25 @@ a {
   font-family: "HuaXianZi", var(--display);
   font-weight: 700;
   font-size: 1.08rem;
-  color: var(--ink);
+  color: #3d3454;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.55);
 }
-.murmurs-detail__date {
+/* 日期改成右下角落款式角标(不再单独占一行)：同款字体、字号缩到题字的
+   0.55 倍左右、颜色减淡、位置往下沉一点，像照片角落烧录的日期戳。格式是
+   YYMMDD 六位数字(fmtDateStamp 拼的)，不用 Unicode 上下标字符，纯靠
+   font-size + 定位实现"缩小下沉"，不会有字体 fallback 不一致的问题。 */
+.murmurs-detail__stamp {
+  position: absolute;
+  right: 18px;
+  bottom: 14px;
   font-family: "HuaXianZi", var(--display);
   font-weight: 400;
-  font-size: 0.76rem;
-  color: #9c86c4;
-  letter-spacing: 0.03em;
+  /* .murmurs-detail__title 是 1.08rem 的兄弟元素(不是父元素)，em 在这里
+     没法直接继承 title 的字号——用固定 rem 值手算 1.08rem × 0.55 ≈ 0.6rem。 */
+  font-size: 0.6rem;
+  color: rgba(107, 87, 143, 0.55);
+  letter-spacing: 0.06em;
+  transform: translateY(3px);
 }
 /* ---------- 余额浮岛面板：新图是完整水晶浮岛场景(男孩+雪豹/女孩+小猫)，
    头顶一圈项链状云环，环心是真透明抠图(不是实心云)，数字叠在环心那块空地上 ---------- */
