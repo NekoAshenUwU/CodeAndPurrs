@@ -4800,6 +4800,11 @@ a {
   padding: 0;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  /* 尺寸硬上限兜底：JS 算出来的 sizePx 理论上不会超过近景 72px 上限，这里
+     再加一道 CSS 兜底——万一哪天数据异常/计算出错，视觉上也不会炸出一朵
+     远超屏宽的巨型花。 */
+  max-width: 72px;
+  max-height: 72px;
   /* 入场"从上游漂入": 从目标位置上方飘落到位、由透明显形——上游=远景=
      画面偏上方向，跟 position 的"远/近"映射方向一致。按 index 错开延迟，
      一朵接一朵地漂进来，不是齐刷刷同时冒出。 */
@@ -4808,6 +4813,24 @@ a {
 }
 .murmurs-flower:active .murmurs-flower__bob {
   transform: scale(0.94);
+}
+/* 密度轮换换下场时的淡出——组合选择器比单独 .murmurs-flower 特异性更高，
+   会整份覆盖上面那条 animation 简写(含 delay)，从当前透明度/位置淡出到隐形。 */
+.murmurs-flower.murmurs-flower--exiting {
+  animation: murmursFlowerExit 850ms ease-in forwards;
+  pointer-events: none;
+}
+.murmurs-flower__reflection {
+  position: absolute;
+  left: 50%;
+  bottom: -8%;
+  width: 72%;
+  height: 26%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0.25) 55%, rgba(255, 255, 255, 0) 78%);
+  border-radius: 50%;
+  filter: blur(1.5px);
+  pointer-events: none;
 }
 .murmurs-flower__bob {
   width: 100%;
@@ -4838,6 +4861,15 @@ a {
     opacity: 1;
   }
 }
+/* 只写 to，没写 from——from 隐式取动画开始那一刻元素当前的计算值(此时的
+   opacity 是深度透视给的值，不一定是 1)，淡出会从"它当下的样子"顺滑过渡
+   到消失，不会有跳变。 */
+@keyframes murmursFlowerExit {
+  to {
+    transform: translate(-50%, calc(-50% + 26px));
+    opacity: 0;
+  }
+}
 /* 水面自然漂浮的小幅晃动——跟落予棠漂流物的 floatvicBob 同一个思路
    (轻微位移+转动，不是大幅摆荡)，但独立一份 keyframe，不跨房间耦合。 */
 @keyframes murmursFlowerBob {
@@ -4861,6 +4893,10 @@ a {
   }
   .murmurs-flower__bob {
     animation: none;
+  }
+  .murmurs-flower.murmurs-flower--exiting {
+    animation: none;
+    opacity: 0;
   }
 }
 

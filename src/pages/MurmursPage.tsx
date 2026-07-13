@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 // 倾棠予梦 Step 2——接棠予酿记忆数据。后端 /api/murmurs/flowers 把日记记忆
@@ -114,26 +114,103 @@ const fmtDate = (iso: string | null): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-// 溪流纵向的"远→近"带：position=0(最旧)落在靠上的远景(接近水平线/上游)，
-// position=1(最新)落在靠下的近景——呼应"旧记忆越飘越远、新记忆在眼前"。
-const FAR_TOP_PERCENT = 20;
-const NEAR_TOP_PERCENT = 84;
+// 真机验收反馈(2026-07-13)：花只能画在水面以下，背景图水面起始线约在屏幕
+// 45% 高度处——WATER_LINE_PERCENT 留了 3% 余量，花的落点(含抖动)不会贴到
+// 岸边/拱门/树梢那一侧。FAR/NEAR 是"远景(旧记忆)→近景(新记忆)"落点带，
+// 都在水面线以下。
+const WATER_LINE_PERCENT = 45;
+const FAR_TOP_PERCENT = WATER_LINE_PERCENT + 3;
+const NEAR_TOP_PERCENT = 90;
 
-function FlowerBloom({ flower, index, onOpen }: { flower: MurmursFlower; index: number; onOpen: (f: MurmursFlower) => void }) {
+// 纵深透视：远景小、压扁多、略透明，模拟贴着水面看过去的视角；近景大、
+// 压扁少、更实——两组区间由 position(0~1，远→近)插值，同一深度带内再按
+// size(importance) 在区间内取值，重要的记忆即使在远景也能开得靠近上限。
+const FAR_SIZE_PX: [number, number] = [20, 36];
+const NEAR_SIZE_PX: [number, number] = [48, 72];
+const FAR_SQUASH_Y = 0.65;
+const NEAR_SQUASH_Y = 0.8;
+const FAR_OPACITY = 0.78;
+const NEAR_OPACITY = 1;
+
+function clamp01(n: number): number {
+  return Math.max(0, Math.min(1, n));
+}
+
+function perspectiveForFlower(flower: MurmursFlower) {
+  const depthT = clamp01(flower.position); // 0=远(旧)，1=近(新)
+  // importance(size 字段 0.4~1.0)在当前深度带内的相对位置，决定花开多大。
+  const importanceT = clamp01((flower.size - 0.4) / 0.6);
+  const bandMin = FAR_SIZE_PX[0] + depthT * (NEAR_SIZE_PX[0] - FAR_SIZE_PX[0]);
+  const bandMax = FAR_SIZE_PX[1] + depthT * (NEAR_SIZE_PX[1] - FAR_SIZE_PX[1]);
+  const sizePx = Math.round(bandMin + importanceT * (bandMax - bandMin));
+  const squashY = FAR_SQUASH_Y + depthT * (NEAR_SQUASH_Y - FAR_SQUASH_Y);
+  const opacity = FAR_OPACITY + depthT * (NEAR_OPACITY - FAR_OPACITY);
+  return { depthT, sizePx, squashY, opacity };
+}
+
+// 横向"车道"布局：把画面分成几条车道，同屏花朵按 id 哈希稳定分配车道，
+// 车道内部再按 position(远→近)从上到下排开——保证同屏(轮换后最多 12 朵)
+// 彼此之间有基本间距，不会像之前那样二三十朵互相堆成一坨。
+const LANES = 5;
+const LANE_MARGIN_PERCENT = 10;
+
+function laneIndexFor(id: string): number {
+  return hashStr(`${id}-lane`) % LANES;
+}
+
+function laneCenterPercent(lane: number): number {
+  const span = 100 - LANE_MARGIN_PERCENT * 2;
+  return LANE_MARGIN_PERCENT + (span / LANES) * (lane + 0.5);
+}
+
+type FlowerLayout = { left: number; top: number };
+
+function layoutVisibleFlowers(visible: MurmursFlower[]): Map<string, FlowerLayout> {
+  const lanes = new Map<number, MurmursFlower[]>();
+  for (const f of visible) {
+    const lane = laneIndexFor(f.id);
+    const group = lanes.get(lane);
+    if (group) group.push(f);
+    else lanes.set(lane, [f]);
+  }
+  const layout = new Map<string, FlowerLayout>();
+  for (const [lane, group] of lanes) {
+    group.sort((a, b) => a.position - b.position); // 同车道内远→近从上到下
+    const n = group.length;
+    group.forEach((f, i) => {
+      const rankT = n > 1 ? i / (n - 1) : clamp01(f.position);
+      const top = FAR_TOP_PERCENT + rankT * (NEAR_TOP_PERCENT - FAR_TOP_PERCENT);
+      const jitterLeft = (hashStr(`${f.id}-x`) % 500) / 100 - 2.5; // ±2.5% 车道内小范围抖动
+      layout.set(f.id, { left: laneCenterPercent(lane) + jitterLeft, top });
+    });
+  }
+  return layout;
+}
+
+function FlowerBloom({
+  flower,
+  index,
+  left,
+  top,
+  isExiting,
+  onOpen,
+}: {
+  flower: MurmursFlower;
+  index: number;
+  left: number;
+  top: number;
+  isExiting: boolean;
+  onOpen: (f: MurmursFlower) => void;
+}) {
   const src = useMemo(
     () => pickAssetSrc(flower.valence, flower.arousal, flower.id),
     [flower.valence, flower.arousal, flower.id],
   );
-  const topPercent = FAR_TOP_PERCENT + flower.position * (NEAR_TOP_PERCENT - FAR_TOP_PERCENT);
-  const jitterTop = (hashStr(`${flower.id}-y`) % 900) / 100 - 4.5; // ±4.5%
-  const leftPercent = 8 + (hashStr(`${flower.id}-x`) % 8400) / 100; // 8%~92%
-  // 参考落予棠漂流物的尺度(常规 72px/特殊 108px)，花朵别比那个还大——
-  // size 0.4~1.0 → 约 46~68px，是"漂在水上的小东西"，不是贴纸大头。
-  const sizePx = 30 + flower.size * 38;
+  const { depthT, sizePx, squashY, opacity } = useMemo(() => perspectiveForFlower(flower), [flower]);
   // 水面自然漂浮的晃动幅度/周期，挂载时随机一次(不用稳定，参考 FloatingVehicle
   // 的做法)——跟落予棠的漂流物同一套"外层定位+内层浮动"结构：entrance 那个
   // translate 用在外层 button 上，idle bob 的 transform 用在内层 div 上，
-  // 两个 transform 各管各的，不会互相覆盖。
+  // 压扁(scaleY)用在最内层 img 上——三层各自一份 transform，互不覆盖。
   const bob = useMemo(
     () => ({
       duration: 3400 + Math.random() * 2600,
@@ -148,19 +225,26 @@ function FlowerBloom({ flower, index, onOpen }: { flower: MurmursFlower; index: 
   return (
     <button
       type="button"
-      className="murmurs-flower"
+      className={`murmurs-flower${isExiting ? ' murmurs-flower--exiting' : ''}`}
       style={
         {
-          top: `${topPercent + jitterTop}%`,
-          left: `${leftPercent}%`,
+          top: `${top}%`,
+          left: `${left}%`,
           width: `${sizePx}px`,
           height: `${sizePx}px`,
+          opacity,
+          pointerEvents: isExiting ? 'none' : 'auto',
           '--murmurs-drift-delay': `${Math.min(index * 90, 1600)}ms`,
         } as React.CSSProperties
       }
       onClick={() => onOpen(flower)}
       aria-label={flower.title}
     >
+      <div
+        className="murmurs-flower__reflection"
+        style={{ opacity: 0.35 + depthT * 0.4 }}
+        aria-hidden="true"
+      />
       <div
         className="murmurs-flower__bob"
         style={
@@ -173,10 +257,76 @@ function FlowerBloom({ flower, index, onOpen }: { flower: MurmursFlower; index: 
           } as React.CSSProperties
         }
       >
-        <img className="murmurs-flower__img" src={src} alt="" loading="lazy" />
+        <img
+          className="murmurs-flower__img"
+          src={src}
+          alt=""
+          loading="lazy"
+          style={{ transform: `scaleY(${squashY})` }}
+        />
       </div>
     </button>
   );
+}
+
+// 密度控制：同屏最多 12 朵，花比 12 朵多时按 created_at 顺序轮换——每隔
+// ROTATION_INTERVAL_MS 换掉最早入场的一朵(先淡出 EXIT_MS，动画播完再真正
+// 摘掉)，同时按顺序请下一朵入场，循环往复，不会 30+ 朵同屏堆积。
+const ROTATION_MAX_VISIBLE = 12;
+const ROTATION_INTERVAL_MS = 5200;
+const EXIT_MS = 850;
+
+function useFlowerRotation(flowers: MurmursFlower[] | null) {
+  const [visible, setVisible] = useState<MurmursFlower[]>([]);
+  const [exitingId, setExitingId] = useState<string | null>(null);
+  // visibleRef 跟 visible state 保持同步，供 setInterval/setTimeout 回调直接读写——
+  // 不把"挑下一朵/推进 cursor"这类副作用塞进 setVisible 的 updater 函数里：
+  // React 18 StrictMode 在开发环境会把 updater 函数双调用一次(用来抓这类不纯的
+  // 用法)，副作用留在 updater 里就会被多算一次导致同屏数量对不上(实测踩过，
+  // 轮换一轮后从 12 变 13)。副作用只放在 interval/timeout 回调本体里，不放
+  // updater 里，才不受双调用影响。
+  const visibleRef = useRef<MurmursFlower[]>([]);
+  const cursorRef = useRef(0);
+
+  useEffect(() => {
+    if (!flowers) return;
+    const initial = flowers.slice(0, Math.min(ROTATION_MAX_VISIBLE, flowers.length));
+    visibleRef.current = initial;
+    setVisible(initial);
+    cursorRef.current = initial.length;
+    setExitingId(null);
+  }, [flowers]);
+
+  useEffect(() => {
+    if (!flowers || flowers.length <= ROTATION_MAX_VISIBLE) return; // 花不够 12 朵，用不着轮换
+    const timer = window.setInterval(() => {
+      const cur = visibleRef.current;
+      if (cur.length === 0) return;
+      const outgoing = cur[0];
+      setExitingId(outgoing.id);
+      window.setTimeout(() => {
+        const rest = visibleRef.current.filter((f) => f.id !== outgoing.id);
+        const total = flowers.length;
+        let incoming = flowers[cursorRef.current % total];
+        let tries = 0;
+        // 花数量刚好比 12 多一点时，下一张可能撞上还在屏幕上的那朵——
+        // 顺着往后找一张不在场上的，最多试一轮，避免死循环。
+        while (rest.some((f) => f.id === incoming.id) && tries < total) {
+          cursorRef.current += 1;
+          incoming = flowers[cursorRef.current % total];
+          tries += 1;
+        }
+        cursorRef.current += 1;
+        const next = rest.some((f) => f.id === incoming.id) ? rest : [...rest, incoming];
+        visibleRef.current = next;
+        setVisible(next);
+        setExitingId(null);
+      }, EXIT_MS);
+    }, ROTATION_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [flowers]);
+
+  return { visible, exitingId };
 }
 
 export function MurmursPage() {
@@ -200,6 +350,8 @@ export function MurmursPage() {
   }, []);
 
   const isEmpty = flowers !== null && flowers.length === 0;
+  const { visible, exitingId } = useFlowerRotation(flowers);
+  const layout = useMemo(() => layoutVisibleFlowers(visible), [visible]);
 
   return (
     <main className="murmurs-page">
@@ -214,9 +366,21 @@ export function MurmursPage() {
       </header>
 
       <div className="murmurs-stream">
-        {flowers?.map((f, i) => (
-          <FlowerBloom key={f.id} flower={f} index={i} onOpen={setSelected} />
-        ))}
+        {visible.map((f, i) => {
+          const pos = layout.get(f.id);
+          if (!pos) return null;
+          return (
+            <FlowerBloom
+              key={f.id}
+              flower={f}
+              index={i}
+              left={pos.left}
+              top={pos.top}
+              isExiting={f.id === exitingId}
+              onOpen={setSelected}
+            />
+          );
+        })}
 
         {isEmpty ? (
           <div
