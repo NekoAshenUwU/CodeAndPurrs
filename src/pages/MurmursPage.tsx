@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createWaterRipples, type WaterRipples } from '../services/waterRipples';
+import { MurmursAmbient } from '../components/ambient/MurmursAmbient';
 
 // 倾棠予梦 Step 2——接棠予酿记忆数据。后端 /api/murmurs/flowers 把日记记忆
 // 映射成 {id,size,position,title,date,moodLabel,valence,arousal} 数组
@@ -596,6 +597,23 @@ export function MurmursPage() {
   const layout = useMemo(() => buildGlobalLayout(flowers ?? []), [flowers]);
   const assets = useMemo(() => buildAssetAssignment(flowers ?? []), [flowers]);
 
+  // 给蝴蝶用的两个回调都必须恒定引用(MurmursAmbient 的 rAF 循环挂在 effect
+  // 里，回调一变循环就重启，蝴蝶会闪回起点)：涟漪走 engineRef；歇脚目标
+  // 每次渲染刷进 perchRef，蝴蝶要停的时候现取，正在退场的花不给停。
+  const perchRef = useRef<{ x: number; y: number }[]>([]);
+  perchRef.current = visible
+    .filter((f) => f.id !== exitingId)
+    .map((f) => layout.get(f.id))
+    .filter((p): p is FlowerLayout => Boolean(p))
+    .map((p) => ({ x: p.left, y: p.top }));
+  const getPerchTargets = useCallback(() => perchRef.current, []);
+  const dropRipple = useCallback(
+    (u: number, v: number, radiusScale?: number, strength?: number) => {
+      engineRef.current?.drop(u, v, radiusScale, strength);
+    },
+    [],
+  );
+
   return (
     <main className="murmurs-page" ref={pageRef}>
       <canvas
@@ -666,6 +684,9 @@ export function MurmursPage() {
       {/* 焦散光纹叠在花朵之上(落予棠是叠在载具之下——那边载具浮在水面上，
           这边花朵沉在水面下，光纹要洒在花身上才像"隔着水看花")。 */}
       <div className="murmurs-caustics" aria-hidden="true" />
+
+      {/* 蝴蝶+樱花瓣(z:3)——飞在水面之上，所以叠在焦散上面。 */}
+      <MurmursAmbient dropRipple={dropRipple} getPerchTargets={getPerchTargets} />
 
       {selected ? (
         <div className="murmurs-detail-backdrop" onClick={() => setSelected(null)}>

@@ -4862,6 +4862,94 @@ a {
   .murmurs-caustics { animation: none; }
 }
 
+/* ----- 蝴蝶 + 樱花瓣(z:3，飞在水面/焦散之上；2026-07-13 老婆批准的视觉
+   新增，见 MurmursAmbient.tsx) -----
+   位置由组件里的 rAF 循环写 transform，这里只管结构和翅膀扇动。 */
+.murmurs-ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.murmurs-bfly {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+  filter: drop-shadow(0 4px 6px rgba(90, 50, 140, 0.22));
+}
+/* tilt 层管朝向(左右翻转+俯仰角，rAF 写)；perspective 给翅膀的 rotateY
+   提供三维透视，没有它扇动看起来只是宽度伸缩，不像真的开合。 */
+.murmurs-bfly__tilt {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  perspective: 220px;
+  transform-style: preserve-3d;
+}
+/* 翅膀绕贴着身体的那条边 rotateY 开合。SVG 按"身体在右缘"画(=左翅)，
+   右翅用同一份图形在 keyframes 里带 scaleX(-1) 镜像——镜像必须写进动画的
+   transform 里(动画会整份接管 transform，分开写会被覆盖)。快慢由 --flap
+   控制：飞行 300~380ms 一拍，停在花上歇脚时 JS 调成 720ms 慢慢扇。 */
+.murmurs-bfly__wing {
+  position: absolute;
+  top: 0;
+  width: 54%;
+  height: 100%;
+  overflow: visible;
+  animation: murmursBflyFlapL var(--flap, 340ms) ease-in-out infinite alternate;
+}
+.murmurs-bfly__wing--l {
+  left: 0;
+  transform-origin: 100% 50%;
+}
+.murmurs-bfly__wing--r {
+  right: 0;
+  transform-origin: 0% 50%;
+  animation-name: murmursBflyFlapR;
+}
+@keyframes murmursBflyFlapL {
+  from {
+    transform: rotateY(52deg);
+  }
+  to {
+    transform: rotateY(-18deg);
+  }
+}
+/* 右翅图形在 SVG 内部镜像(见 MurmursAmbient.tsx 的注释——CSS scaleX(-1)
+   会被扇动动画接管后把翅膀翻到身体另一边)，这里只做符号相反的 rotateY。 */
+@keyframes murmursBflyFlapR {
+  from {
+    transform: rotateY(-52deg);
+  }
+  to {
+    transform: rotateY(18deg);
+  }
+}
+.murmurs-bfly__body {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 16%;
+  height: 100%;
+  transform: translateX(-50%);
+  overflow: visible;
+}
+.murmurs-petal {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 2px 3px rgba(120, 60, 120, 0.18));
+}
+@media (prefers-reduced-motion: reduce) {
+  /* 环境动效整层不显示(组件里的 rAF 也不会启动)，跟焦散/星光同一条准则。 */
+  .murmurs-ambient {
+    display: none;
+  }
+}
+
 /* 花朵容器铺满整页(顶栏之下)，绝对定位放置每朵花——depthScore(时间+重要度
    混合，见 MurmursPage.tsx)决定纵向"远景→近景"的落点，横向按车道散开。
    z-index:1 夹在涟漪画布(0)和焦散光纹(2)之间：花沉在水里，光洒在花上。 */
