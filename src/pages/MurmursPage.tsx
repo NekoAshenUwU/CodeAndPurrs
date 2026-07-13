@@ -1,15 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { createWaterRipples, type WaterRipples } from '../services/waterRipples';
 
 // 倾棠予梦 Step 2——接棠予酿记忆数据。后端 /api/murmurs/flowers 把日记记忆
 // 映射成 {id,size,position,title,date,moodLabel,valence,arousal} 数组
-// （60 秒内存缓存，详见 server/proxy.mjs），这里只管把这份数组画成溪流上
-// 的漂浮花朵。花色不走关键词，改由 valence/arousal 连续计算——见下方。
+// （60 秒内存缓存，详见 server/proxy.mjs），这里只管把这份数组画成沉在
+// 湖水里的花朵。花色不走关键词，改由 valence/arousal 连续计算——见下方。
+//
+// 2026-07-13 第六轮（老婆发的参考视频截图版）：
+// - 水面接落予棠同一套 WebGL 触摸涟漪（src/services/waterRipples.ts，已定稿
+//   锁定模块，只调用不改动）+ 焦散光纹 + 星光，"波光粼粼"。
+// - 花朵沉在水里、完全静止：idle bob 晃动整个删掉，坐标一次分配后不再动。
+// - 纵深改成"新 + 重要 = 近，旧 + 不重要 = 远"：position(时间) 和
+//   size(importance) 加权混合出 depthScore，一起决定落点/大小/清晰度。
+// - 花朵素材全局去重：39 张素材按心情色就近排序后做"不重复分配"，同一张图
+//   不会同时出现两次（记忆条数超过素材数才会从头复用）。
 
 type MurmursFlower = {
   id: string;
   size: number; // 0.4~1.0，来自 importance，越重要花越大
-  position: number; // 0~1，按 created_at 排序：0=最旧/最远，1=最新/最近
+  position: number; // 0~1，按 created_at 排序：0=最旧，1=最新
   title: string;
   date: string | null;
   moodLabel?: string | null; // 纯文字心情词(平静/开心/伤心…)，弹出卡片用，不参与花色
@@ -18,7 +28,7 @@ type MurmursFlower = {
 };
 
 // 花色改用连续色谱：valence 决定色相(冷→暖)，arousal 决定饱和度/明度。
-// 32 张素材按肉眼估的 HSL 标了色标——不是量出来的像素值，只是"这朵花大概
+// 39 张素材按肉眼估的 HSL 标了色标——不是量出来的像素值，只是"这朵花大概
 // 长这个色系"的粗估，允许有偏差，上线后棠棠看到明显不对可以再调具体某一张。
 // 色相刻意绕开纯绿(现有素材也没有绿花)，从冷的蓝紫一路转到暖的粉橙。
 const FLOWER_COLOR_TAGS: Record<string, { h: number; s: number; l: number }> = {
@@ -94,23 +104,39 @@ function hueCircularDist(a: number, b: number): number {
   return d > 180 ? 360 - d : d;
 }
 
-// 按 valence/arousal 算出目标色，找 32 张素材里色标最接近的几张，
-// 再用 id 稳定哈希在候选里挑一张——同一条记忆刷新页面还是那张图，
-// 同时同一片色系里仍有花色/花型的自然差异，不会所有花都长一个样。
-function pickAssetSrc(valence: number, arousal: number, id: string): string {
-  const targetHue = valenceToHue(valence);
-  const { s: targetS, l: targetL } = arousalToSatLight(arousal);
-  const ranked = FLOWER_FILES.map((file) => {
-    const tag = FLOWER_COLOR_TAGS[file];
-    const dh = hueCircularDist(tag.h, targetHue) / 180; // 0~1
-    const ds = Math.abs(tag.s - targetS) / 100;
-    const dl = Math.abs(tag.l - targetL) / 100;
-    // 色相是 valence 的主要信号，权重给高一点；饱和度/明度权重相近。
-    const dist = dh * 2 + ds * 0.6 + dl * 0.6;
-    return { file, dist };
-  }).sort((a, b) => a.dist - b.dist);
-  const pool = ranked.slice(0, 5);
-  const file = pool[hashStr(id) % pool.length].file;
+// 素材分配改成"全局不重复"（2026-07-13 老婆要求：水中花朵不要重复）：
+// 对全量 flowers 一次性分配——每条记忆按心情色把 39 张素材排个序，然后拿
+// "色系最接近且还没被用掉"的那张；素材全部用完才清空重来（也就是只有记忆
+// 条数超过 39 才可能出现复用）。同一份 flowers 数组算出来的结果永远一样，
+// 刷新页面每朵花还是那张图。色系匹配从"硬保证"降级成"尽量"——去重优先。
+function buildAssetAssignment(flowers: MurmursFlower[]): Map<string, string> {
+  const assigned = new Map<string, string>();
+  let used = new Set<string>();
+  for (const f of flowers) {
+    const targetHue = valenceToHue(f.valence);
+    const { s: targetS, l: targetL } = arousalToSatLight(f.arousal);
+    const ranked = FLOWER_FILES.map((file) => {
+      const tag = FLOWER_COLOR_TAGS[file];
+      const dh = hueCircularDist(tag.h, targetHue) / 180; // 0~1
+      const ds = Math.abs(tag.s - targetS) / 100;
+      const dl = Math.abs(tag.l - targetL) / 100;
+      // 色相是 valence 的主要信号，权重给高一点；饱和度/明度权重相近。
+      const dist = dh * 2 + ds * 0.6 + dl * 0.6;
+      return { file, dist };
+    }).sort((a, b) => a.dist - b.dist);
+    if (used.size >= FLOWER_FILES.length) used = new Set();
+    const pool = ranked.filter((r) => !used.has(r.file));
+    // 色系最近的前 3 张里用 id 哈希挑一张——不至于所有"开心"的记忆都按同一个
+    // 顺序领同一批花，同色系内部仍有花型差异。
+    const top = pool.slice(0, Math.min(3, pool.length));
+    const file = top[hashStr(f.id) % top.length].file;
+    used.add(file);
+    assigned.set(f.id, file);
+  }
+  return assigned;
+}
+
+function assetUrl(file: string): string {
   return `${import.meta.env.BASE_URL}assets/murmurs/${file}`;
 }
 
@@ -148,15 +174,16 @@ function stripLeadingDatePrefix(title: string, dateIso: string | null): string {
 
 // 真机验收反馈(2026-07-13)：花只能画在水面以下，背景图水面起始线约在屏幕
 // 45% 高度处——WATER_LINE_PERCENT 留了 3% 余量，花的落点(含抖动)不会贴到
-// 岸边/拱门/树梢那一侧。FAR/NEAR 是"远景(旧记忆)→近景(新记忆)"落点带，
-// 都在水面线以下。
+// 岸边/樱花树那一侧。FAR/NEAR 是"远景→近景"落点带，都在水面线以下。
 const WATER_LINE_PERCENT = 45;
 const FAR_TOP_PERCENT = WATER_LINE_PERCENT + 3;
 const NEAR_TOP_PERCENT = 90;
 
-// 纵深透视：远景小、压扁多、略透明，模拟贴着水面看过去的视角；近景大、
-// 压扁少、更实——两组区间由 position(0~1，远→近)插值，同一深度带内再按
-// size(importance) 在区间内取值，重要的记忆即使在远景也能开得靠近上限。
+// 纵深透视：远景小、压扁多、略透明微模糊，模拟隔着水看过去；近景大、
+// 压扁少、更实更清晰。第六轮起纵深不再只看时间——"新的和重要值高的在
+// 前面，旧的重要值低的在远一点"(老婆原话)：depthScore 由 position(时间)
+// 和 size(importance) 加权混合，时间为主、重要度为辅，重要的旧记忆也能
+// 往前站一点，鸡毛蒜皮的新记忆则往后退半步。
 // 真机验收反馈(2026-07-13 第二轮)：新背景水面开阔，整体调大一档。
 const FAR_SIZE_PX: [number, number] = [36, 48];
 const NEAR_SIZE_PX: [number, number] = [88, 96];
@@ -164,21 +191,38 @@ const FAR_SQUASH_Y = 0.65;
 const NEAR_SQUASH_Y = 0.8;
 const FAR_OPACITY = 0.78;
 const NEAR_OPACITY = 1;
+// 远景花在水下更深，隔的水更厚——多一点模糊；近景完全清晰。
+const FAR_BLUR_PX = 1.1;
+const DEPTH_TIME_WEIGHT = 0.65;
+const DEPTH_IMPORTANCE_WEIGHT = 0.35;
 
 function clamp01(n: number): number {
   return Math.max(0, Math.min(1, n));
 }
 
+function importanceT(flower: MurmursFlower): number {
+  return clamp01((flower.size - 0.4) / 0.6);
+}
+
+// 0=最远(旧且不重要)，1=最近(新且重要)。
+function depthScoreForFlower(flower: MurmursFlower): number {
+  return clamp01(
+    DEPTH_TIME_WEIGHT * clamp01(flower.position) + DEPTH_IMPORTANCE_WEIGHT * importanceT(flower),
+  );
+}
+
 function perspectiveForFlower(flower: MurmursFlower) {
-  const depthT = clamp01(flower.position); // 0=远(旧)，1=近(新)
-  // importance(size 字段 0.4~1.0)在当前深度带内的相对位置，决定花开多大。
-  const importanceT = clamp01((flower.size - 0.4) / 0.6);
+  const depthT = depthScoreForFlower(flower);
+  // importance 在当前深度带内的相对位置，决定花开多大——重要的记忆即使
+  // 在远景也能开得靠近带宽上限。
+  const impT = importanceT(flower);
   const bandMin = FAR_SIZE_PX[0] + depthT * (NEAR_SIZE_PX[0] - FAR_SIZE_PX[0]);
   const bandMax = FAR_SIZE_PX[1] + depthT * (NEAR_SIZE_PX[1] - FAR_SIZE_PX[1]);
-  const sizePx = Math.round(bandMin + importanceT * (bandMax - bandMin));
+  const sizePx = Math.round(bandMin + impT * (bandMax - bandMin));
   const squashY = FAR_SQUASH_Y + depthT * (NEAR_SQUASH_Y - FAR_SQUASH_Y);
   const opacity = FAR_OPACITY + depthT * (NEAR_OPACITY - FAR_OPACITY);
-  return { depthT, sizePx, squashY, opacity };
+  const blurPx = FAR_BLUR_PX * (1 - depthT);
+  return { depthT, sizePx, squashY, opacity, blurPx };
 }
 
 // 同屏密度上限——提前到这里声明，下面的全局布局函数要用它决定"名次桶"数量
@@ -205,17 +249,21 @@ type FlowerLayout = { left: number; top: number };
 // 的坐标就永远不变，轮换只决定"现在画不画这朵花"，完全碰不到坐标。"同一朵
 // 花位置不变"从"实测巧合"变成"数学上不可能变"，不再需要 CSS transition 兜底。
 //
-// 具体分配：flowers 已经按 created_at 从旧到新排好，按名次分进 rowBuckets
-// 个"名次桶"里，桶序号天然对应"远→近"；同一个桶内部用哈希+线性探测抢
-// lane(横向车道)，抢到不同车道的保证不会叠在一起——这个探测也是对全量数组
-// 跑一次，不受"这一刻同屏是谁"影响。
+// 具体分配：先按 depthScore(时间+重要度混合，见上)从远到近排一遍，按名次
+// 分进 rowBuckets 个"名次桶"里，桶序号天然对应"远→近"——桶排序和 top 都用
+// 同一个 depthScore，同一桶里的花落点也挨着，车道防碰撞才真正防得住；
+// 同一个桶内部用哈希+线性探测抢 lane(横向车道)，抢到不同车道的保证不会叠
+// 在一起——这个探测也是对全量数组跑一次，不受"这一刻同屏是谁"影响。
 function buildGlobalLayout(flowers: MurmursFlower[]): Map<string, FlowerLayout> {
   const n = flowers.length;
   const layout = new Map<string, FlowerLayout>();
   if (n === 0) return layout;
+  const byDepth = [...flowers].sort(
+    (a, b) => depthScoreForFlower(a) - depthScoreForFlower(b) || hashStr(a.id) - hashStr(b.id),
+  );
   const rowBuckets = Math.max(1, Math.min(n, ROTATION_MAX_VISIBLE));
   const laneTaken: boolean[][] = Array.from({ length: rowBuckets }, () => Array(LANES).fill(false));
-  flowers.forEach((f, rank) => {
+  byDepth.forEach((f, rank) => {
     const row = Math.min(rowBuckets - 1, Math.floor((rank / n) * rowBuckets));
     let lane = hashStr(`${f.id}-lane`) % LANES;
     let tries = 0;
@@ -224,7 +272,7 @@ function buildGlobalLayout(flowers: MurmursFlower[]): Map<string, FlowerLayout> 
       tries += 1;
     }
     laneTaken[row][lane] = true;
-    const depthT = clamp01(f.position);
+    const depthT = depthScoreForFlower(f);
     const top = FAR_TOP_PERCENT + depthT * (NEAR_TOP_PERCENT - FAR_TOP_PERCENT);
     const jitterTop = (hashStr(`${f.id}-y`) % 300) / 100 - 1.5; // ±1.5%
     const jitterLeft = (hashStr(`${f.id}-x`) % 300) / 100 - 1.5; // ±1.5%，车道已经分开了，小抖动够用
@@ -239,6 +287,7 @@ function buildGlobalLayout(flowers: MurmursFlower[]): Map<string, FlowerLayout> 
 function FlowerBloom({
   flower,
   index,
+  src,
   left,
   top,
   isExiting,
@@ -246,31 +295,19 @@ function FlowerBloom({
 }: {
   flower: MurmursFlower;
   index: number;
+  src: string;
   left: number;
   top: number;
   isExiting: boolean;
   onOpen: (f: MurmursFlower) => void;
 }) {
-  const src = useMemo(
-    () => pickAssetSrc(flower.valence, flower.arousal, flower.id),
-    [flower.valence, flower.arousal, flower.id],
+  const { depthT, sizePx, squashY, opacity, blurPx } = useMemo(
+    () => perspectiveForFlower(flower),
+    [flower],
   );
-  const { depthT, sizePx, squashY, opacity } = useMemo(() => perspectiveForFlower(flower), [flower]);
-  // 水面自然漂浮的晃动幅度/周期，挂载时随机一次(不用稳定，参考 FloatingVehicle
-  // 的做法)——跟落予棠的漂流物同一套"外层定位+内层浮动"结构：entrance 那个
-  // translate 用在外层 button 上，idle bob 的 transform 用在内层 div 上，
-  // 压扁(scaleY)用在最内层 img 上——三层各自一份 transform，互不覆盖。
-  const bob = useMemo(
-    () => ({
-      duration: 3400 + Math.random() * 2600,
-      delay: -Math.random() * 5000,
-      dx: 5 + Math.random() * 8,
-      dy: 6 + Math.random() * 9,
-      rot: 2 + Math.random() * 3,
-    }),
-    [],
-  );
-
+  // 第六轮起花朵完全静止(老婆原话"花朵沉入水里不要晃动")：原来的 idle bob
+  // 晃动层整个删掉，水的"活"感全部交给 WebGL 涟漪 + 焦散 + 星光这三层水面
+  // 效果——花是沉在水里的记忆，安安静静躺着；水在动，花不动。
   return (
     <button
       type="button"
@@ -294,33 +331,28 @@ function FlowerBloom({
         style={{ opacity: 0.35 + depthT * 0.4 }}
         aria-hidden="true"
       />
-      <div
-        className="murmurs-flower__bob"
-        style={
-          {
-            animationDuration: `${bob.duration}ms`,
-            animationDelay: `${bob.delay}ms`,
-            '--mfdx': `${bob.dx}px`,
-            '--mfdy': `${bob.dy}px`,
-            '--mfrot': `${bob.rot}deg`,
-          } as React.CSSProperties
-        }
-      >
-        <img
-          className="murmurs-flower__img"
-          src={src}
-          alt=""
-          loading="lazy"
-          style={{ transform: `scaleY(${squashY})` }}
-        />
-      </div>
+      <img
+        className="murmurs-flower__img"
+        src={src}
+        alt=""
+        loading="lazy"
+        style={{
+          transform: `scaleY(${squashY})`,
+          // 远景花隔的水厚，按深度补一点模糊；基础的"泡在水里"降饱和/冷色调
+          // 跟 global.css 里 .murmurs-flower__img 的静态 filter 保持同一套值，
+          // inline 写全是因为 filter 只有一份计算值，没法 CSS+inline 各写一半。
+          filter: `drop-shadow(0 3px 7px rgba(60, 30, 100, 0.2)) saturate(0.9) brightness(0.98) hue-rotate(-4deg)${
+            blurPx > 0.05 ? ` blur(${blurPx.toFixed(2)}px)` : ''
+          }`,
+        }}
+      />
     </button>
   );
 }
 
 // 密度控制：同屏最多 12 朵，花比 12 朵多时按 created_at 顺序轮换——每隔
 // ROTATION_INTERVAL_MS 换掉最早入场的一朵(先播"沉入水中"退场动画 EXIT_MS，
-// 播完再真正摘掉)，同时按顺序请下一朵从上游边缘淡入漂入，循环往复，
+// 播完再真正摘掉)，同时按顺序请下一朵原地缓缓浮现，循环往复，
 // 不会 30+ 朵同屏堆积。
 // EXIT_MS 要跟 CSS 里 murmursFlowerExit 的动画时长(global.css)保持一致——
 // 两处对不上就会露出"动画没播完元素就没了"的破绽。
@@ -394,9 +426,37 @@ function useFlowerRotation(flowers: MurmursFlower[] | null) {
   return { visible, exitingId };
 }
 
+// 水面星光：跟落予棠 .sea-sparkle 同一个样式(global.css 里是通用类)，
+// 只是撒点范围限制在水面线以下。模块级算一次，刷新前位置不变。
+const MURMUR_SPARKLES = Array.from({ length: 12 }, () => ({
+  x: 5 + Math.random() * 90,
+  y: WATER_LINE_PERCENT + 4 + Math.random() * (92 - WATER_LINE_PERCENT - 4),
+  size: 2 + Math.random() * 3,
+  delay: Math.random() * 6,
+  dur: 2.8 + Math.random() * 2.4,
+}));
+
+// 环境涟漪：没人碰屏幕时水面也不该是死的——每隔几秒在水面区域随机落一圈
+// 很轻的涟漪(强度约为触摸默认 0.14 的 1/3)，像风吹过/鱼碰了下水面。跟触摸
+// 涟漪共用同一个 WebGL 引擎。OS 开了"减弱动态效果"就不自动落(触摸涟漪保留
+// ——那是直接反馈不是环境动效，跟落予棠同一条准则)。
+const AMBIENT_DROP_INTERVAL_MS = 3200;
+
+// 从 CSS 已解析好的 background-image 里拿背景图 URL 喂给 WebGL 当纹理，
+// 跟落予棠 parseBackgroundUrl 同一个做法——CSS 是唯一事实来源，哪天换图
+// 只改 CSS 这边就够。
+function parseBackgroundUrl(cssValue: string): string | null {
+  const m = /url\(["']?(.*?)["']?\)/.exec(cssValue);
+  return m ? m[1] : null;
+}
+
 export function MurmursPage() {
   const [flowers, setFlowers] = useState<MurmursFlower[] | null>(null); // null = 加载中
   const [selected, setSelected] = useState<MurmursFlower | null>(null);
+  const [ripplesReady, setRipplesReady] = useState(false);
+  const pageRef = useRef<HTMLElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const engineRef = useRef<WaterRipples | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -414,14 +474,78 @@ export function MurmursPage() {
     };
   }, []);
 
+  // 湖面接 WebGL 涟漪引擎(落予棠定稿的 waterRipples 模块，只调用不改)：
+  // 只跑一次。WebGL 不可用/图片加载失败 → createWaterRipples 返回 null，
+  // canvas 保持 opacity:0，底下 .murmurs-page 的 CSS 背景图照常显示，
+  // 只是没有涟漪(焦散/星光不受影响，仍然叠着)——纯降级，不会黑屏。
+  // 不拿 prefers-reduced-motion 挡初始化——触摸涟漪是"手指点哪儿哪儿起一圈"
+  // 的直接反馈动画，落予棠真机踩过这个坑(OS 减弱动态一开涟漪整个没反应)。
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const page = pageRef.current;
+    if (!canvas || !page) return;
+
+    let cancelled = false;
+    const bgUrl = parseBackgroundUrl(getComputedStyle(page).backgroundImage) ?? '/rooms/murmurs-bg.webp';
+    void createWaterRipples(canvas, bgUrl).then((engine) => {
+      if (cancelled) {
+        engine?.destroy();
+        return;
+      }
+      if (!engine) return; // 不支持就静默降级，waterRipples 里已有 console.error
+      engineRef.current = engine;
+      engine.start();
+      setRipplesReady(true);
+    });
+    return () => {
+      cancelled = true;
+      engineRef.current?.destroy();
+      engineRef.current = null;
+    };
+  }, []);
+
+  // 环境涟漪定时器——挂在引擎就绪之后，页面在后台标签页时不落(document.hidden)。
+  useEffect(() => {
+    if (!ripplesReady) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const timer = window.setInterval(() => {
+      const engine = engineRef.current;
+      if (!engine || document.hidden) return;
+      const u = 0.06 + Math.random() * 0.88;
+      const v = (WATER_LINE_PERCENT + 4) / 100 + Math.random() * ((94 - WATER_LINE_PERCENT - 4) / 100);
+      engine.drop(u, v, 0.9, 0.045);
+    }, AMBIENT_DROP_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [ripplesReady]);
+
+  // 手指/鼠标按在水面 → 该点起真实涟漪(WebGL drop)，跟落予棠同一套：绑在
+  // 花朵容器上用 pointerdown，事件照常冒泡，点花=开记忆卡片+落一圈涟漪，
+  // 两者独立互不干扰。水面线以上(天空/樱花树)不起涟漪。
+  const onWaterPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !engineRef.current) return;
+    const rect = canvas.getBoundingClientRect();
+    const u = (e.clientX - rect.left) / rect.width;
+    const v = (e.clientY - rect.top) / rect.height;
+    if (u < 0 || u > 1 || v < WATER_LINE_PERCENT / 100 || v > 1) return;
+    engineRef.current.drop(u, v);
+  };
+
   const isEmpty = flowers !== null && flowers.length === 0;
   const { visible, exitingId } = useFlowerRotation(flowers);
   // 依赖 flowers(拉回来就不再变的原始数组)，不依赖 visible(轮换会变)——
-  // 保证每朵花的坐标只算一次，轮换绝对碰不到它。
+  // 保证每朵花的坐标/素材只算一次，轮换绝对碰不到它们。
   const layout = useMemo(() => buildGlobalLayout(flowers ?? []), [flowers]);
+  const assets = useMemo(() => buildAssetAssignment(flowers ?? []), [flowers]);
 
   return (
-    <main className="murmurs-page">
+    <main className="murmurs-page" ref={pageRef}>
+      <canvas
+        ref={canvasRef}
+        className={`murmurs-ripples-canvas${ripplesReady ? ' is-ready' : ''}`}
+        aria-hidden="true"
+      />
+
       <header className="chat-head">
         <Link to="/" className="chat-head__back" aria-label="回首页">
           ‹
@@ -432,15 +556,32 @@ export function MurmursPage() {
         </div>
       </header>
 
-      <div className="murmurs-stream">
+      <div className="murmurs-stream" onPointerDown={onWaterPointerDown}>
+        {MURMUR_SPARKLES.map((s, i) => (
+          <span
+            key={i}
+            className="sea-sparkle"
+            style={{
+              left: `${s.x}%`,
+              top: `${s.y}%`,
+              width: `${s.size}px`,
+              height: `${s.size}px`,
+              animationDelay: `${s.delay}s`,
+              animationDuration: `${s.dur}s`,
+            }}
+          />
+        ))}
+
         {visible.map((f, i) => {
           const pos = layout.get(f.id);
-          if (!pos) return null;
+          const src = assets.get(f.id);
+          if (!pos || !src) return null;
           return (
             <FlowerBloom
               key={f.id}
               flower={f}
               index={i}
+              src={assetUrl(src)}
               left={pos.left}
               top={pos.top}
               isExiting={f.id === exitingId}
@@ -457,12 +598,16 @@ export function MurmursPage() {
           >
             <img
               className="murmurs-flower__img"
-              src={`${import.meta.env.BASE_URL}assets/murmurs/${PLACEHOLDER_BUD_SRC}`}
+              src={assetUrl(PLACEHOLDER_BUD_SRC)}
               alt=""
             />
           </div>
         ) : null}
       </div>
+
+      {/* 焦散光纹叠在花朵之上(落予棠是叠在载具之下——那边载具浮在水面上，
+          这边花朵沉在水面下，光纹要洒在花身上才像"隔着水看花")。 */}
+      <div className="murmurs-caustics" aria-hidden="true" />
 
       {selected ? (
         <div className="murmurs-detail-backdrop" onClick={() => setSelected(null)}>

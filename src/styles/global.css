@@ -4791,15 +4791,91 @@ a {
   overflow: hidden;
 }
 
-/* 花朵容器铺满整页(顶栏之下)，绝对定位放置每朵花——position 字段决定
-   纵向"远景(旧记忆)→近景(新记忆)"的落点，横向随机散开。 */
+/* ----- 背景层① WebGL 触摸涟漪画布(2026-07-13 第六轮，照搬落予棠
+   .sweetie-ripples-canvas 的整套做法) -----
+   position:absolute 铺满 .murmurs-page，z-index:0 垫最底。
+   pointer-events:none——pointerdown 绑在 .murmurs-stream 上，算好归一化
+   坐标后手动调 engine.drop()。初始 opacity:0，引擎加载完背景图真正跑起来
+   才淡入(is-ready)；WebGL 不支持/初始化失败就永远停在 opacity:0，露出底下
+   .murmurs-page 自己那条 CSS 背景，纯降级不黑屏。
+   涟漪只留在湖面：canvas 用竖向 mask 裁掉天空/樱花树那一带(水面线约在
+   视口 45%)，跟落予棠"涟漪不上天空"同一条规矩——canvas 的 cover 采样数学
+   和 CSS background:cover 一致，两层像素对得上，接缝看不出来。 */
+.murmurs-ripples-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, transparent 38%, #000 47%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 38%, #000 47%);
+}
+.murmurs-ripples-canvas.is-ready {
+  opacity: 1;
+}
+
+/* ----- 顶层焦散光纹("波光粼粼") -----
+   跟落予棠 .sweetie-caustics 同一张无缝贴图/同一套参数(动画 keyframes 也
+   直接复用 sweetieCausticsPan)，但 z-index 叠在花朵(.murmurs-stream 的 z:1)
+   之上——落予棠的载具浮在水面上所以光纹垫底，这边花朵沉在水面下，光纹要
+   洒在花身上才像"隔着水看花"。soft-light + 低透明度只是轻轻提亮，不会把
+   花糊掉。 */
+.murmurs-caustics {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-image: url("/textures/caustics-seamless.png");
+  background-repeat: repeat;
+  background-size: 960px 960px;
+  mix-blend-mode: soft-light;
+  opacity: 0.18;
+  filter: blur(1.6px);
+  animation: sweetieCausticsPan 60s linear infinite;
+  will-change: background-position;
+  /* 纵向渐隐：天空/樱花树区域不该有焦散，水面线附近渐入，中远段最强，
+     页面底部(近景)略收一点，别抢近景大花的清晰度。 */
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 42%,
+    rgba(0, 0, 0, 0.55) 50%,
+    #000 58%,
+    #000 82%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 42%,
+    rgba(0, 0, 0, 0.55) 50%,
+    #000 58%,
+    #000 82%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+}
+@media (prefers-reduced-motion: reduce) {
+  .murmurs-caustics { animation: none; }
+}
+
+/* 花朵容器铺满整页(顶栏之下)，绝对定位放置每朵花——depthScore(时间+重要度
+   混合，见 MurmursPage.tsx)决定纵向"远景→近景"的落点，横向按车道散开。
+   z-index:1 夹在涟漪画布(0)和焦散光纹(2)之间：花沉在水里，光洒在花上。 */
 .murmurs-stream {
   position: absolute;
   inset: 0;
+  z-index: 1;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
-/* 外层 button 只管"定位 + 入场动画"，内层 .murmurs-flower__bob 只管"持续
-   漂浮的晃动"——两层各自一份 transform，不会像 balance-island 数额那样
-   互相覆盖(同一个元素上 transform 只有一份计算值，静态定位会被动画整个替掉)。 */
+/* 第六轮起花朵完全静止(老婆原话"花朵沉入水里不要晃动")：原来的内层
+   .murmurs-flower__bob 晃动层连同 murmursFlowerBob keyframes 整个删掉，
+   入场动画也从"从上方飘落"改成"原地缓缓浮现"(murmursFlowerDrift 只剩
+   透明度/轻微放大，不再位移)——水在动(WebGL 涟漪+焦散)，花不动。 */
 .murmurs-flower {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -4813,15 +4889,14 @@ a {
      远超屏宽的巨型花。 */
   max-width: 96px;
   max-height: 96px;
-  /* 入场"从上游漂入": 从目标位置上方飘落到位、由透明显形——上游=远景=
-     画面偏上方向，跟 position 的"远/近"映射方向一致。按 index 错开延迟，
-     一朵接一朵地漂进来，不是齐刷刷同时冒出。真机验收要求"缓缓浮出水面"，
-     900ms 太快改成 2000ms，跟退场的 murmursFlowerExit 时长对称。 */
+  /* 入场"原地浮现"：花沉在水里不动(第六轮)，所以入场也不位移——只从透明
+     +略小缓缓显形到位，像从水底慢慢浮清晰。按 index 错开延迟，一朵接一朵，
+     不是齐刷刷同时冒出。2000ms 跟退场的 murmursFlowerExit 时长对称。 */
   animation: murmursFlowerDrift 2000ms ease-out backwards;
   animation-delay: var(--murmurs-drift-delay, 0ms);
 }
-.murmurs-flower:active .murmurs-flower__bob {
-  transform: scale(0.94);
+.murmurs-flower:active {
+  transform: translate(-50%, -50%) scale(0.94);
 }
 /* 密度轮换换下场时的"沉入水中"退场——组合选择器比单独 .murmurs-flower
    特异性更高，会整份覆盖上面那条 animation 简写(含 delay)。2000ms 要跟
@@ -4843,18 +4918,13 @@ a {
   filter: blur(1.5px);
   pointer-events: none;
 }
-.murmurs-flower__bob {
-  width: 100%;
-  height: 100%;
-  animation-name: murmursFlowerBob;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
-}
 /* "沉在水里"的静态观感(第四轮反馈，区别于轮换退场的"沉入水中"动画——
    这个是花朵平时安安静静漂着时就要有的效果，不是只在退场那一刻才有)：
    花朵下半部分用 mask 渐隐，露出底下的水色，看起来像下半截泡在水面下；
    再叠一点点降饱和度+轻微冷色调，避免花朵像贴纸一样"浮"在图片最上层、
-   跟水面全无关系。幅度都很轻，别把花本身的颜色改得认不出来。 */
+   跟水面全无关系。幅度都很轻，别把花本身的颜色改得认不出来。
+   注意：记忆花朵的 filter 实际由 JS inline 写(同一套值+按深度补 blur，
+   filter 只有一份计算值没法两边各写一半)，这里这份是给占位含苞花用的。 */
 .murmurs-flower__img {
   display: block;
   width: 100%;
@@ -4869,14 +4939,16 @@ a {
   pointer-events: none;
   opacity: 0.85;
 }
+/* to 里故意不写 opacity——远景花的常驻透明度是 JS inline 给的(0.78~1)，
+   写死 opacity:1 会在动画结束那一帧从 1 跳回 inline 值(远景花肉眼可见地
+   "闪"一下)；省略掉，浏览器自动从 0 补间到元素自己的底值，稳稳落位。 */
 @keyframes murmursFlowerDrift {
   from {
-    transform: translate(-50%, calc(-50% - 60px));
+    transform: translate(-50%, -50%) scale(0.9);
     opacity: 0;
   }
   to {
-    transform: translate(-50%, -50%);
-    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 /* "沉入水中"：透明度渐降 + 轻微 blur + 色调略偏蓝(sepia+hue-rotate(180deg)
@@ -4892,28 +4964,8 @@ a {
     filter: blur(4px) sepia(0.55) hue-rotate(180deg) saturate(1.6);
   }
 }
-/* 水面自然漂浮的小幅晃动——跟落予棠漂流物的 floatvicBob 同一个思路
-   (轻微位移+转动，不是大幅摆荡)，但独立一份 keyframe，不跨房间耦合。 */
-@keyframes murmursFlowerBob {
-  0%,
-  100% {
-    transform: translate(0, 0) rotate(0deg);
-  }
-  25% {
-    transform: translate(calc(var(--mfdx) * 0.6), calc(var(--mfdy) * -1)) rotate(calc(var(--mfrot) * 0.5));
-  }
-  50% {
-    transform: translate(var(--mfdx), calc(var(--mfdy) * -0.3)) rotate(var(--mfrot));
-  }
-  75% {
-    transform: translate(calc(var(--mfdx) * 0.3), var(--mfdy)) rotate(calc(var(--mfrot) * -0.4));
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .murmurs-flower {
-    animation: none;
-  }
-  .murmurs-flower__bob {
     animation: none;
   }
   .murmurs-flower.murmurs-flower--exiting {
