@@ -2,64 +2,60 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 // 倾棠予梦 Step 2——接棠予酿记忆数据。后端 /api/murmurs/flowers 把日记记忆
-// 映射成 {id,size,color,position,title,date,moodEmoji} 数组（60 秒内存缓存，
-// 详见 server/proxy.mjs），这里只管把这份数组画成溪流上的漂浮花朵。
+// 映射成 {id,size,position,title,date,moodLabel,valence,arousal} 数组
+// （60 秒内存缓存，详见 server/proxy.mjs），这里只管把这份数组画成溪流上
+// 的漂浮花朵。花色不走关键词，改由 valence/arousal 连续计算——见下方。
 
 type MurmursFlower = {
   id: string;
   size: number; // 0.4~1.0，来自 importance，越重要花越大
-  color: string; // 来自 mood/mood_emoji 的色系关键词
   position: number; // 0~1，按 created_at 排序：0=最旧/最远，1=最新/最近
   title: string;
   date: string | null;
-  moodEmoji?: string | null;
+  moodLabel?: string | null; // 纯文字心情词(平静/开心/伤心…)，弹出卡片用，不参与花色
+  valence: number; // 实测约 -0.3~0.8，负=冷色调，正=暖色调
+  arousal: number; // 实测约 0.3~0.75，越高饱和度/明度越强
 };
 
-// 色系关键词 → 素材池。花色关键词跟后端 MOOD_COLOR_MAP 手动对应，覆盖不到
-// 的颜色一律落到薰衣草紫那一池（DEFAULT_POOL），不会因为没见过的颜色词
-// 就漏画一朵花。同一色系里有好几种花/两种松紧状态，用 id 哈希稳定挑一张——
-// 同一条记忆刷新页面还是那张图，不会一惊一乍地换脸。
-const FLOWER_ASSET_POOLS: Record<string, string[]> = {
-  pink: [
-    'flower-cosmos-pink-1.webp',
-    'flower-cosmos-pink-2.webp',
-    'flower-ranunculus-pink-1.webp',
-    'flower-ranunculus-pink-2.webp',
-    'flower-pansy-pink-1.webp',
-    'flower-pansy-pink-2.webp',
-  ],
-  blush: ['flower-peony-pearl-blush-1.webp', 'flower-peony-pearl-blush-2.webp'],
-  gold: [
-    'flower-lotus-gold-bloom.webp',
-    'flower-lotus-gold-bloom-bud.webp',
-    'flower-ranunculus-yellow-1.webp',
-    'flower-ranunculus-yellow-2.webp',
-    'flower-cosmos-cream-1.webp',
-    'flower-cosmos-cream-2.webp',
-  ],
-  blue: ['flower-cosmos-blue-1.webp', 'flower-cosmos-blue-2.webp'],
-  lavender: [
-    'flower-lily-lavender-bloom.webp',
-    'flower-cosmos-lavender-1.webp',
-    'flower-cosmos-lavender-2.webp',
-    'flower-peony-pearl-lilac-1.webp',
-    'flower-peony-pearl-lilac-2.webp',
-  ],
-  white: [
-    'flower-cosmos-white-1.webp',
-    'flower-cosmos-white-2.webp',
-    'flower-peony-pearl-white-1.webp',
-    'flower-peony-pearl-white-2.webp',
-  ],
-  lilac: [
-    'flower-ranunculus-lilac-1.webp',
-    'flower-ranunculus-lilac-2.webp',
-    'flower-pansy-violet-1.webp',
-    'flower-pansy-violet-2.webp',
-    'flower-iris-bloom.webp',
-  ],
+// 花色改用连续色谱：valence 决定色相(冷→暖)，arousal 决定饱和度/明度。
+// 32 张素材按肉眼估的 HSL 标了色标——不是量出来的像素值，只是"这朵花大概
+// 长这个色系"的粗估，允许有偏差，上线后棠棠看到明显不对可以再调具体某一张。
+// 色相刻意绕开纯绿(现有素材也没有绿花)，从冷的蓝紫一路转到暖的粉橙。
+const FLOWER_COLOR_TAGS: Record<string, { h: number; s: number; l: number }> = {
+  'flower-lily-lavender-bloom.webp': { h: 265, s: 40, l: 78 },
+  'flower-lily-periwinkle-bloom-bud.webp': { h: 235, s: 45, l: 80 },
+  'flower-lotus-gold-bloom.webp': { h: 40, s: 65, l: 72 },
+  'flower-lotus-gold-bloom-bud.webp': { h: 35, s: 60, l: 76 },
+  'flower-iris-bloom.webp': { h: 255, s: 50, l: 55 },
+  'flower-iris-half-open.webp': { h: 250, s: 45, l: 62 },
+  'flower-ranunculus-yellow-1.webp': { h: 48, s: 55, l: 80 },
+  'flower-ranunculus-yellow-2.webp': { h: 45, s: 50, l: 84 },
+  'flower-ranunculus-pink-1.webp': { h: 340, s: 55, l: 78 },
+  'flower-ranunculus-pink-2.webp': { h: 335, s: 60, l: 76 },
+  'flower-ranunculus-lilac-1.webp': { h: 280, s: 40, l: 78 },
+  'flower-ranunculus-lilac-2.webp': { h: 275, s: 38, l: 80 },
+  'flower-pansy-pink-1.webp': { h: 325, s: 55, l: 72 },
+  'flower-pansy-pink-2.webp': { h: 330, s: 50, l: 76 },
+  'flower-pansy-violet-1.webp': { h: 265, s: 50, l: 58 },
+  'flower-pansy-violet-2.webp': { h: 260, s: 48, l: 62 },
+  'flower-cosmos-blue-1.webp': { h: 205, s: 45, l: 80 },
+  'flower-cosmos-blue-2.webp': { h: 210, s: 42, l: 82 },
+  'flower-cosmos-cream-1.webp': { h: 42, s: 35, l: 88 },
+  'flower-cosmos-cream-2.webp': { h: 38, s: 32, l: 90 },
+  'flower-cosmos-lavender-1.webp': { h: 270, s: 35, l: 82 },
+  'flower-cosmos-lavender-2.webp': { h: 268, s: 38, l: 80 },
+  'flower-cosmos-pink-1.webp': { h: 345, s: 55, l: 80 },
+  'flower-cosmos-pink-2.webp': { h: 350, s: 50, l: 82 },
+  'flower-cosmos-white-1.webp': { h: 300, s: 10, l: 94 },
+  'flower-cosmos-white-2.webp': { h: 30, s: 8, l: 95 },
+  'flower-peony-pearl-white-1.webp': { h: 320, s: 15, l: 92 },
+  'flower-peony-pearl-white-2.webp': { h: 40, s: 12, l: 93 },
+  'flower-peony-pearl-lilac-1.webp': { h: 285, s: 35, l: 82 },
+  'flower-peony-pearl-lilac-2.webp': { h: 280, s: 38, l: 80 },
+  'flower-peony-pearl-blush-1.webp': { h: 15, s: 45, l: 84 },
+  'flower-peony-pearl-blush-2.webp': { h: 10, s: 48, l: 82 },
 };
-const DEFAULT_POOL = FLOWER_ASSET_POOLS.lavender;
+const FLOWER_FILES = Object.keys(FLOWER_COLOR_TAGS);
 
 // 空数据(还没有棠予酿记忆，或者 MCP/key 没配好)时的占位花——没有专门的
 // "纯含苞"素材，半开的鸢尾花是现有素材里最接近"含苞待放"的一张，先顶上。
@@ -71,9 +67,43 @@ function hashStr(s: string): number {
   return h;
 }
 
-function pickAssetSrc(color: string, id: string): string {
-  const pool = FLOWER_ASSET_POOLS[color] ?? DEFAULT_POOL;
-  const file = pool[hashStr(id) % pool.length];
+// valence(-0.3~0.8) → 色相：负值落在冷调蓝紫(约 225°)，正值转到暖调粉橙(约 20°/380°)，
+// 走"蓝→靛→紫→品红→粉→橙"这条不经过绿色的路径。
+function valenceToHue(valence: number): number {
+  const [lo, hi] = [-0.3, 0.8];
+  const t = Math.max(0, Math.min(1, (valence - lo) / (hi - lo)));
+  return (225 + t * (380 - 225)) % 360;
+}
+
+// arousal(0.3~0.75) → 饱和度/明度：越平静(低)越浅淡柔和，越强烈(高)越饱和鲜亮。
+function arousalToSatLight(arousal: number): { s: number; l: number } {
+  const [lo, hi] = [0.3, 0.75];
+  const t = Math.max(0, Math.min(1, (arousal - lo) / (hi - lo)));
+  return { s: 25 + t * (70 - 25), l: 85 - t * (85 - 55) };
+}
+
+function hueCircularDist(a: number, b: number): number {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+}
+
+// 按 valence/arousal 算出目标色，找 32 张素材里色标最接近的几张，
+// 再用 id 稳定哈希在候选里挑一张——同一条记忆刷新页面还是那张图，
+// 同时同一片色系里仍有花色/花型的自然差异，不会所有花都长一个样。
+function pickAssetSrc(valence: number, arousal: number, id: string): string {
+  const targetHue = valenceToHue(valence);
+  const { s: targetS, l: targetL } = arousalToSatLight(arousal);
+  const ranked = FLOWER_FILES.map((file) => {
+    const tag = FLOWER_COLOR_TAGS[file];
+    const dh = hueCircularDist(tag.h, targetHue) / 180; // 0~1
+    const ds = Math.abs(tag.s - targetS) / 100;
+    const dl = Math.abs(tag.l - targetL) / 100;
+    // 色相是 valence 的主要信号，权重给高一点；饱和度/明度权重相近。
+    const dist = dh * 2 + ds * 0.6 + dl * 0.6;
+    return { file, dist };
+  }).sort((a, b) => a.dist - b.dist);
+  const pool = ranked.slice(0, 5);
+  const file = pool[hashStr(id) % pool.length].file;
   return `${import.meta.env.BASE_URL}assets/murmurs/${file}`;
 }
 
@@ -90,7 +120,10 @@ const FAR_TOP_PERCENT = 20;
 const NEAR_TOP_PERCENT = 84;
 
 function FlowerBloom({ flower, index, onOpen }: { flower: MurmursFlower; index: number; onOpen: (f: MurmursFlower) => void }) {
-  const src = useMemo(() => pickAssetSrc(flower.color, flower.id), [flower.color, flower.id]);
+  const src = useMemo(
+    () => pickAssetSrc(flower.valence, flower.arousal, flower.id),
+    [flower.valence, flower.arousal, flower.id],
+  );
   const topPercent = FAR_TOP_PERCENT + flower.position * (NEAR_TOP_PERCENT - FAR_TOP_PERCENT);
   const jitterTop = (hashStr(`${flower.id}-y`) % 900) / 100 - 4.5; // ±4.5%
   const leftPercent = 8 + (hashStr(`${flower.id}-x`) % 8400) / 100; // 8%~92%
@@ -211,7 +244,7 @@ export function MurmursPage() {
             >
               ×
             </button>
-            {selected.moodEmoji ? <span className="murmurs-detail__mood">{selected.moodEmoji}</span> : null}
+            {selected.moodLabel ? <span className="murmurs-detail__mood">{selected.moodLabel}</span> : null}
             <span className="murmurs-detail__title">{selected.title}</span>
             <span className="murmurs-detail__date">{fmtDate(selected.date)}</span>
           </div>

@@ -4905,9 +4905,15 @@ a {
   padding: 4px;
 }
 .murmurs-detail__mood {
-  font-size: 2rem;
+  font-family: var(--round);
+  font-size: 0.72rem;
   line-height: 1;
-  margin-bottom: 4px;
+  color: #a06fd6;
+  background: rgba(180, 130, 220, 0.14);
+  padding: 3px 12px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
 }
 .murmurs-detail__title {
   font-family: "HuaXianZi", var(--display);

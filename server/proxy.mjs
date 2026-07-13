@@ -164,31 +164,16 @@ let _murmursFlowersCache = { at: 0, flowers: null };
 const MURMURS_CACHE_MS = Number(process.env.MURMURS_FLOWERS_CACHE_MS || 60_000);
 const MURMURS_LIMIT = 40;
 
-// mood / mood_emoji → 花色关键词。棠予酿这两个字段目前没有完整的取值文档，
-// 这里先覆盖常见的几种；识别不出的(新心情/大小写不同/没填)一律落到默认色，
-// 不会因为一个没见过的字符串就漏掉这朵花或报错。
-const MOOD_COLOR_MAP = {
-  happy: 'pink', joy: 'pink', joyful: 'pink', excited: 'pink', playful: 'pink',
-  love: 'blush', loving: 'blush', warm: 'blush', tender: 'blush', romantic: 'blush',
-  grateful: 'gold', thankful: 'gold', content: 'gold', satisfied: 'gold',
-  calm: 'blue', peaceful: 'blue', relaxed: 'blue', serene: 'blue',
-  nostalgic: 'lavender', wistful: 'lavender', thoughtful: 'lavender', reflective: 'lavender',
-  sad: 'white', melancholy: 'white', quiet: 'white', lonely: 'white',
-  proud: 'lilac', hopeful: 'lilac', determined: 'lilac',
-};
-const MOOD_EMOJI_COLOR_MAP = {
-  '😊': 'pink', '😄': 'pink', '🎉': 'pink',
-  '🥰': 'blush', '❤️': 'blush', '💕': 'blush', '💜': 'lavender',
-  '🙏': 'gold', '😌': 'gold',
-  '🌊': 'blue', '😢': 'white', '🥲': 'white',
-  '✨': 'lilac',
-};
-function moodToColor(mood, moodEmoji) {
-  const byMood = mood && MOOD_COLOR_MAP[String(mood).toLowerCase().trim()];
-  if (byMood) return byMood;
-  const byEmoji = moodEmoji && MOOD_EMOJI_COLOR_MAP[String(moodEmoji).trim()];
-  if (byEmoji) return byEmoji;
-  return 'lavender'; // 没识别出心情 → 落一个中性默认色，花不会因此消失
+// valence/arousal 实测范围(棠予酿真实数据校准)：没有这两个字段或不是有限数字时
+// 落到这个区间的中点，不让花色计算收到 NaN。
+const VALENCE_RANGE = [-0.3, 0.8];
+const AROUSAL_RANGE = [0.3, 0.75];
+const VALENCE_DEFAULT = (VALENCE_RANGE[0] + VALENCE_RANGE[1]) / 2;
+const AROUSAL_DEFAULT = (AROUSAL_RANGE[0] + AROUSAL_RANGE[1]) / 2;
+function clampedNumber(v, fallback, [lo, hi]) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(lo, Math.min(hi, n));
 }
 
 // importance(棠予酿量表 1~10)映射成 0.4~1.0 的缩放系数——最重要的记忆开得
@@ -222,13 +207,15 @@ async function fetchMurmursFlowersRaw() {
   return sorted.map((row, i) => ({
     id: String(row.id ?? i),
     size: importanceToSize(row.importance),
-    color: moodToColor(row.mood, row.mood_emoji),
     position: sorted.length > 1 ? Math.round((i / (sorted.length - 1)) * 1000) / 1000 : 1,
     title: String(row.title || '').trim() || '一段没有标题的心事',
     date: row.created_at || null,
-    // moodEmoji 没在原字段映射表里列出，但点击卡片要展示它——多带这一个
-    // 字段过去，不影响 {id,size,color,position,title,date} 这份约定。
-    moodEmoji: row.mood_emoji || null,
+    // 花色改由前端用 valence/arousal 连续计算，这里只透传原始数值。
+    valence: clampedNumber(row.valence, VALENCE_DEFAULT, VALENCE_RANGE),
+    arousal: clampedNumber(row.arousal, AROUSAL_DEFAULT, AROUSAL_RANGE),
+    // 心情文字字段是 mood_label（不是 mood）——只用于弹出卡片显示纯文字，
+    // 不参与花色、不渲染 emoji。
+    moodLabel: row.mood_label || null,
   }));
 }
 
