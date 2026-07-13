@@ -185,8 +185,8 @@ function perspectiveForFlower(flower: MurmursFlower) {
 // 现在改成 top 只由这朵花自己的 position + id 决定，跟 visible 里还有谁、
 // 有几个完全无关——同一朵花只要还在场上，left/top 永远是同一个值，不会因为
 // 别的花轮换而被连带挪动。
-const LANES = 5;
-const LANE_MARGIN_PERCENT = 10;
+const LANES = 8;
+const LANE_MARGIN_PERCENT = 8;
 
 function laneIndexFor(id: string): number {
   return hashStr(`${id}-lane`) % LANES;
@@ -199,19 +199,65 @@ function laneCenterPercent(lane: number): number {
 
 type FlowerLayout = { left: number; top: number };
 
-function layoutVisibleFlowers(visible: MurmursFlower[]): Map<string, FlowerLayout> {
+// 真机反馈(2026-07-13 第四轮)：车道+抖动只是"降低碰撞概率"，12 朵里总有
+// 几朵哈希到同一车道又刚好 position 很接近，看真机截图确实叠在一起了。
+// 加一道最小间距的松弛(relaxation)：先按每朵花自己的 id/position 算出
+// "理想位置"(不依赖同屏其它花，这部分保持跟之前一样稳定)，再对这批理想
+// 位置跑几轮"太近就互相推开"——这一步会依赖同屏都有谁，轮换时理论上可能
+// 让个别花的位置微调，所以配合 CSS 里 .murmurs-flower 的 top/left transition
+// 一起用：位置真的变了也是缓慢过渡过去，不是瞬间跳位置(那才是上一轮真正
+// 的"闪烁"成因，不是"位置会不会变"本身)。
+// 纵向 1% 对应的真实像素比横向 1% 大(竖屏 window 更高)，粗略按 0.5 折算成
+// "横向等效"再算距离，不追求跟每台设备像素完全对应，只求别肉眼叠一起。
+const MIN_SEPARATION_PERCENT = 15;
+const VERTICAL_SCALE = 0.5;
+
+function resolveOverlaps(base: { id: string; left: number; top: number }[]): Map<string, FlowerLayout> {
+  const pts = base.map((p) => ({ ...p }));
+  for (let iter = 0; iter < 4; iter++) {
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        const a = pts[i];
+        const b = pts[j];
+        const dx = b.left - a.left;
+        const dy = (b.top - a.top) * VERTICAL_SCALE;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 0.0001;
+        if (dist < MIN_SEPARATION_PERCENT) {
+          const push = (MIN_SEPARATION_PERCENT - dist) / 2;
+          const ux = dx / dist;
+          const uy = dy / dist;
+          a.left -= ux * push;
+          a.top -= (uy * push) / VERTICAL_SCALE;
+          b.left += ux * push;
+          b.top += (uy * push) / VERTICAL_SCALE;
+        }
+      }
+    }
+  }
   const layout = new Map<string, FlowerLayout>();
-  for (const f of visible) {
+  for (const p of pts) {
+    layout.set(p.id, {
+      left: Math.max(4, Math.min(96, p.left)),
+      top: Math.max(FAR_TOP_PERCENT, Math.min(NEAR_TOP_PERCENT, p.top)),
+    });
+  }
+  return layout;
+}
+
+function layoutVisibleFlowers(visible: MurmursFlower[]): Map<string, FlowerLayout> {
+  const base = visible.map((f) => {
     const lane = laneIndexFor(f.id);
     const depthT = clamp01(f.position);
     const top = FAR_TOP_PERCENT + depthT * (NEAR_TOP_PERCENT - FAR_TOP_PERCENT);
     const jitterTop = (hashStr(`${f.id}-y`) % 400) / 100 - 2; // ±2%，车道已经分开了，小抖动够用
     const jitterLeft = (hashStr(`${f.id}-x`) % 500) / 100 - 2.5; // ±2.5%
-    layout.set(f.id, {
+    return {
+      id: f.id,
       left: laneCenterPercent(lane) + jitterLeft,
       top: Math.max(FAR_TOP_PERCENT, Math.min(NEAR_TOP_PERCENT, top + jitterTop)),
-    });
-  }
+    };
+  });
+  const layout = resolveOverlaps(base);
   return layout;
 }
 

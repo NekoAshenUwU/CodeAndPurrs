@@ -4805,6 +4805,11 @@ a {
      远超屏宽的巨型花。 */
   max-width: 96px;
   max-height: 96px;
+  /* 第四轮加了"太挤就互相推开"的碰撞松弛(MurmursPage.tsx 里的
+     resolveOverlaps)——同屏轮换时理论上会让个别花的 top/left 微调，加这条
+     transition 保证那种微调是缓慢挪过去，不是瞬间跳位置(瞬间跳位置才是
+     上一轮真正的"闪烁"成因)。 */
+  transition: top 1.4s ease, left 1.4s ease;
   /* 入场"从上游漂入": 从目标位置上方飘落到位、由透明显形——上游=远景=
      画面偏上方向，跟 position 的"远/近"映射方向一致。按 index 错开延迟，
      一朵接一朵地漂进来，不是齐刷刷同时冒出。真机验收要求"缓缓浮出水面"，
@@ -4842,13 +4847,20 @@ a {
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
 }
+/* "沉在水里"的静态观感(第四轮反馈，区别于轮换退场的"沉入水中"动画——
+   这个是花朵平时安安静静漂着时就要有的效果，不是只在退场那一刻才有)：
+   花朵下半部分用 mask 渐隐，露出底下的水色，看起来像下半截泡在水面下；
+   再叠一点点降饱和度+轻微冷色调，避免花朵像贴纸一样"浮"在图片最上层、
+   跟水面全无关系。幅度都很轻，别把花本身的颜色改得认不出来。 */
 .murmurs-flower__img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
   pointer-events: none;
-  filter: drop-shadow(0 3px 7px rgba(60, 30, 100, 0.2));
+  filter: drop-shadow(0 3px 7px rgba(60, 30, 100, 0.2)) saturate(0.9) brightness(0.98) hue-rotate(-4deg);
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 58%, rgba(0, 0, 0, 0.45) 100%);
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 58%, rgba(0, 0, 0, 0.45) 100%);
 }
 .murmurs-flower--placeholder {
   pointer-events: none;
@@ -4925,15 +4937,20 @@ a {
    毛玻璃。第三轮反馈：第二轮那版透明度太高，字被背景(水面反光+花朵)糊得
    看不清——这版把底色不透明度、模糊半径都调高了一截，backdrop 那层也加深，
    两层叠加才压得住背景的高对比度，同时保留"玻璃"质感不是纯色卡片。 */
+/* 真机反馈(2026-07-13 第四轮)："弹窗缩小，最好比字体大一点就行"——原来
+   width:100%+max-width:320 让卡片不管文字多短都撑满 320px，一堆空白。
+   改成 width:max-content，卡片宽度跟着文字走，max-width 只用来给长标题
+   兜底换行，不再是"默认拉满"。 */
 .murmurs-detail {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  max-width: 320px;
-  width: 100%;
-  padding: 30px 26px 30px;
+  width: max-content;
+  max-width: 280px;
+  min-width: 150px;
+  padding: 28px 24px 30px;
   border-radius: 22px;
   background: linear-gradient(135deg, rgba(255, 246, 253, 0.68), rgba(226, 208, 248, 0.62));
   backdrop-filter: blur(28px) saturate(140%);
@@ -4960,11 +4977,17 @@ a {
   cursor: pointer;
   padding: 0;
 }
-/* 标题/心情/日期统一用页面标题同款字体(HuaXianZi，跟 .chat-head 一致)，
-   只用字号/字重分级，不再多种字体混排。文字都加一点白色 text-shadow"托底"，
-   卡片本身半透明，托底能让字在背景亮/暗交界处也不糊。 */
+/* 字体统一(第四轮修正)：HuaXianZi 是给 App 固定 UI 文案用的精选子集(约
+   1210 字)，日记标题是完全自由的文字，实测"午怀扭矩递钻"这几个字都不在
+   子集里——浏览器会逐字 fallback 到系统字体，同一句话里字体忽好忽坏，
+   这正是"字体不统一"的真正原因，而且日记内容以后还会出现别的生字，
+   没法一个个补子集补完。改成标题/心情/日期都用 var(--display)（
+   ZCOOL KuaiLe 配 PingFang SC/微软雅黑兜底，全字库覆盖）——风格依然是
+   圆润可爱的中文字体，但保证同一句话里不会再半途换脸；只用字号/字重
+   分级，不再靠字体本身分级。文字都加一点白色 text-shadow"托底"，卡片
+   半透明，托底能让字在背景亮/暗交界处也不糊。 */
 .murmurs-detail__mood {
-  font-family: "HuaXianZi", var(--display);
+  font-family: var(--display);
   font-weight: 500;
   font-size: 0.74rem;
   line-height: 1;
@@ -4977,7 +5000,7 @@ a {
   margin-bottom: 2px;
 }
 .murmurs-detail__title {
-  font-family: "HuaXianZi", var(--display);
+  font-family: var(--display);
   font-weight: 700;
   font-size: 1.08rem;
   color: #3d3454;
@@ -4985,13 +5008,13 @@ a {
 }
 /* 日期改成右下角落款式角标(不再单独占一行)：同款字体、字号缩到题字的
    0.55 倍左右、颜色减淡、位置往下沉一点，像照片角落烧录的日期戳。格式是
-   YYMMDD 六位数字(fmtDateStamp 拼的)，不用 Unicode 上下标字符，纯靠
-   font-size + 定位实现"缩小下沉"，不会有字体 fallback 不一致的问题。 */
+   YYMMDD 六位数字(fmtDateStamp 拼的)，纯数字，不受上面那个子集问题影响，
+   不用 Unicode 上下标字符，纯靠 font-size + 定位实现"缩小下沉"。 */
 .murmurs-detail__stamp {
   position: absolute;
   right: 18px;
   bottom: 14px;
-  font-family: "HuaXianZi", var(--display);
+  font-family: var(--display);
   font-weight: 400;
   /* .murmurs-detail__title 是 1.08rem 的兄弟元素(不是父元素)，em 在这里
      没法直接继承 title 的字号——用固定 rem 值手算 1.08rem × 0.55 ≈ 0.6rem。 */
