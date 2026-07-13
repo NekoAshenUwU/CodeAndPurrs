@@ -109,9 +109,10 @@
   font-display: swap;
 }
 @font-face {
-  font-family: "TianTianQuanFull"; /* 字魂甜甜圈(盖世可爱甜甜圈) 全字库(7538字/GB2312级覆盖) ·
-    倾棠予梦弹窗正文——日记标题是自由输入，留全字库，跟 RiFuYiRi 落予棠正文同一个道理 */
-  src: url("/fonts/tiantianquan-diary.woff2") format("woff2");
+  font-family: "GaiShiKeAiTianTianQuan"; /* Aa盖世可爱甜甜圈(非商业使用) 全字库(22051字) ·
+    倾棠予梦弹窗正文——日记标题是自由输入，留全字库，跟 RiFuYiRi 落予棠正文同一个道理。
+    (上一轮错拿了"字魂甜甜圈"那份同名不同款的字体，这份是老婆重新发的正确文件) */
+  src: url("/fonts/gaishi-tiantianquan-diary.woff2") format("woff2");
   font-weight: 400;
   font-display: swap;
 }
@@ -4979,18 +4980,15 @@ a {
   cursor: pointer;
   padding: 0;
 }
-/* 字体统一(第五轮)：HuaXianZi 是给 App 固定 UI 文案用的精选子集(约1210字)，
-   日记标题是完全自由的文字，实测"午怀扭矩递钻"这几个字都不在子集里——
-   浏览器会逐字 fallback 到系统字体，同一句话里字体忽好忽坏。第四轮先改成
-   var(--display) 保证不再混排，这轮按要求换成"盖世可爱甜甜圈"(字魂甜甜圈)——
-   之前只切过两份窄子集(誓言用的 13 字 tiantianquan-vow / 余额数字用的
-   tiantianquan-amount)，都不够日记自由文本用。从 scratchpad 里还留着的
-   原始完整字库文件重新切了一份全字库(tiantianquan-diary.woff2，7538字，
-   GB2312 级覆盖，实测"午怀扭矩递钻"等生字全部命中)，命名 TianTianQuanFull，
-   跟 RiFuYiRi(落予棠正文全字库)同一个思路——自由输入的文字就得留全字库，
-   不能再切窄子集，不然换个词又不认得。只用字号/字重分级，不靠字体分级。 */
+/* 字体统一：HuaXianZi 是给 App 固定 UI 文案用的精选子集(约1210字)，日记
+   标题是完全自由的文字，实测"午怀扭矩递钻"这几个字都不在子集里——浏览器
+   会逐字 fallback 到系统字体，同一句话里字体忽好忽坏。改成"盖世可爱甜甜圈"
+   (Aa盖世可爱甜甜圈，全字库 22051 字)——第一次误拿了"字魂甜甜圈"那份
+   同名不同款的字体(scratchpad 里刚好也有份叫 TianTianQuan 的文件，名字
+   撞了)，老婆重新发了正确文件才改对。跟 RiFuYiRi(落予棠正文全字库)同一个
+   思路——自由输入的文字就得留全字库，不能切窄子集。只用字号/字重分级。 */
 .murmurs-detail__mood {
-  font-family: "TianTianQuanFull", var(--display);
+  font-family: "GaiShiKeAiTianTianQuan", var(--display);
   font-weight: 500;
   font-size: 0.74rem;
   line-height: 1;
@@ -5003,7 +5001,7 @@ a {
   margin-bottom: 2px;
 }
 .murmurs-detail__title {
-  font-family: "TianTianQuanFull", var(--display);
+  font-family: "GaiShiKeAiTianTianQuan", var(--display);
   font-weight: 700;
   font-size: 1.08rem;
   color: #3d3454;
@@ -5017,7 +5015,7 @@ a {
   position: absolute;
   right: 18px;
   bottom: 14px;
-  font-family: "TianTianQuanFull", var(--display);
+  font-family: "GaiShiKeAiTianTianQuan", var(--display);
   font-weight: 400;
   /* .murmurs-detail__title 是 1.08rem 的兄弟元素(不是父元素)，em 在这里
      没法直接继承 title 的字号——用固定 rem 值手算 1.08rem × 0.55 ≈ 0.6rem。 */
