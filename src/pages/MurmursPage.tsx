@@ -239,48 +239,79 @@ function laneCenterPercent(lane: number): number {
 
 type FlowerLayout = { left: number; top: number };
 
-// 真机反馈踩过两轮坑才定下这个方案："花朵会瞬移/闪烁"：
+// 把 px 尺寸换算成百分比坐标时用的竖屏基准(真机验收都在手机上)。故意不读
+// 真实 viewport——坐标必须纯由数据决定(转屏/resize/刷新都不重算不跳动)，
+// 基准偏差只影响"间距余量"，屏幕更宽时只会更松，方向是安全的。
+const LAYOUT_BASE_W = 400;
+const LAYOUT_BASE_H = 850;
+// 碰撞半径的余量系数：1.0=刚好贴边，1.12=留 12% 呼吸缝。
+const COLLISION_PAD = 1.12;
+
+// 真机反馈踩过两轮坑才定下"全局一次性分配坐标"这个方案："花朵会瞬移/闪烁"：
 // - 第二轮：按"同车道内当前排第几个"算 top，排名随同屏花朵增减而变，
 //   轮换时没换掉的花也被连带重排。
 // - 第四轮：改成"同屏花朵互相推开"的松弛算法，配 CSS transition 想让位移
 //   变平滑，但松弛结果依然取决于"此刻同屏是谁"，真机截图看效果还是像瞬移。
-// 这轮换根本思路：不再"每次同屏渲染时临时算位置"，改成对【全量 flowers
-// 数组】一次性分配坐标——只要 flowers(从后端拉回来的原始数组)不变，每朵花
-// 的坐标就永远不变，轮换只决定"现在画不画这朵花"，完全碰不到坐标。"同一朵
-// 花位置不变"从"实测巧合"变成"数学上不可能变"，不再需要 CSS transition 兜底。
+// 根本思路：不再"每次同屏渲染时临时算位置"，改成对【全量 flowers 数组】
+// 一次性分配坐标——只要 flowers(从后端拉回来的原始数组)不变，每朵花的坐标
+// 就永远不变，轮换只决定"现在画不画这朵花"，完全碰不到坐标。
 //
-// 具体分配：先按 depthScore(时间+重要度混合，见上)从远到近排一遍，按名次
-// 分进 rowBuckets 个"名次桶"里，桶序号天然对应"远→近"——桶排序和 top 都用
-// 同一个 depthScore，同一桶里的花落点也挨着，车道防碰撞才真正防得住；
-// 同一个桶内部用哈希+线性探测抢 lane(横向车道)，抢到不同车道的保证不会叠
-// 在一起——这个探测也是对全量数组跑一次，不受"这一刻同屏是谁"影响。
+// 第七轮(2026-07-13 真机反馈"花朵不要叠一起")把"车道占用表"升级成真正的
+// 尺寸感知碰撞检测：老方案只保证"同名次桶内不同车道"，但车道间距(约 10.5%
+// 屏宽)比近景花的直径(96px≈24% 屏宽)小得多——相邻车道/相邻名次桶照样叠。
+// 新方案按 depthScore 从远到近逐朵落位：每朵花生成一批候选点(自己的深度
+// top ± 台阶 × 8 条车道，顺序由 id 哈希决定所以依然确定性)，用"两朵花
+// 半径之和"的椭圆距离对已落位的全量花做碰撞检查，取第一个完全不碰的候选；
+// 全都碰(花太多水面太挤)就退而求其次拿"离邻居最远"的那个候选——不会有
+// 硬保证下的死循环，挤的时候也只是贴得近，不会精确叠死在同一点。
 function buildGlobalLayout(flowers: MurmursFlower[]): Map<string, FlowerLayout> {
-  const n = flowers.length;
   const layout = new Map<string, FlowerLayout>();
-  if (n === 0) return layout;
+  if (flowers.length === 0) return layout;
   const byDepth = [...flowers].sort(
     (a, b) => depthScoreForFlower(a) - depthScoreForFlower(b) || hashStr(a.id) - hashStr(b.id),
   );
-  const rowBuckets = Math.max(1, Math.min(n, ROTATION_MAX_VISIBLE));
-  const laneTaken: boolean[][] = Array.from({ length: rowBuckets }, () => Array(LANES).fill(false));
-  byDepth.forEach((f, rank) => {
-    const row = Math.min(rowBuckets - 1, Math.floor((rank / n) * rowBuckets));
-    let lane = hashStr(`${f.id}-lane`) % LANES;
-    let tries = 0;
-    while (laneTaken[row][lane] && tries < LANES) {
-      lane = (lane + 1) % LANES;
-      tries += 1;
-    }
-    laneTaken[row][lane] = true;
+  const placed: { x: number; y: number; rx: number; ry: number }[] = [];
+  // top 候选台阶：优先待在自己 depthScore 对应的深度，实在挤不下才上下挪。
+  const DY_STEPS = [0, 2.5, -2.5, 5, -5, 7.5, -7.5];
+  for (const f of byDepth) {
+    const { sizePx, squashY } = perspectiveForFlower(f);
+    const rx = ((sizePx / 2) / LAYOUT_BASE_W) * 100 * COLLISION_PAD;
+    const ry = (((sizePx * squashY) / 2) / LAYOUT_BASE_H) * 100 * COLLISION_PAD;
     const depthT = depthScoreForFlower(f);
-    const top = FAR_TOP_PERCENT + depthT * (NEAR_TOP_PERCENT - FAR_TOP_PERCENT);
+    const baseTop = FAR_TOP_PERCENT + depthT * (NEAR_TOP_PERCENT - FAR_TOP_PERCENT);
     const jitterTop = (hashStr(`${f.id}-y`) % 300) / 100 - 1.5; // ±1.5%
-    const jitterLeft = (hashStr(`${f.id}-x`) % 300) / 100 - 1.5; // ±1.5%，车道已经分开了，小抖动够用
-    layout.set(f.id, {
-      left: Math.max(4, Math.min(96, laneCenterPercent(lane) + jitterLeft)),
-      top: Math.max(FAR_TOP_PERCENT, Math.min(NEAR_TOP_PERCENT, top + jitterTop)),
-    });
-  });
+    const jitterLeft = (hashStr(`${f.id}-x`) % 300) / 100 - 1.5; // ±1.5%
+    const startLane = hashStr(`${f.id}-lane`) % LANES;
+    let best: FlowerLayout = { left: 50, top: baseTop };
+    let bestClearance = -Infinity;
+    let found = false;
+    for (const dy of DY_STEPS) {
+      for (let li = 0; li < LANES && !found; li++) {
+        const lane = (startLane + li) % LANES;
+        const x = Math.max(4, Math.min(96, laneCenterPercent(lane) + jitterLeft));
+        const y = Math.max(
+          FAR_TOP_PERCENT,
+          Math.min(NEAR_TOP_PERCENT, baseTop + dy + jitterTop),
+        );
+        // 到最近邻居的归一化椭圆距离：>=1 表示连呼吸缝都没碰到。
+        let clearance = Infinity;
+        for (const p of placed) {
+          const nx = (x - p.x) / (rx + p.rx);
+          const ny = (y - p.y) / (ry + p.ry);
+          const d = Math.hypot(nx, ny);
+          if (d < clearance) clearance = d;
+        }
+        if (clearance > bestClearance) {
+          bestClearance = clearance;
+          best = { left: x, top: y };
+        }
+        if (clearance >= 1) found = true;
+      }
+      if (found) break;
+    }
+    placed.push({ x: best.left, y: best.top, rx, ry });
+    layout.set(f.id, best);
+  }
   return layout;
 }
 
@@ -305,9 +336,22 @@ function FlowerBloom({
     () => perspectiveForFlower(flower),
     [flower],
   );
-  // 第六轮起花朵完全静止(老婆原话"花朵沉入水里不要晃动")：原来的 idle bob
-  // 晃动层整个删掉，水的"活"感全部交给 WebGL 涟漪 + 焦散 + 星光这三层水面
-  // 效果——花是沉在水里的记忆，安安静静躺着；水在动，花不动。
+  // 晃动的度走过一个来回：第六轮"完全静止"，第七轮老婆反馈"可以有轻微的
+  // 晃动感，随着水波晃动"——加回一层 sway，但跟被删掉的旧 bob 是两个量级：
+  // 旧 bob 位移 5~15px/转 2~5°/周期 3.4~6s(像漂在浪里)，这版 2~4px/
+  // 0.8~1.8°/周期 6.8~10s(像沉在水里被水波轻轻带动)。参数用 id 哈希算，
+  // 不用 Math.random——同一朵花每次出场晃的节奏都一样，确定性跟坐标同一个
+  // 待遇。
+  const sway = useMemo(
+    () => ({
+      duration: 6800 + (hashStr(`${flower.id}-swd`) % 3200),
+      delay: -(hashStr(`${flower.id}-swp`) % 8000),
+      dx: 2 + (hashStr(`${flower.id}-swx`) % 20) / 10, // 2~4px
+      dy: 1.2 + (hashStr(`${flower.id}-swy`) % 12) / 10, // 1.2~2.4px
+      rot: 0.8 + (hashStr(`${flower.id}-swr`) % 10) / 10, // 0.8~1.8°
+    }),
+    [flower.id],
+  );
   return (
     <button
       type="button"
@@ -331,21 +375,35 @@ function FlowerBloom({
         style={{ opacity: 0.35 + depthT * 0.4 }}
         aria-hidden="true"
       />
-      <img
-        className="murmurs-flower__img"
-        src={src}
-        alt=""
-        loading="lazy"
-        style={{
-          transform: `scaleY(${squashY})`,
-          // 远景花隔的水厚，按深度补一点模糊；基础的"泡在水里"降饱和/冷色调
-          // 跟 global.css 里 .murmurs-flower__img 的静态 filter 保持同一套值，
-          // inline 写全是因为 filter 只有一份计算值，没法 CSS+inline 各写一半。
-          filter: `drop-shadow(0 3px 7px rgba(60, 30, 100, 0.2)) saturate(0.9) brightness(0.98) hue-rotate(-4deg)${
-            blurPx > 0.05 ? ` blur(${blurPx.toFixed(2)}px)` : ''
-          }`,
-        }}
-      />
+      <div
+        className="murmurs-flower__sway"
+        style={
+          {
+            animationDuration: `${sway.duration}ms`,
+            animationDelay: `${sway.delay}ms`,
+            '--msdx': `${sway.dx.toFixed(1)}px`,
+            '--msdy': `${sway.dy.toFixed(1)}px`,
+            '--msrot': `${sway.rot.toFixed(1)}deg`,
+          } as React.CSSProperties
+        }
+      >
+        <img
+          className="murmurs-flower__img"
+          src={src}
+          alt=""
+          loading="lazy"
+          style={{
+            transform: `scaleY(${squashY})`,
+            // 第七轮"尽量还原花朵的颜色"：之前叠的 saturate(0.9)/brightness
+            // (0.98)/hue-rotate(-4deg) 全部去掉，只留投影和远景按深度补的
+            // 一点水雾模糊——"沉在水里"的感觉交给下半渐隐 mask + 焦散光纹，
+            // 不再动花本身的颜色。
+            filter: `drop-shadow(0 3px 7px rgba(60, 30, 100, 0.2))${
+              blurPx > 0.05 ? ` blur(${blurPx.toFixed(2)}px)` : ''
+            }`,
+          }}
+        />
+      </div>
     </button>
   );
 }
