@@ -4773,13 +4773,152 @@ a {
   background: var(--chat-bg-image, url("/rooms/sweetie-pocket-bg.webp")) center / cover no-repeat;
 }
 
-/* 倾棠予梦页面——目前只有背景图+顶栏，别的都还没装修 */
+/* 倾棠予梦页面——背景图+顶栏+棠予酿记忆花朵，见下面 .murmurs-stream */
 .murmurs-page {
   position: relative;
   width: 100%;
   height: 100vh;
   height: 100dvh;
   background: url("/rooms/murmurs-bg.webp") center / cover no-repeat;
+  overflow: hidden;
+}
+
+/* 花朵容器铺满整页(顶栏之下)，绝对定位放置每朵花——position 字段决定
+   纵向"远景(旧记忆)→近景(新记忆)"的落点，横向随机散开。 */
+.murmurs-stream {
+  position: absolute;
+  inset: 0;
+}
+/* 外层 button 只管"定位 + 入场动画"，内层 .murmurs-flower__bob 只管"持续
+   漂浮的晃动"——两层各自一份 transform，不会像 balance-island 数额那样
+   互相覆盖(同一个元素上 transform 只有一份计算值，静态定位会被动画整个替掉)。 */
+.murmurs-flower {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  /* 入场"从上游漂入": 从目标位置上方飘落到位、由透明显形——上游=远景=
+     画面偏上方向，跟 position 的"远/近"映射方向一致。按 index 错开延迟，
+     一朵接一朵地漂进来，不是齐刷刷同时冒出。 */
+  animation: murmursFlowerDrift 900ms ease-out backwards;
+  animation-delay: var(--murmurs-drift-delay, 0ms);
+}
+.murmurs-flower:active .murmurs-flower__bob {
+  transform: scale(0.94);
+}
+.murmurs-flower__bob {
+  width: 100%;
+  height: 100%;
+  animation-name: murmursFlowerBob;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+.murmurs-flower__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 7px rgba(60, 30, 100, 0.2));
+}
+.murmurs-flower--placeholder {
+  pointer-events: none;
+  opacity: 0.85;
+}
+@keyframes murmursFlowerDrift {
+  from {
+    transform: translate(-50%, calc(-50% - 48px));
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+  }
+}
+/* 水面自然漂浮的小幅晃动——跟落予棠漂流物的 floatvicBob 同一个思路
+   (轻微位移+转动，不是大幅摆荡)，但独立一份 keyframe，不跨房间耦合。 */
+@keyframes murmursFlowerBob {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(calc(var(--mfdx) * 0.6), calc(var(--mfdy) * -1)) rotate(calc(var(--mfrot) * 0.5));
+  }
+  50% {
+    transform: translate(var(--mfdx), calc(var(--mfdy) * -0.3)) rotate(var(--mfrot));
+  }
+  75% {
+    transform: translate(calc(var(--mfdx) * 0.3), var(--mfdy)) rotate(calc(var(--mfrot) * -0.4));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .murmurs-flower {
+    animation: none;
+  }
+  .murmurs-flower__bob {
+    animation: none;
+  }
+}
+
+/* 记忆卡片弹层——跟落予棠 .sweetie-detail 同一套视觉语言，但独立一份类名，
+   两个房间互不耦合，以后单独改样式不会互相影响。 */
+.murmurs-detail-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(40, 20, 60, 0.35);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  padding: 24px;
+}
+.murmurs-detail {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 320px;
+  width: 100%;
+  padding: 28px 24px 22px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 40px rgba(60, 30, 100, 0.25);
+  text-align: center;
+}
+.murmurs-detail__x {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: #9c86c4;
+  cursor: pointer;
+  padding: 4px;
+}
+.murmurs-detail__mood {
+  font-size: 2rem;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.murmurs-detail__title {
+  font-family: "HuaXianZi", var(--display);
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+.murmurs-detail__date {
+  font-family: var(--round);
+  font-size: 0.76rem;
+  color: #9c86c4;
+  letter-spacing: 0.03em;
 }
 /* ---------- 余额浮岛面板：新图是完整水晶浮岛场景(男孩+雪豹/女孩+小猫)，
    头顶一圈项链状云环，环心是真透明抠图(不是实心云)，数字叠在环心那块空地上 ---------- */

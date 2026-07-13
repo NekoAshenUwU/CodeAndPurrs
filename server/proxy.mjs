@@ -156,6 +156,100 @@ async function loadDiaryComposed() {
   return [tang, local].filter(Boolean).join('\n\n---\n\n');
 }
 
+// ---------- 倾棠予梦 · 把棠予酿的日记记忆映射成漂浮花朵(/api/murmurs/flowers) ----------
+// 复用跟 fetchTangDiary 完全同一把 TANG_INTERNAL_KEY / TANG_MCP_BASE_URL——
+// 这俩已经在 process.loadEnvFile()(文件最顶部)加载进 process.env 了,直接读，
+// 不额外引入第二份 key、不硬编码任何密钥。
+let _murmursFlowersCache = { at: 0, flowers: null };
+const MURMURS_CACHE_MS = Number(process.env.MURMURS_FLOWERS_CACHE_MS || 60_000);
+const MURMURS_LIMIT = 40;
+
+// mood / mood_emoji → 花色关键词。棠予酿这两个字段目前没有完整的取值文档，
+// 这里先覆盖常见的几种；识别不出的(新心情/大小写不同/没填)一律落到默认色，
+// 不会因为一个没见过的字符串就漏掉这朵花或报错。
+const MOOD_COLOR_MAP = {
+  happy: 'pink', joy: 'pink', joyful: 'pink', excited: 'pink', playful: 'pink',
+  love: 'blush', loving: 'blush', warm: 'blush', tender: 'blush', romantic: 'blush',
+  grateful: 'gold', thankful: 'gold', content: 'gold', satisfied: 'gold',
+  calm: 'blue', peaceful: 'blue', relaxed: 'blue', serene: 'blue',
+  nostalgic: 'lavender', wistful: 'lavender', thoughtful: 'lavender', reflective: 'lavender',
+  sad: 'white', melancholy: 'white', quiet: 'white', lonely: 'white',
+  proud: 'lilac', hopeful: 'lilac', determined: 'lilac',
+};
+const MOOD_EMOJI_COLOR_MAP = {
+  '😊': 'pink', '😄': 'pink', '🎉': 'pink',
+  '🥰': 'blush', '❤️': 'blush', '💕': 'blush', '💜': 'lavender',
+  '🙏': 'gold', '😌': 'gold',
+  '🌊': 'blue', '😢': 'white', '🥲': 'white',
+  '✨': 'lilac',
+};
+function moodToColor(mood, moodEmoji) {
+  const byMood = mood && MOOD_COLOR_MAP[String(mood).toLowerCase().trim()];
+  if (byMood) return byMood;
+  const byEmoji = moodEmoji && MOOD_EMOJI_COLOR_MAP[String(moodEmoji).trim()];
+  if (byEmoji) return byEmoji;
+  return 'lavender'; // 没识别出心情 → 落一个中性默认色，花不会因此消失
+}
+
+// importance(棠予酿量表 1~10)映射成 0.4~1.0 的缩放系数——最重要的记忆开得
+// 最大朵，不重要的偏小但留了下限(0.4)，不会小到看不见。
+function importanceToSize(importance) {
+  const n = Number(importance);
+  const clamped = Number.isFinite(n) ? Math.max(1, Math.min(10, n)) : 5;
+  return Math.round((0.4 + (clamped - 1) * (0.6 / 9)) * 100) / 100;
+}
+
+async function fetchMurmursFlowersRaw() {
+  const key = (process.env.TANG_INTERNAL_KEY || '').trim();
+  if (!key) {
+    console.warn('[murmurs] TANG_INTERNAL_KEY 未配置，倾棠予梦花朵接口返回空数组(前端应显示含苞占位花)');
+    return [];
+  }
+  const base = process.env.TANG_MCP_BASE_URL || 'http://127.0.0.1:8890';
+  const r = await fetch(`${base}/internal/diary/list?limit=${MURMURS_LIMIT}`, {
+    headers: { 'X-Internal-Key': key },
+    signal: AbortSignal.timeout(4000), // 别让页面加载被棠予酿卡住
+  });
+  if (!r.ok) throw new Error(`棠予酿 diary/list 返回 ${r.status}`);
+  const rows = await r.json();
+  if (!Array.isArray(rows)) return [];
+
+  // position 按 created_at 从旧到新排序(旧记忆越飘越远、新记忆在前)，
+  // 归一化成 0~1：0=最旧/最远，1=最新/最近——具体落到屏幕哪个像素由前端决定，
+  // 这里只负责给出稳定的相对顺序。
+  const sorted = [...rows].sort((a, b) => (Date.parse(a?.created_at) || 0) - (Date.parse(b?.created_at) || 0));
+
+  return sorted.map((row, i) => ({
+    id: String(row.id ?? i),
+    size: importanceToSize(row.importance),
+    color: moodToColor(row.mood, row.mood_emoji),
+    position: sorted.length > 1 ? Math.round((i / (sorted.length - 1)) * 1000) / 1000 : 1,
+    title: String(row.title || '').trim() || '一段没有标题的心事',
+    date: row.created_at || null,
+    // moodEmoji 没在原字段映射表里列出，但点击卡片要展示它——多带这一个
+    // 字段过去，不影响 {id,size,color,position,title,date} 这份约定。
+    moodEmoji: row.mood_emoji || null,
+  }));
+}
+
+// 60 秒内存缓存：同一时间窗内的页面加载不重复打 MCP。拉取失败就沿用上一次
+// 缓存(哪怕过期了)，真的一次都没成功过才回空数组——跟 loadTangDiaryCached
+// 同一个"别因为一次网络抽风就把内容摘掉"的原则。
+async function loadMurmursFlowersCached() {
+  const now = Date.now();
+  if (_murmursFlowersCache.flowers && now - _murmursFlowersCache.at < MURMURS_CACHE_MS) {
+    return _murmursFlowersCache.flowers;
+  }
+  try {
+    const flowers = await fetchMurmursFlowersRaw();
+    _murmursFlowersCache = { at: now, flowers };
+    return flowers;
+  } catch (err) {
+    console.warn('[murmurs] 拉取棠予酿花朵失败:', err?.message || err);
+    return _murmursFlowersCache.flowers || [];
+  }
+}
+
 // 嗅探：每次真聊天成功后把"请求前缀"写到磁盘，供心跳脚本读，让 Anthropic 端
 // 的 prompt cache 不会因为超 TTL 而过期。只对真会命中缓存的 provider 写
 // （claudecode / anthropic）；mock 模式或其它家不写。
@@ -1111,6 +1205,7 @@ const server = http.createServer(async (req, res) => {
   const isDiaryComposed = req.url === '/api/diary/composed' || req.url?.startsWith('/api/diary/composed?');
   const isDiary = req.url?.startsWith('/api/diary') && !isDiaryComposed;
   const isTangyuniang = req.url?.startsWith('/api/tangyuniang/');
+  const isMurmursFlowers = req.url === '/api/murmurs/flowers' || req.url?.startsWith('/api/murmurs/flowers?');
 
   // ----- 棠予酿 internal 通道转发 -----
   // 白名单 + 强制 X-Internal-Key 头 + method 检查全在 forwardToTangyuniang 里做,
@@ -1123,6 +1218,19 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     await forwardToTangyuniang(req, res, matched);
+    return;
+  }
+
+  // ----- 倾棠予梦：棠予酿记忆映射成花朵数组，60 秒内存缓存 -----
+  if (isMurmursFlowers) {
+    if (req.method !== 'GET') {
+      res.writeHead(405, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'method not allowed' }));
+      return;
+    }
+    const flowers = await loadMurmursFlowersCached();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ flowers, count: flowers.length }));
     return;
   }
 
