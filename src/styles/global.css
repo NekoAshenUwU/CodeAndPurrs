@@ -4791,15 +4791,40 @@ a {
   overflow: hidden;
 }
 
+/* 真实 WebGL 触摸涟漪画布——跟落予棠(SweetiePocketPage)完全同一套接入方式
+   (见 waterRipples.ts)，只调它导出的公开入口，不碰模块内部。
+   mask 只留水面那一段(WATER_LINE_PERCENT=45%，跟 MurmursPage.tsx 里花朵
+   落点用的是同一条线)，天空/山/树那一截不参与涟漪畸变，露出底下
+   .murmurs-page 自己那条静态 CSS 背景——两边用的是同一张图，cover 采样
+   数学一致，衔接处看不出接缝。初始 opacity:0，引擎真正跑起来才淡入
+   (WebGL 不支持时永远停在 0，纯降级成静态背景，不会露黑屏)。 */
+.murmurs-ripples-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, transparent 42%, #000 50%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 42%, #000 50%);
+}
+.murmurs-ripples-canvas.is-ready {
+  opacity: 1;
+}
+
 /* 花朵容器铺满整页(顶栏之下)，绝对定位放置每朵花——position 字段决定
-   纵向"远景(旧记忆)→近景(新记忆)"的落点，横向随机散开。 */
+   纵向"远景(旧记忆)→近景(新记忆)"的落点，横向随机散开。z-index 高于
+   涟漪画布，确保花朵稳稳浮在水波之上。 */
 .murmurs-stream {
   position: absolute;
   inset: 0;
+  z-index: 1;
 }
-/* 外层 button 只管"定位 + 入场动画"，内层 .murmurs-flower__bob 只管"持续
-   漂浮的晃动"——两层各自一份 transform，不会像 balance-island 数额那样
-   互相覆盖(同一个元素上 transform 只有一份计算值，静态定位会被动画整个替掉)。 */
+/* 真机反馈要求"花不要晃动"——去掉了原来的 idle bob 持续漂浮层，花朵落位后
+   就静止不动，button 上只剩"定位 + 入场/退场"这一份 transform。 */
 .murmurs-flower {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -4820,8 +4845,12 @@ a {
   animation: murmursFlowerDrift 2000ms ease-out backwards;
   animation-delay: var(--murmurs-drift-delay, 0ms);
 }
-.murmurs-flower:active .murmurs-flower__bob {
-  transform: scale(0.94);
+/* 按压反馈直接放外层 button 自己身上(translate 居中 + 按下缩一点)——
+   不能放 img 上：img 的 transform 是内联样式(压扁用的 scaleY)，内联样式
+   优先级天然盖过 class 选择器，:active 那份 transform 写在 img 上根本
+   不会生效。 */
+.murmurs-flower:active {
+  transform: translate(-50%, -50%) scale(0.94);
 }
 /* 密度轮换换下场时的"沉入水中"退场——组合选择器比单独 .murmurs-flower
    特异性更高，会整份覆盖上面那条 animation 简写(含 delay)。2000ms 要跟
@@ -4842,13 +4871,6 @@ a {
   border-radius: 50%;
   filter: blur(1.5px);
   pointer-events: none;
-}
-.murmurs-flower__bob {
-  width: 100%;
-  height: 100%;
-  animation-name: murmursFlowerBob;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
 }
 /* "沉在水里"的静态观感(第四轮反馈，区别于轮换退场的"沉入水中"动画——
    这个是花朵平时安安静静漂着时就要有的效果，不是只在退场那一刻才有)：
@@ -4892,28 +4914,8 @@ a {
     filter: blur(4px) sepia(0.55) hue-rotate(180deg) saturate(1.6);
   }
 }
-/* 水面自然漂浮的小幅晃动——跟落予棠漂流物的 floatvicBob 同一个思路
-   (轻微位移+转动，不是大幅摆荡)，但独立一份 keyframe，不跨房间耦合。 */
-@keyframes murmursFlowerBob {
-  0%,
-  100% {
-    transform: translate(0, 0) rotate(0deg);
-  }
-  25% {
-    transform: translate(calc(var(--mfdx) * 0.6), calc(var(--mfdy) * -1)) rotate(calc(var(--mfrot) * 0.5));
-  }
-  50% {
-    transform: translate(var(--mfdx), calc(var(--mfdy) * -0.3)) rotate(var(--mfrot));
-  }
-  75% {
-    transform: translate(calc(var(--mfdx) * 0.3), var(--mfdy)) rotate(calc(var(--mfrot) * -0.4));
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .murmurs-flower {
-    animation: none;
-  }
-  .murmurs-flower__bob {
     animation: none;
   }
   .murmurs-flower.murmurs-flower--exiting {

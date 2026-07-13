@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { createWaterRipples, type WaterRipples } from '../services/waterRipples';
 
 // 倾棠予梦 Step 2——接棠予酿记忆数据。后端 /api/murmurs/flowers 把日记记忆
 // 映射成 {id,size,position,title,date,moodLabel,valence,arousal} 数组
@@ -256,20 +257,6 @@ function FlowerBloom({
     [flower.valence, flower.arousal, flower.id],
   );
   const { depthT, sizePx, squashY, opacity } = useMemo(() => perspectiveForFlower(flower), [flower]);
-  // 水面自然漂浮的晃动幅度/周期，挂载时随机一次(不用稳定，参考 FloatingVehicle
-  // 的做法)——跟落予棠的漂流物同一套"外层定位+内层浮动"结构：entrance 那个
-  // translate 用在外层 button 上，idle bob 的 transform 用在内层 div 上，
-  // 压扁(scaleY)用在最内层 img 上——三层各自一份 transform，互不覆盖。
-  const bob = useMemo(
-    () => ({
-      duration: 3400 + Math.random() * 2600,
-      delay: -Math.random() * 5000,
-      dx: 5 + Math.random() * 8,
-      dy: 6 + Math.random() * 9,
-      rot: 2 + Math.random() * 3,
-    }),
-    [],
-  );
 
   return (
     <button
@@ -294,26 +281,15 @@ function FlowerBloom({
         style={{ opacity: 0.35 + depthT * 0.4 }}
         aria-hidden="true"
       />
-      <div
-        className="murmurs-flower__bob"
-        style={
-          {
-            animationDuration: `${bob.duration}ms`,
-            animationDelay: `${bob.delay}ms`,
-            '--mfdx': `${bob.dx}px`,
-            '--mfdy': `${bob.dy}px`,
-            '--mfrot': `${bob.rot}deg`,
-          } as React.CSSProperties
-        }
-      >
-        <img
-          className="murmurs-flower__img"
-          src={src}
-          alt=""
-          loading="lazy"
-          style={{ transform: `scaleY(${squashY})` }}
-        />
-      </div>
+      {/* 真机反馈要求"花不要晃动"——去掉了原来的持续漂浮动画(idle bob)，
+          花朵落位后就静止不动，只有入场/退场那两段动画。 */}
+      <img
+        className="murmurs-flower__img"
+        src={src}
+        alt=""
+        loading="lazy"
+        style={{ transform: `scaleY(${squashY})` }}
+      />
     </button>
   );
 }
@@ -397,6 +373,10 @@ function useFlowerRotation(flowers: MurmursFlower[] | null) {
 export function MurmursPage() {
   const [flowers, setFlowers] = useState<MurmursFlower[] | null>(null); // null = 加载中
   const [selected, setSelected] = useState<MurmursFlower | null>(null);
+  const [ripplesReady, setRipplesReady] = useState(false);
+  const pageRef = useRef<HTMLElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const engineRef = useRef<WaterRipples | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -414,6 +394,46 @@ export function MurmursPage() {
     };
   }, []);
 
+  // 接落予棠同款 WebGL 触摸涟漪(真水波，不是这里额外画的)——跟 SweetiePocketPage
+  // 一模一样的接入方式：只调 waterRipples.ts 已经导出的公开入口(createWaterRipples/
+  // engine.drop)，不碰模块内部一行代码，不违反"已定稿锁定"那条规矩。
+  // WebGL 不支持/加载失败会静默降级为纯静态背景图(canvas 停在 opacity:0)，
+  // 详见 waterRipples.ts 里 createWaterRipples 的降级说明。
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    let cancelled = false;
+    void createWaterRipples(canvas, '/rooms/murmurs-bg.webp').then((engine) => {
+      if (cancelled) {
+        engine?.destroy();
+        return;
+      }
+      if (!engine) return;
+      engineRef.current = engine;
+      engine.start();
+      setRipplesReady(true);
+    });
+    return () => {
+      cancelled = true;
+      engineRef.current?.destroy();
+      engineRef.current = null;
+    };
+  }, []);
+
+  // 手指/鼠标按在页面上(不管按的是空白水面还是花朵按钮)都落一圈真涟漪——
+  // 绑在最外层、用 pointerdown 而不是 canvas 自己接收事件，事件正常冒泡，
+  // 花朵按钮自己的 onClick(开记忆卡片)完全不受影响，跟落予棠"点漂流物=
+  // 开详情+落涟漪"同一个道理。
+  const onPagePointerDown = (e: React.PointerEvent<HTMLElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !engineRef.current) return;
+    const rect = canvas.getBoundingClientRect();
+    const u = (e.clientX - rect.left) / rect.width;
+    const v = (e.clientY - rect.top) / rect.height;
+    if (u < 0 || u > 1 || v < 0 || v > 1) return;
+    engineRef.current.drop(u, v);
+  };
+
   const isEmpty = flowers !== null && flowers.length === 0;
   const { visible, exitingId } = useFlowerRotation(flowers);
   // 依赖 flowers(拉回来就不再变的原始数组)，不依赖 visible(轮换会变)——
@@ -421,7 +441,12 @@ export function MurmursPage() {
   const layout = useMemo(() => buildGlobalLayout(flowers ?? []), [flowers]);
 
   return (
-    <main className="murmurs-page">
+    <main className="murmurs-page" ref={pageRef} onPointerDown={onPagePointerDown}>
+      <canvas
+        ref={canvasRef}
+        className={`murmurs-ripples-canvas${ripplesReady ? ' is-ready' : ''}`}
+        aria-hidden="true"
+      />
       <header className="chat-head">
         <Link to="/" className="chat-head__back" aria-label="回首页">
           ‹
