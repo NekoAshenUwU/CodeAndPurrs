@@ -5099,7 +5099,9 @@ a {
   /* .murmurs-detail__title 是 1.08rem 的兄弟元素(不是父元素)，em 在这里
      没法直接继承 title 的字号——用固定 rem 值手算 1.08rem × 0.55 ≈ 0.6rem。 */
   font-size: 0.6rem;
-  color: rgba(107, 87, 143, 0.55);
+  /* 第七轮反馈"日期颜色可以显眼一些，比较淡了"：不透明度 0.55→0.9，色相
+     往 mood 徽章的紫色靠一点，仍然比标题轻一档(角标不抢戏)但一眼能看清。 */
+  color: rgba(122, 63, 184, 0.9);
   letter-spacing: 0.06em;
   transform: translateY(3px);
 }
