@@ -108,6 +108,13 @@
   font-weight: 400;
   font-display: swap;
 }
+@font-face {
+  font-family: "TianTianQuanFull"; /* 字魂甜甜圈(盖世可爱甜甜圈) 全字库(7538字/GB2312级覆盖) ·
+    倾棠予梦弹窗正文——日记标题是自由输入，留全字库，跟 RiFuYiRi 落予棠正文同一个道理 */
+  src: url("/fonts/tiantianquan-diary.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
 
 :root {
   color: #5f5877;
@@ -4805,11 +4812,6 @@ a {
      远超屏宽的巨型花。 */
   max-width: 96px;
   max-height: 96px;
-  /* 第四轮加了"太挤就互相推开"的碰撞松弛(MurmursPage.tsx 里的
-     resolveOverlaps)——同屏轮换时理论上会让个别花的 top/left 微调，加这条
-     transition 保证那种微调是缓慢挪过去，不是瞬间跳位置(瞬间跳位置才是
-     上一轮真正的"闪烁"成因)。 */
-  transition: top 1.4s ease, left 1.4s ease;
   /* 入场"从上游漂入": 从目标位置上方飘落到位、由透明显形——上游=远景=
      画面偏上方向，跟 position 的"远/近"映射方向一致。按 index 错开延迟，
      一朵接一朵地漂进来，不是齐刷刷同时冒出。真机验收要求"缓缓浮出水面"，
@@ -4977,17 +4979,18 @@ a {
   cursor: pointer;
   padding: 0;
 }
-/* 字体统一(第四轮修正)：HuaXianZi 是给 App 固定 UI 文案用的精选子集(约
-   1210 字)，日记标题是完全自由的文字，实测"午怀扭矩递钻"这几个字都不在
-   子集里——浏览器会逐字 fallback 到系统字体，同一句话里字体忽好忽坏，
-   这正是"字体不统一"的真正原因，而且日记内容以后还会出现别的生字，
-   没法一个个补子集补完。改成标题/心情/日期都用 var(--display)（
-   ZCOOL KuaiLe 配 PingFang SC/微软雅黑兜底，全字库覆盖）——风格依然是
-   圆润可爱的中文字体，但保证同一句话里不会再半途换脸；只用字号/字重
-   分级，不再靠字体本身分级。文字都加一点白色 text-shadow"托底"，卡片
-   半透明，托底能让字在背景亮/暗交界处也不糊。 */
+/* 字体统一(第五轮)：HuaXianZi 是给 App 固定 UI 文案用的精选子集(约1210字)，
+   日记标题是完全自由的文字，实测"午怀扭矩递钻"这几个字都不在子集里——
+   浏览器会逐字 fallback 到系统字体，同一句话里字体忽好忽坏。第四轮先改成
+   var(--display) 保证不再混排，这轮按要求换成"盖世可爱甜甜圈"(字魂甜甜圈)——
+   之前只切过两份窄子集(誓言用的 13 字 tiantianquan-vow / 余额数字用的
+   tiantianquan-amount)，都不够日记自由文本用。从 scratchpad 里还留着的
+   原始完整字库文件重新切了一份全字库(tiantianquan-diary.woff2，7538字，
+   GB2312 级覆盖，实测"午怀扭矩递钻"等生字全部命中)，命名 TianTianQuanFull，
+   跟 RiFuYiRi(落予棠正文全字库)同一个思路——自由输入的文字就得留全字库，
+   不能再切窄子集，不然换个词又不认得。只用字号/字重分级，不靠字体分级。 */
 .murmurs-detail__mood {
-  font-family: var(--display);
+  font-family: "TianTianQuanFull", var(--display);
   font-weight: 500;
   font-size: 0.74rem;
   line-height: 1;
@@ -5000,7 +5003,7 @@ a {
   margin-bottom: 2px;
 }
 .murmurs-detail__title {
-  font-family: var(--display);
+  font-family: "TianTianQuanFull", var(--display);
   font-weight: 700;
   font-size: 1.08rem;
   color: #3d3454;
@@ -5008,13 +5011,13 @@ a {
 }
 /* 日期改成右下角落款式角标(不再单独占一行)：同款字体、字号缩到题字的
    0.55 倍左右、颜色减淡、位置往下沉一点，像照片角落烧录的日期戳。格式是
-   YYMMDD 六位数字(fmtDateStamp 拼的)，纯数字，不受上面那个子集问题影响，
-   不用 Unicode 上下标字符，纯靠 font-size + 定位实现"缩小下沉"。 */
+   YYMMDD 六位数字(fmtDateStamp 拼的)，不用 Unicode 上下标字符，纯靠
+   font-size + 定位实现"缩小下沉"。 */
 .murmurs-detail__stamp {
   position: absolute;
   right: 18px;
   bottom: 14px;
-  font-family: var(--display);
+  font-family: "TianTianQuanFull", var(--display);
   font-weight: 400;
   /* .murmurs-detail__title 是 1.08rem 的兄弟元素(不是父元素)，em 在这里
      没法直接继承 title 的字号——用固定 rem 值手算 1.08rem × 0.55 ≈ 0.6rem。 */

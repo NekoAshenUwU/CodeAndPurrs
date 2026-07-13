@@ -174,23 +174,12 @@ function perspectiveForFlower(flower: MurmursFlower) {
   return { depthT, sizePx, squashY, opacity };
 }
 
-// 横向"车道"布局：把画面分成几条车道，同屏花朵按 id 哈希稳定分配车道，
-// 减少互相堆叠的概率。
-//
-// 真机验收反馈(2026-07-13 第二轮)踩过的坑："花朵会突然消失闪现"——根源是
-// 这里原来按"同车道内当前排第几个"(rankT = i/(n-1))算 top，这个排名会
-// 随着 visible 数组的增减而变("车道邻居"变了，排名跟着变)，导致轮换时
-// 明明没换掉的花朵也会被重新计算出一个不同的 top，且 top 是内联样式直接改
-// 值、没有 transition，于是同屏其他花朵会跟着"瞬间跳位置"，看起来像闪烁。
-// 现在改成 top 只由这朵花自己的 position + id 决定，跟 visible 里还有谁、
-// 有几个完全无关——同一朵花只要还在场上，left/top 永远是同一个值，不会因为
-// 别的花轮换而被连带挪动。
+// 同屏密度上限——提前到这里声明，下面的全局布局函数要用它决定"名次桶"数量
+// (后面 useFlowerRotation 那边直接复用这个常量，不再重复声明一份)。
+const ROTATION_MAX_VISIBLE = 12;
+
 const LANES = 8;
 const LANE_MARGIN_PERCENT = 8;
-
-function laneIndexFor(id: string): number {
-  return hashStr(`${id}-lane`) % LANES;
-}
 
 function laneCenterPercent(lane: number): number {
   const span = 100 - LANE_MARGIN_PERCENT * 2;
@@ -199,65 +188,44 @@ function laneCenterPercent(lane: number): number {
 
 type FlowerLayout = { left: number; top: number };
 
-// 真机反馈(2026-07-13 第四轮)：车道+抖动只是"降低碰撞概率"，12 朵里总有
-// 几朵哈希到同一车道又刚好 position 很接近，看真机截图确实叠在一起了。
-// 加一道最小间距的松弛(relaxation)：先按每朵花自己的 id/position 算出
-// "理想位置"(不依赖同屏其它花，这部分保持跟之前一样稳定)，再对这批理想
-// 位置跑几轮"太近就互相推开"——这一步会依赖同屏都有谁，轮换时理论上可能
-// 让个别花的位置微调，所以配合 CSS 里 .murmurs-flower 的 top/left transition
-// 一起用：位置真的变了也是缓慢过渡过去，不是瞬间跳位置(那才是上一轮真正
-// 的"闪烁"成因，不是"位置会不会变"本身)。
-// 纵向 1% 对应的真实像素比横向 1% 大(竖屏 window 更高)，粗略按 0.5 折算成
-// "横向等效"再算距离，不追求跟每台设备像素完全对应，只求别肉眼叠一起。
-const MIN_SEPARATION_PERCENT = 15;
-const VERTICAL_SCALE = 0.5;
-
-function resolveOverlaps(base: { id: string; left: number; top: number }[]): Map<string, FlowerLayout> {
-  const pts = base.map((p) => ({ ...p }));
-  for (let iter = 0; iter < 4; iter++) {
-    for (let i = 0; i < pts.length; i++) {
-      for (let j = i + 1; j < pts.length; j++) {
-        const a = pts[i];
-        const b = pts[j];
-        const dx = b.left - a.left;
-        const dy = (b.top - a.top) * VERTICAL_SCALE;
-        const dist = Math.sqrt(dx * dx + dy * dy) || 0.0001;
-        if (dist < MIN_SEPARATION_PERCENT) {
-          const push = (MIN_SEPARATION_PERCENT - dist) / 2;
-          const ux = dx / dist;
-          const uy = dy / dist;
-          a.left -= ux * push;
-          a.top -= (uy * push) / VERTICAL_SCALE;
-          b.left += ux * push;
-          b.top += (uy * push) / VERTICAL_SCALE;
-        }
-      }
-    }
-  }
+// 真机反馈踩过两轮坑才定下这个方案："花朵会瞬移/闪烁"：
+// - 第二轮：按"同车道内当前排第几个"算 top，排名随同屏花朵增减而变，
+//   轮换时没换掉的花也被连带重排。
+// - 第四轮：改成"同屏花朵互相推开"的松弛算法，配 CSS transition 想让位移
+//   变平滑，但松弛结果依然取决于"此刻同屏是谁"，真机截图看效果还是像瞬移。
+// 这轮换根本思路：不再"每次同屏渲染时临时算位置"，改成对【全量 flowers
+// 数组】一次性分配坐标——只要 flowers(从后端拉回来的原始数组)不变，每朵花
+// 的坐标就永远不变，轮换只决定"现在画不画这朵花"，完全碰不到坐标。"同一朵
+// 花位置不变"从"实测巧合"变成"数学上不可能变"，不再需要 CSS transition 兜底。
+//
+// 具体分配：flowers 已经按 created_at 从旧到新排好，按名次分进 rowBuckets
+// 个"名次桶"里，桶序号天然对应"远→近"；同一个桶内部用哈希+线性探测抢
+// lane(横向车道)，抢到不同车道的保证不会叠在一起——这个探测也是对全量数组
+// 跑一次，不受"这一刻同屏是谁"影响。
+function buildGlobalLayout(flowers: MurmursFlower[]): Map<string, FlowerLayout> {
+  const n = flowers.length;
   const layout = new Map<string, FlowerLayout>();
-  for (const p of pts) {
-    layout.set(p.id, {
-      left: Math.max(4, Math.min(96, p.left)),
-      top: Math.max(FAR_TOP_PERCENT, Math.min(NEAR_TOP_PERCENT, p.top)),
-    });
-  }
-  return layout;
-}
-
-function layoutVisibleFlowers(visible: MurmursFlower[]): Map<string, FlowerLayout> {
-  const base = visible.map((f) => {
-    const lane = laneIndexFor(f.id);
+  if (n === 0) return layout;
+  const rowBuckets = Math.max(1, Math.min(n, ROTATION_MAX_VISIBLE));
+  const laneTaken: boolean[][] = Array.from({ length: rowBuckets }, () => Array(LANES).fill(false));
+  flowers.forEach((f, rank) => {
+    const row = Math.min(rowBuckets - 1, Math.floor((rank / n) * rowBuckets));
+    let lane = hashStr(`${f.id}-lane`) % LANES;
+    let tries = 0;
+    while (laneTaken[row][lane] && tries < LANES) {
+      lane = (lane + 1) % LANES;
+      tries += 1;
+    }
+    laneTaken[row][lane] = true;
     const depthT = clamp01(f.position);
     const top = FAR_TOP_PERCENT + depthT * (NEAR_TOP_PERCENT - FAR_TOP_PERCENT);
-    const jitterTop = (hashStr(`${f.id}-y`) % 400) / 100 - 2; // ±2%，车道已经分开了，小抖动够用
-    const jitterLeft = (hashStr(`${f.id}-x`) % 500) / 100 - 2.5; // ±2.5%
-    return {
-      id: f.id,
-      left: laneCenterPercent(lane) + jitterLeft,
+    const jitterTop = (hashStr(`${f.id}-y`) % 300) / 100 - 1.5; // ±1.5%
+    const jitterLeft = (hashStr(`${f.id}-x`) % 300) / 100 - 1.5; // ±1.5%，车道已经分开了，小抖动够用
+    layout.set(f.id, {
+      left: Math.max(4, Math.min(96, laneCenterPercent(lane) + jitterLeft)),
       top: Math.max(FAR_TOP_PERCENT, Math.min(NEAR_TOP_PERCENT, top + jitterTop)),
-    };
+    });
   });
-  const layout = resolveOverlaps(base);
   return layout;
 }
 
@@ -349,7 +317,6 @@ function FlowerBloom({
 // 不会 30+ 朵同屏堆积。
 // EXIT_MS 要跟 CSS 里 murmursFlowerExit 的动画时长(global.css)保持一致——
 // 两处对不上就会露出"动画没播完元素就没了"的破绽。
-const ROTATION_MAX_VISIBLE = 12;
 const ROTATION_INTERVAL_MS = 6200;
 const EXIT_MS = 2000;
 
@@ -442,7 +409,9 @@ export function MurmursPage() {
 
   const isEmpty = flowers !== null && flowers.length === 0;
   const { visible, exitingId } = useFlowerRotation(flowers);
-  const layout = useMemo(() => layoutVisibleFlowers(visible), [visible]);
+  // 依赖 flowers(拉回来就不再变的原始数组)，不依赖 visible(轮换会变)——
+  // 保证每朵花的坐标只算一次，轮换绝对碰不到它。
+  const layout = useMemo(() => buildGlobalLayout(flowers ?? []), [flowers]);
 
   return (
     <main className="murmurs-page">
