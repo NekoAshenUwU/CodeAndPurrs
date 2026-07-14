@@ -68,6 +68,7 @@ type ButterflyState = {
   pause: number; // 秒，>0 表示悬停/歇脚中
   phase: number; // 飞行起伏/侧倾的相位
   lastSpark: number; // 上次撒闪粉的时间戳(ms)
+  lastDust: number; // 上次撒金粉的时间戳(ms)
   lastStar: number; // 上次掉小星星的时间戳(ms)
   spark: string;
   star: string;
@@ -147,6 +148,24 @@ export function MurmursAmbient({
       root.appendChild(el);
       window.setTimeout(() => el.remove(), dur + 100);
     };
+    // 金粉(素材包展示页的 goldFall"金尘")：暖金色小光点从蝴蝶身下往下飘落，
+    // 跟冷色系的闪粉(mote)一暖一冷。第九轮先砍了怕手机过载，老婆点名要
+    // ("还会撒金粉和星星")——加回来，频率仍比展示页低。
+    const spawnDust = (xPct: number, yPct: number) => {
+      const el = document.createElement('i');
+      el.className = 'murmurs-dust';
+      el.style.left = `${((xPct / 100) * rect.width).toFixed(1)}px`;
+      el.style.top = `${((yPct / 100) * rect.height).toFixed(1)}px`;
+      const size = rand(2.8, 5.2);
+      el.style.width = `${size.toFixed(1)}px`;
+      el.style.height = `${size.toFixed(1)}px`;
+      el.style.setProperty('--dx', `${rand(-13, 13).toFixed(1)}px`);
+      el.style.setProperty('--dy', `${rand(18, 52).toFixed(1)}px`);
+      const dur = rand(800, 1300);
+      el.style.setProperty('--dur', `${dur.toFixed(0)}ms`);
+      root.appendChild(el);
+      window.setTimeout(() => el.remove(), dur + 100);
+    };
     const spawnStar = (xPct: number, yPct: number, star: string, starGlow: string) => {
       const el = document.createElement('i');
       el.className = 'murmurs-star';
@@ -177,6 +196,7 @@ export function MurmursAmbient({
         pause: 0,
         phase: rand(0, Math.PI * 2),
         lastSpark: 0,
+        lastDust: 0,
         lastStar: performance.now() + i * 900,
         spark: cfg.spark,
         star: cfg.star,
@@ -254,6 +274,10 @@ export function MurmursAmbient({
         if (moving && now - b.lastSpark > 210) {
           b.lastSpark = now;
           spawnMote(b.x + rand(-2, 2), b.y + rand(-1.5, 1.5), b.spark);
+        }
+        if (moving && now - b.lastDust > 320) {
+          b.lastDust = now;
+          spawnDust(b.x + rand(-2.5, 2.5), b.y + rand(1, 3)); // 从身下洒落
         }
         if (now - b.lastStar > 2600) {
           b.lastStar = now + rand(0, 600);

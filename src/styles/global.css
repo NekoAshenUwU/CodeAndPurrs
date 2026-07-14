@@ -4921,6 +4921,36 @@ a {
     transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.25);
   }
 }
+/* 金粉(素材包展示页的"金尘"goldFall)：暖金色光点从蝴蝶身下往下飘落。 */
+.murmurs-dust {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    circle at 35% 35%,
+    rgba(255, 248, 214, 0.98) 0%,
+    rgba(255, 228, 138, 0.96) 35%,
+    rgba(255, 195, 84, 0.8) 66%,
+    rgba(255, 195, 84, 0) 100%
+  );
+  box-shadow: 0 0 6px rgba(255, 228, 138, 0.85), 0 0 12px rgba(255, 196, 91, 0.6);
+  animation: murmursGoldFall var(--dur) ease-out forwards;
+}
+@keyframes murmursGoldFall {
+  0% {
+    opacity: 0.96;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.1);
+  }
+}
 .murmurs-star {
   position: absolute;
   color: var(--star);
