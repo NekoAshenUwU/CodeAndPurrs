@@ -1,31 +1,49 @@
 import { useEffect, useRef } from 'react';
 
-// 倾棠予梦的环境小生灵(2026-07-13 老婆批准的视觉新增)：蝴蝶 + 樱花瓣。
-// 设计目标是"跟记忆花朵/涟漪发生关系"，不是单纯加会动的贴纸：
-// - 蝴蝶：3 只 SVG 手绘蝴蝶(樱粉/薰衣草紫/湖水蓝，取色自背景图)，翅膀用
-//   3D rotateY 扇动；沿随机弧线飞，偶尔俯身点水——落点真的荡开一圈 WebGL
-//   涟漪(dropRipple 回调)；偶尔停在某朵记忆花上歇脚(getPerchTargets 给的
-//   坐标)，歇脚时翅膀放慢慢扇，几秒后飞走。
-// - 樱花瓣：从右上角樱花树那一带偶尔飘下一两片，左右摇曳着落到水面，
-//   落点荡一小圈涟漪然后隐去。
-// 全部位置由一个 rAF 循环驱动(3 蝴蝶+3 花瓣共 6 个元素的 transform，手机
-// 无压力)；翅膀扇动是纯 CSS 动画不占 JS。prefers-reduced-motion 时整层
-// 不启动也不显示(环境动效，跟焦散/星光同一条准则)。
-//
-// 蝴蝶/花瓣是运输中的"过客"，不需要像记忆花朵那样确定性——用 Math.random
-// 没问题，刷新后飞的路线不同反而更像活物。
+// 倾棠予梦的环境小生灵：蝴蝶 + 樱花瓣。
+// 蝴蝶第九轮(2026-07-14)：老婆发来"Dream Butterflies Dynamic Deluxe"素材包，
+// 之前手绘的 SVG 琉璃翼整个删掉，画面全部换成她给的三张【自带扇翅逐帧动画
+// 的 webp】(冰蓝/蜜桃粉/月光薰衣草)——扇翅膀不再靠 CSS rotateY，图自己会动。
+// 从她那份展示 HTML 里一并移植了：柔白+彩光的双层辉光(呼吸式明暗)、
+// 飞行时的闪粉尾迹(mote)、偶尔一颗 ✦ 小星星。
+// 【没有】移植它的假 CSS 椭圆涟漪——咱们有真的 WebGL 涟漪：
+// 蝴蝶的独有行为不变：偶尔俯身点水(落点荡开一圈真涟漪 dropRipple)、
+// 偶尔停在某朵记忆花上歇脚(getPerchTargets)几秒再飞走。
+// 樱花瓣不变：右上角樱花树偶尔飘一两片，落水一小圈涟漪。
+// 全部位置一个 rAF 循环驱动；prefers-reduced-motion 时整层不启动不显示。
 
 type DropRipple = (u: number, v: number, radiusScale?: number, strength?: number) => void;
 type PerchTarget = { x: number; y: number };
 
-// 取色自 murmurs-bg：樱粉(岸边花/樱花树)、薰衣草紫(远山/云)、湖水蓝(水面)。
-const BFLY_PALETTES = [
-  { a: '#f8c3da', b: '#ef9ec6', edge: '#e386b4', spot: '#fdeaf3' },
-  { a: '#cdb6f0', b: '#ab90da', edge: '#977dc9', spot: '#f1e9fc' },
-  { a: '#b3d3f2', b: '#93bae8', edge: '#7fa9dc', spot: '#ebf4fd' },
+// 三只蝴蝶的配置基本照搬素材包展示页(辉光/闪粉/星星配色是配好的一套)，
+// 只有尺寸整体缩小——展示页是全屏空景可以放 98~156px，咱们页面近景记忆花
+// 上限才 96px，蝴蝶是点缀不能比花大。
+const BUTTERFLIES = [
+  {
+    src: 'ice_blue_flap.webp',
+    size: 80,
+    glow: 'rgba(146, 193, 255, 0.55)',
+    spark: 'rgba(198, 229, 255, 0.95)',
+    star: '#fff3c7',
+    starGlow: 'rgba(255, 213, 115, 0.72)',
+  },
+  {
+    src: 'peach_pink_flap.webp',
+    size: 66,
+    glow: 'rgba(255, 160, 218, 0.48)',
+    spark: 'rgba(255, 219, 240, 0.92)',
+    star: '#ffe6bb',
+    starGlow: 'rgba(255, 188, 132, 0.68)',
+  },
+  {
+    src: 'moon_lavender_flap.webp',
+    size: 58,
+    glow: 'rgba(188, 162, 255, 0.52)',
+    spark: 'rgba(231, 213, 255, 0.95)',
+    star: '#fff0c2',
+    starGlow: 'rgba(246, 206, 125, 0.60)',
+  },
 ];
-// 稍微收小一号(第八轮"太卡通"返工的一部分)：环境点缀不该比记忆花朵抢眼。
-const BFLY_SIZES = [34, 29, 32];
 
 // 水面/飞行区域(百分比坐标)，跟 MurmursPage 的 WATER_LINE_PERCENT=45 对齐：
 // 蝴蝶可以飞进天空但主要绕着水面转；点水/花瓣落水只在水面线以下。
@@ -48,9 +66,13 @@ type ButterflyState = {
   speed: number; // %/秒
   mode: 'wander' | 'dip' | 'perch';
   pause: number; // 秒，>0 表示悬停/歇脚中
-  phase: number; // 飞行时上下轻颤的相位
+  phase: number; // 飞行起伏/侧倾的相位
+  lastSpark: number; // 上次撒闪粉的时间戳(ms)
+  lastStar: number; // 上次掉小星星的时间戳(ms)
+  spark: string;
+  star: string;
+  starGlow: string;
   el: HTMLElement;
-  tiltEl: HTMLElement;
 };
 
 type PetalState = {
@@ -108,9 +130,43 @@ export function MurmursAmbient({
     });
     ro.observe(root);
 
+    // 闪粉/小星星是"发射后不管"的一次性元素：CSS 动画播完 setTimeout 摘掉。
+    // 频率被压得比素材包展示页低一截(那边每只 86ms 一颗、还有金尘/光环共
+    // 五种粒子)——咱们页面底下已经跑着 WebGL 涟漪，粒子只留最出效果的两种，
+    // 手机别过载。
+    const spawnMote = (xPct: number, yPct: number, spark: string) => {
+      const el = document.createElement('i');
+      el.className = 'murmurs-mote';
+      el.style.left = `${((xPct / 100) * rect.width).toFixed(1)}px`;
+      el.style.top = `${((yPct / 100) * rect.height).toFixed(1)}px`;
+      el.style.setProperty('--spark', spark);
+      el.style.setProperty('--dx', `${rand(-9, 9).toFixed(1)}px`);
+      el.style.setProperty('--dy', `${rand(12, 30).toFixed(1)}px`);
+      const dur = rand(700, 1100);
+      el.style.setProperty('--dur', `${dur.toFixed(0)}ms`);
+      root.appendChild(el);
+      window.setTimeout(() => el.remove(), dur + 100);
+    };
+    const spawnStar = (xPct: number, yPct: number, star: string, starGlow: string) => {
+      const el = document.createElement('i');
+      el.className = 'murmurs-star';
+      el.textContent = Math.random() < 0.6 ? '✦' : '✧';
+      el.style.left = `${((xPct / 100) * rect.width).toFixed(1)}px`;
+      el.style.top = `${((yPct / 100) * rect.height).toFixed(1)}px`;
+      el.style.setProperty('--star', star);
+      el.style.setProperty('--starGlow', starGlow);
+      el.style.setProperty('--dx', `${rand(-11, 11).toFixed(1)}px`);
+      el.style.setProperty('--dy', `${rand(14, 32).toFixed(1)}px`);
+      const dur = rand(900, 1300);
+      el.style.setProperty('--dur', `${dur.toFixed(0)}ms`);
+      root.appendChild(el);
+      window.setTimeout(() => el.remove(), dur + 100);
+    };
+
     const bflies: ButterflyState[] = Array.from(
       root.querySelectorAll<HTMLElement>('.murmurs-bfly'),
-    ).map((el) => {
+    ).map((el, i) => {
+      const cfg = BUTTERFLIES[i % BUTTERFLIES.length];
       const b: ButterflyState = {
         x: rand(FLY_X[0], FLY_X[1]),
         y: rand(FLY_Y[0], FLY_Y[1]),
@@ -120,8 +176,12 @@ export function MurmursAmbient({
         mode: 'wander',
         pause: 0,
         phase: rand(0, Math.PI * 2),
+        lastSpark: 0,
+        lastStar: performance.now() + i * 900,
+        spark: cfg.spark,
+        star: cfg.star,
+        starGlow: cfg.starGlow,
         el,
-        tiltEl: el.querySelector<HTMLElement>('.murmurs-bfly__tilt')!,
       };
       pickWander(b);
       return b;
@@ -142,12 +202,10 @@ export function MurmursAmbient({
       last = now;
 
       for (const b of bflies) {
+        let moving = false;
         if (b.pause > 0) {
           b.pause -= dt;
-          if (b.pause <= 0) {
-            b.el.style.setProperty('--flap', `${Math.round(rand(300, 380))}ms`);
-            pickWander(b);
-          }
+          if (b.pause <= 0) pickWander(b);
         } else {
           const dx = b.tx - b.x;
           const dy = b.ty - b.y;
@@ -158,8 +216,7 @@ export function MurmursAmbient({
               dropRipple(b.x / 100, b.y / 100, 0.8, 0.05);
               b.pause = 0.35;
             } else if (b.mode === 'perch') {
-              // 停在花上歇脚：翅膀放慢慢扇。
-              b.el.style.setProperty('--flap', '720ms');
+              // 停在花上歇脚几秒(webp 的扇翅是烧在图里的，歇脚时也轻轻扇)。
               b.pause = rand(2.5, 5);
             } else {
               const r = Math.random();
@@ -180,17 +237,28 @@ export function MurmursAmbient({
               }
             }
           } else {
+            moving = true;
             const ux = dx / dist;
             const uy = dy / dist;
             b.x += ux * b.speed * dt;
             // 飞行中上下轻颤——扇一下浮一下的那种起伏感。
-            b.y += uy * b.speed * dt + Math.sin(now / 1000 * 7 + b.phase) * 1.6 * dt;
-            const tilt = Math.max(-18, Math.min(18, uy * 22));
-            const flip = ux < 0 ? -1 : 1;
-            b.tiltEl.style.transform = `scaleX(${flip}) rotate(${(tilt * flip).toFixed(1)}deg)`;
+            b.y += uy * b.speed * dt + Math.sin((now / 1000) * 7 + b.phase) * 1.6 * dt;
           }
         }
-        b.el.style.transform = `translate(${((b.x / 100) * rect.width).toFixed(1)}px, ${((b.y / 100) * rect.height).toFixed(1)}px) translate(-50%, -50%)`;
+        // 侧倾(bank)照搬素材包展示页的味道：飞着的时候左右轻轻摆，素材是
+        // 俯视对称构图，靠小角度倾斜就有"迎风转向"的感觉，不用翻转。
+        const bank = Math.sin((now / 1000) * 1.65 + b.phase) * (moving ? 9 : 4);
+        b.el.style.transform = `translate(${((b.x / 100) * rect.width).toFixed(1)}px, ${((b.y / 100) * rect.height).toFixed(1)}px) translate(-50%, -50%) rotate(${bank.toFixed(1)}deg)`;
+
+        // 闪粉尾迹只在飞行时撒；歇脚/悬停时偶尔还掉一颗小星星(更安静)。
+        if (moving && now - b.lastSpark > 210) {
+          b.lastSpark = now;
+          spawnMote(b.x + rand(-2, 2), b.y + rand(-1.5, 1.5), b.spark);
+        }
+        if (now - b.lastStar > 2600) {
+          b.lastStar = now + rand(0, 600);
+          spawnStar(b.x + rand(-3, 3), b.y + rand(-2, 2), b.star, b.starGlow);
+        }
       }
 
       for (const p of petals) {
@@ -228,36 +296,21 @@ export function MurmursAmbient({
 
   return (
     <div className="murmurs-ambient" ref={rootRef} aria-hidden="true">
-      {BFLY_PALETTES.map((pal, i) => (
-        <div
+      {BUTTERFLIES.map((cfg, i) => (
+        <img
           key={i}
           className="murmurs-bfly"
+          src={`${import.meta.env.BASE_URL}assets/butterflies/${cfg.src}`}
+          alt=""
           style={
             {
-              width: `${BFLY_SIZES[i]}px`,
-              height: `${BFLY_SIZES[i]}px`,
-              '--flap': `${300 + i * 40}ms`,
+              width: `${cfg.size}px`,
+              height: `${cfg.size}px`,
+              '--glow': cfg.glow,
+              '--glowDur': `${4.4 + i * 0.5}s`,
             } as React.CSSProperties
           }
-        >
-          <div className="murmurs-bfly__tilt">
-            <ButterflyWing side="l" pal={pal} idx={i} />
-            <ButterflyWing side="r" pal={pal} idx={i} />
-            <svg className="murmurs-bfly__body" viewBox="0 0 20 100">
-              <path
-                d="M10 34 C7 22 3 14 0 8 M10 34 C13 22 17 14 20 8"
-                stroke={pal.edge}
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                fill="none"
-                opacity="0.75"
-              />
-              {/* 身体也走半透明琉璃质感，不再是实心色块 */}
-              <ellipse cx="10" cy="60" rx="3" ry="26" fill={pal.edge} opacity="0.7" />
-              <ellipse cx="10" cy="52" rx="1.6" ry="14" fill="#ffffff" opacity="0.55" />
-            </svg>
-          </div>
-        </div>
+        />
       ))}
       {[0, 1, 2].map((i) => (
         <svg key={i} className="murmurs-petal" viewBox="0 0 24 24" style={{ width: `${11 + i * 2}px` }}>
@@ -275,75 +328,5 @@ export function MurmursAmbient({
         </svg>
       ))}
     </div>
-  );
-}
-
-// 单边翅膀：前翅+后翅两个瓣，渐变填充+珍珠色斑点。图形按左翅画(身体铰链
-// 在 viewBox 右缘)，右翅在 SVG 内部用 <g scale(-1,1)> 镜像——一开始试过用
-// CSS transform: scaleX(-1) 镜像，但扇动动画会整份接管 transform，把镜像
-// 写进 keyframes 后 origin 在左缘的 scaleX(-1) 会把整个翅膀翻到身体左边、
-// 跟左翅叠死(截图抓包)。镜像放进 SVG 里，CSS 动画就只剩纯 rotateY，
-// 左右各一份符号相反的 keyframes(见 global.css)，绕各自贴身体的边开合。
-function ButterflyWing({
-  side,
-  pal,
-  idx,
-}: {
-  side: 'l' | 'r';
-  pal: { a: string; b: string; edge: string; spot: string };
-  idx: number;
-}) {
-  const gid = `murmursBflyG${idx}${side}`;
-  return (
-    <svg
-      className={`murmurs-bfly__wing murmurs-bfly__wing--${side}`}
-      viewBox="0 0 100 200"
-      preserveAspectRatio="none"
-    >
-      <defs>
-        {/* 琉璃翼(2026-07-13 真机反馈"太卡通了"返工)：贴身处几乎透白、越往
-            翅尖颜色越透出来，全程半透明——让背景的湖光从翅膀里透过去，才能
-            跟这张朦胧梦幻的背景融在一起。描边全部去掉(硬轮廓是"贴纸感"的
-            最大来源)。 */}
-        <linearGradient id={gid} x1="1" y1="0.1" x2="0" y2="0.7">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.92" />
-          <stop offset="45%" stopColor={pal.a} stopOpacity="0.78" />
-          <stop offset="100%" stopColor={pal.b} stopOpacity="0.62" />
-        </linearGradient>
-        <filter id={`${gid}Glow`} x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="5" />
-        </filter>
-      </defs>
-      <g transform={side === 'r' ? 'translate(100 0) scale(-1 1)' : undefined}>
-        {/* 底层光晕：同形状模糊放一份在下面，翅膀像是自己在发一点微光 */}
-        <g filter={`url(#${gid}Glow)`} opacity="0.45">
-          <path d="M96 88 C92 40 70 6 36 4 C14 3 4 16 10 34 C18 56 52 78 96 88 Z" fill={pal.b} />
-          <path
-            d="M96 96 C64 98 40 108 32 126 C24 144 34 166 50 168 C58 169 60 178 56 186 C68 182 90 148 96 96 Z"
-            fill={pal.b}
-          />
-        </g>
-        {/* 前翅：斜向外上方舒展，翅尖略尖 */}
-        <path
-          d="M96 88 C92 40 70 6 36 4 C14 3 4 16 10 34 C18 56 52 78 96 88 Z"
-          fill={`url(#${gid})`}
-        />
-        {/* 后翅：小一号，带一点垂尾 */}
-        <path
-          d="M96 96 C64 98 40 108 32 126 C24 144 34 166 50 168 C58 169 60 178 56 186 C68 182 90 148 96 96 Z"
-          fill={`url(#${gid})`}
-          opacity="0.9"
-        />
-        {/* 翅脉：从翅根放射出去的几根细白线，半透明——琉璃翼的"筋" */}
-        <g stroke="#ffffff" strokeWidth="1.1" strokeLinecap="round" fill="none" opacity="0.5">
-          <path d="M92 84 C74 62 52 34 34 18" />
-          <path d="M92 86 C70 72 46 54 26 40" />
-          <path d="M92 100 C72 110 54 124 44 142" />
-        </g>
-        {/* 翅尖一点珠光，不再用卡通圆斑 */}
-        <circle cx="30" cy="22" r="3.2" fill={pal.spot} opacity="0.85" />
-        <circle cx="46" cy="150" r="2.6" fill={pal.spot} opacity="0.7" />
-      </g>
-    </svg>
   );
 }
