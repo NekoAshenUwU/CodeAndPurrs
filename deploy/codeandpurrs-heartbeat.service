@@ -1,0 +1,27 @@
+[Unit]
+Description=CodeAndPurrs · Prompt Cache Keepalive
+Documentation=https://github.com/NekoAshenUwU/CodeAndPurrs/blob/main/docs/HEARTBEAT-INSTALL.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/var/www/codeandpurrs
+# .env 里有 CLAUDE_CODE_OAUTH_TOKEN / ANTHROPIC_API_KEY，Node 自带 --env-file 加载
+ExecStart=/usr/bin/node --env-file-if-exists=.env /var/www/codeandpurrs/server/heartbeat.mjs
+
+# 安全收口（心跳只需要读 server/data + 写日志 + 出站 https）
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/log/codeandpurrs /var/www/codeandpurrs/server/data
+# /root/.local/bin/claude 在 root 家目录，PATH 要补上才能 spawn 到
+Environment=PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# 心跳卡死最多 3 分钟（spawn claude 偶尔会拖很久），超时直接 kill
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target
