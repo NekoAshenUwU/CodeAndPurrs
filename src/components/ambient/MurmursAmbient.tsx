@@ -159,9 +159,9 @@ export function MurmursAmbient({
       const size = rand(2.8, 5.2);
       el.style.width = `${size.toFixed(1)}px`;
       el.style.height = `${size.toFixed(1)}px`;
-      el.style.setProperty('--dx', `${rand(-13, 13).toFixed(1)}px`);
-      el.style.setProperty('--dy', `${rand(18, 52).toFixed(1)}px`);
-      const dur = rand(800, 1300);
+      el.style.setProperty('--dx', `${rand(-16, 16).toFixed(1)}px`);
+      el.style.setProperty('--dy', `${rand(8, 24).toFixed(1)}px`); // 轻轻飘散，不再直坠
+      const dur = rand(900, 1400);
       el.style.setProperty('--dur', `${dur.toFixed(0)}ms`);
       root.appendChild(el);
       window.setTimeout(() => el.remove(), dur + 100);
@@ -277,7 +277,9 @@ export function MurmursAmbient({
         }
         if (moving && now - b.lastDust > 320) {
           b.lastDust = now;
-          spawnDust(b.x + rand(-2.5, 2.5), b.y + rand(1, 3)); // 从身下洒落
+          // 从翅膀两侧散开(左右偏移大、上下贴平)——原来写的"身下洒落"配上
+          // 偏棕的金色被真机验收判定像大便😂，动线和颜色一起改。
+          spawnDust(b.x + rand(-3.5, 3.5), b.y + rand(-1, 1));
         }
         if (now - b.lastStar > 2600) {
           b.lastStar = now + rand(0, 600);

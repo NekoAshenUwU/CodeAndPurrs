@@ -4928,14 +4928,16 @@ a {
   opacity: 0;
   pointer-events: none;
   transform: translate(-50%, -50%);
+  /* 真机反馈"像大便"😂——展示页原版的金色太橙偏棕，落在粉蓝背景上惨案。
+     改成香槟珠光：白芯+很淡的金边，橙色分量全去掉。 */
   background: radial-gradient(
     circle at 35% 35%,
-    rgba(255, 248, 214, 0.98) 0%,
-    rgba(255, 228, 138, 0.96) 35%,
-    rgba(255, 195, 84, 0.8) 66%,
-    rgba(255, 195, 84, 0) 100%
+    rgba(255, 255, 250, 0.98) 0%,
+    rgba(255, 244, 200, 0.92) 40%,
+    rgba(255, 230, 160, 0.55) 70%,
+    rgba(255, 230, 160, 0) 100%
   );
-  box-shadow: 0 0 6px rgba(255, 228, 138, 0.85), 0 0 12px rgba(255, 196, 91, 0.6);
+  box-shadow: 0 0 6px rgba(255, 246, 210, 0.9), 0 0 12px rgba(255, 236, 170, 0.55);
   animation: murmursGoldFall var(--dur) ease-out forwards;
 }
 @keyframes murmursGoldFall {
