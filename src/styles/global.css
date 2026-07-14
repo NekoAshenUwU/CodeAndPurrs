@@ -5026,6 +5026,117 @@ a {
   letter-spacing: 0.06em;
   transform: translateY(3px);
 }
+
+/* ---------- Dream Butterflies · 老婆发的蝴蝶/金粉/星屑/涟漪效果(ambient
+   组件，DreamButterflies.tsx)，先接在 /murmurs 里——纯装饰 overlay，
+   pointer-events:none，背景透明，不挡任何点击。z-index 4：盖过水波(0)和
+   花朵(1)，但压在顶栏(30)/弹窗(50)下面，视觉上"蝴蝶飞在水面花朵之上、
+   UI 之下"。 ---------- */
+.dream-butterflies-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: hidden;
+  isolation: isolate;
+  pointer-events: none;
+}
+.db-butterfly {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--size);
+  aspect-ratio: 1;
+  object-fit: contain;
+  transform-origin: 50% 55%;
+  pointer-events: none;
+  will-change: transform, opacity, filter;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 16px var(--glow)) drop-shadow(0 8px 14px rgba(71, 52, 114, 0.14));
+  animation: dbButterflyGlow var(--glowDur, 5s) ease-in-out infinite alternate;
+}
+@keyframes dbButterflyGlow {
+  from {
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.85)) drop-shadow(0 0 12px var(--glow)) drop-shadow(0 8px 12px rgba(71, 52, 114, 0.12));
+  }
+  to {
+    filter: drop-shadow(0 0 7px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 20px var(--glow)) drop-shadow(0 10px 16px rgba(71, 52, 114, 0.18));
+  }
+}
+.db-dust,
+.db-star,
+.db-ripple {
+  position: absolute;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+/* 金粉 */
+.db-dust {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  z-index: 2;
+  opacity: 0;
+  background: radial-gradient(circle at 35% 35%, rgba(255, 248, 214, 0.98) 0%, rgba(255, 228, 138, 0.96) 35%, rgba(255, 195, 84, 0.8) 66%, rgba(255, 195, 84, 0) 100%);
+  box-shadow: 0 0 6px rgba(255, 228, 138, 0.85), 0 0 12px rgba(255, 196, 91, 0.6);
+  animation: dbGoldFall var(--dur) ease-out forwards;
+}
+@keyframes dbGoldFall {
+  0% {
+    opacity: 0.96;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.1);
+  }
+}
+/* 星屑 */
+.db-star {
+  color: var(--star);
+  text-shadow: 0 0 7px rgba(255, 255, 255, 0.95), 0 0 14px var(--starGlow);
+  font-size: var(--sizeStar);
+  line-height: 1;
+  z-index: 3;
+  opacity: 0;
+  animation: dbStarDrift var(--dur) ease-out forwards;
+}
+@keyframes dbStarDrift {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(0deg) scale(0.2);
+  }
+  14% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(80deg) scale(1.2);
+  }
+}
+/* 涟漪(装饰性的，跟 murmurs-ripples-canvas 那个真实 WebGL 水波是两码事，
+   这个只在蝴蝶飞得比较低时偶尔冒一圈，标记"掠过水面"这个瞬间) */
+.db-ripple {
+  width: 54px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.6px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 10px rgba(191, 229, 255, 0.22), inset 0 0 10px rgba(191, 229, 255, 0.18);
+  z-index: 1;
+  opacity: 0;
+  animation: dbRippleOut var(--dur) ease-out forwards;
+}
+@keyframes dbRippleOut {
+  0% {
+    opacity: 0.42;
+    transform: translate(-50%, -50%) scale(0.45);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.55);
+  }
+}
 /* ---------- 余额浮岛面板：新图是完整水晶浮岛场景(男孩+雪豹/女孩+小猫)，
    头顶一圈项链状云环，环心是真透明抠图(不是实心云)，数字叠在环心那块空地上 ---------- */
 .balance-island {

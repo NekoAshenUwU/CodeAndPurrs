@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createWaterRipples, type WaterRipples } from '../services/waterRipples';
+import { DreamButterflies } from '../components/ambient/DreamButterflies';
 
 // 倾棠予梦 Step 2——接棠予酿记忆数据。后端 /api/murmurs/flowers 把日记记忆
 // 映射成 {id,size,position,title,date,moodLabel,valence,arousal} 数组
@@ -447,6 +448,7 @@ export function MurmursPage() {
         className={`murmurs-ripples-canvas${ripplesReady ? ' is-ready' : ''}`}
         aria-hidden="true"
       />
+      <DreamButterflies />
       <header className="chat-head">
         <Link to="/" className="chat-head__back" aria-label="回首页">
           ‹
