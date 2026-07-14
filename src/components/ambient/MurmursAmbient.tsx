@@ -156,11 +156,13 @@ export function MurmursAmbient({
       el.className = 'murmurs-dust';
       el.style.left = `${((xPct / 100) * rect.width).toFixed(1)}px`;
       el.style.top = `${((yPct / 100) * rect.height).toFixed(1)}px`;
-      const size = rand(2.8, 5.2);
+      // 第三轮返工：金粉必须细如尘(1~2px)——之前 3~5px 一粒粒的，老婆原话
+      // "要细才像金粉不是一粒粒像拉粑粑"。细颗粒靠数量补存在感(调用处加密)。
+      const size = rand(1, 2);
       el.style.width = `${size.toFixed(1)}px`;
       el.style.height = `${size.toFixed(1)}px`;
       el.style.setProperty('--dx', `${rand(-16, 16).toFixed(1)}px`);
-      el.style.setProperty('--dy', `${rand(8, 24).toFixed(1)}px`); // 轻轻飘散，不再直坠
+      el.style.setProperty('--dy', `${rand(8, 24).toFixed(1)}px`); // 轻轻飘散，不直坠
       const dur = rand(900, 1400);
       el.style.setProperty('--dur', `${dur.toFixed(0)}ms`);
       root.appendChild(el);
@@ -275,11 +277,14 @@ export function MurmursAmbient({
           b.lastSpark = now;
           spawnMote(b.x + rand(-2, 2), b.y + rand(-1.5, 1.5), b.spark);
         }
-        if (moving && now - b.lastDust > 320) {
+        if (moving && now - b.lastDust > 150) {
           b.lastDust = now;
-          // 从翅膀两侧散开(左右偏移大、上下贴平)——原来写的"身下洒落"配上
-          // 偏棕的金色被真机验收判定像大便😂，动线和颜色一起改。
-          spawnDust(b.x + rand(-3.5, 3.5), b.y + rand(-1, 1));
+          // 从翅膀两侧散开(左右偏移大、上下贴平)——一次撒 2~3 粒细尘，
+          // 颗粒改细(1~2px)之后靠密度补足"金粉如雾"的存在感。
+          const n = 2 + (Math.random() < 0.5 ? 1 : 0);
+          for (let k = 0; k < n; k++) {
+            spawnDust(b.x + rand(-3.5, 3.5), b.y + rand(-1.5, 1.5));
+          }
         }
         if (now - b.lastStar > 2600) {
           b.lastStar = now + rand(0, 600);
