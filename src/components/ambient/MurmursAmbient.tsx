@@ -15,13 +15,13 @@ import { useEffect, useRef } from 'react';
 type DropRipple = (u: number, v: number, radiusScale?: number, strength?: number) => void;
 type PerchTarget = { x: number; y: number };
 
-// 三只蝴蝶的配置基本照搬素材包展示页(辉光/闪粉/星星配色是配好的一套)，
-// 只有尺寸整体缩小——展示页是全屏空景可以放 98~156px，咱们页面近景记忆花
-// 上限才 96px，蝴蝶是点缀不能比花大。
+// 三只蝴蝶的配置基本照搬素材包展示页(辉光/闪粉/星星配色是配好的一套)。
+// 尺寸走过一个来回：第九轮怕抢记忆花的戏缩到 58~80px，真机验收老婆说
+// "蝴蝶调大一些"——现在 74~104px，介于初版和展示页(98~156px)之间。
 const BUTTERFLIES = [
   {
     src: 'ice_blue_flap.webp',
-    size: 80,
+    size: 104,
     glow: 'rgba(146, 193, 255, 0.55)',
     spark: 'rgba(198, 229, 255, 0.95)',
     star: '#fff3c7',
@@ -29,7 +29,7 @@ const BUTTERFLIES = [
   },
   {
     src: 'peach_pink_flap.webp',
-    size: 66,
+    size: 86,
     glow: 'rgba(255, 160, 218, 0.48)',
     spark: 'rgba(255, 219, 240, 0.92)',
     star: '#ffe6bb',
@@ -37,7 +37,7 @@ const BUTTERFLIES = [
   },
   {
     src: 'moon_lavender_flap.webp',
-    size: 58,
+    size: 74,
     glow: 'rgba(188, 162, 255, 0.52)',
     spark: 'rgba(231, 213, 255, 0.95)',
     star: '#fff0c2',
@@ -161,9 +161,11 @@ export function MurmursAmbient({
       const size = rand(1, 2);
       el.style.width = `${size.toFixed(1)}px`;
       el.style.height = `${size.toFixed(1)}px`;
-      el.style.setProperty('--dx', `${rand(-16, 16).toFixed(1)}px`);
-      el.style.setProperty('--dy', `${rand(8, 24).toFixed(1)}px`); // 轻轻飘散，不直坠
-      const dur = rand(900, 1400);
+      // 第四轮(金粉尾巴)：位移收小+寿命拉长——粒子基本停在被撒下的原地慢慢
+      // 熄灭，蝴蝶飞走了粒子还亮着，飞行轨迹就自然连成一条金雾尾巴。
+      el.style.setProperty('--dx', `${rand(-10, 10).toFixed(1)}px`);
+      el.style.setProperty('--dy', `${rand(4, 14).toFixed(1)}px`);
+      const dur = rand(1300, 2000);
       el.style.setProperty('--dur', `${dur.toFixed(0)}ms`);
       root.appendChild(el);
       window.setTimeout(() => el.remove(), dur + 100);
@@ -277,13 +279,15 @@ export function MurmursAmbient({
           b.lastSpark = now;
           spawnMote(b.x + rand(-2, 2), b.y + rand(-1.5, 1.5), b.spark);
         }
-        if (moving && now - b.lastDust > 150) {
+        if (moving && now - b.lastDust > 110) {
           b.lastDust = now;
-          // 从翅膀两侧散开(左右偏移大、上下贴平)——一次撒 2~3 粒细尘，
-          // 颗粒改细(1~2px)之后靠密度补足"金粉如雾"的存在感。
-          const n = 2 + (Math.random() < 0.5 ? 1 : 0);
+          // 金粉尾巴(第四轮)：高频细撒+粒子原地慢熄(见 spawnDust 里的
+          // 位移/寿命)，蝴蝶飞过的弧线就连成一条渐渐熄灭的金雾尾迹。
+          // 频率是权衡过的上限：三只全在飞时同屏约七八十粒金尘，粒子只动
+          // transform/opacity(合成器动画)，再密就要开始赌手机了。
+          const n = 1 + (Math.random() < 0.7 ? 1 : 0);
           for (let k = 0; k < n; k++) {
-            spawnDust(b.x + rand(-3.5, 3.5), b.y + rand(-1.5, 1.5));
+            spawnDust(b.x + rand(-3, 3), b.y + rand(-1.5, 1.5));
           }
         }
         if (now - b.lastStar > 2600) {
