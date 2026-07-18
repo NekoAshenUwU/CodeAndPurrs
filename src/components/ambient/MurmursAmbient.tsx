@@ -67,6 +67,8 @@ type ButterflyState = {
   mode: 'wander' | 'dip' | 'perch';
   pause: number; // 秒，>0 表示悬停/歇脚中
   phase: number; // 飞行起伏/侧倾的相位
+  hx: number; // 平滑后的朝向(横)，驱动 rotateY 三维侧转
+  hy: number; // 平滑后的朝向(纵)，驱动 rotateX 俯仰
   lastSpark: number; // 上次撒闪粉的时间戳(ms)
   lastDust: number; // 上次撒金粉的时间戳(ms)
   lastStar: number; // 上次掉小星星的时间戳(ms)
@@ -199,6 +201,8 @@ export function MurmursAmbient({
         mode: 'wander',
         pause: 0,
         phase: rand(0, Math.PI * 2),
+        hx: 0,
+        hy: 0,
         lastSpark: 0,
         lastDust: 0,
         lastStar: performance.now() + i * 900,
@@ -267,12 +271,29 @@ export function MurmursAmbient({
             b.x += ux * b.speed * dt;
             // 飞行中上下轻颤——扇一下浮一下的那种起伏感。
             b.y += uy * b.speed * dt + Math.sin((now / 1000) * 7 + b.phase) * 1.6 * dt;
+            // 朝向平滑跟随速度方向(指数趋近)：换航点时 hx/hy 不会瞬跳，
+            // 而是花小半秒转过去——这段过渡本身就是"转弯"。
+            const k = Math.min(1, dt * 2.6);
+            b.hx += (ux - b.hx) * k;
+            b.hy += (uy - b.hy) * k;
           }
         }
-        // 侧倾(bank)照搬素材包展示页的味道：飞着的时候左右轻轻摆，素材是
-        // 俯视对称构图，靠小角度倾斜就有"迎风转向"的感觉，不用翻转。
-        const bank = Math.sin((now / 1000) * 1.65 + b.phase) * (moving ? 9 : 4);
-        b.el.style.transform = `translate(${((b.x / 100) * rect.width).toFixed(1)}px, ${((b.y / 100) * rect.height).toFixed(1)}px) translate(-50%, -50%) rotate(${bank.toFixed(1)}deg)`;
+        if (!moving) {
+          // 悬停/歇脚时慢慢回正，像停稳时把翅膀放平。
+          const k = Math.min(1, dt * 1.8);
+          b.hx -= b.hx * k;
+          b.hy -= b.hy * k;
+        }
+        // 多角度(2026-07-18 老婆要求"不要只是一面，可以转弯")：素材只有俯视
+        // 一张，但配合 perspective 做真 3D 旋转，同一张图就能转出侧面来——
+        // rotateY 往飞行方向侧成四分之三视角(往左飞就看到它左倾的侧颜)，
+        // rotateX 俯冲前倾/爬升后仰，rotateZ 是原有的呼吸摆+转弯压翼
+        // (朝向还没跟上目标方向的差值=正在转弯，往弯心压)。
+        const sway = Math.sin((now / 1000) * 1.65 + b.phase) * (moving ? 7 : 3);
+        const yaw = b.hx * 42; // 最大约 ±42°，足够看出"另一面"又不至于薄成一条线
+        const pitch = b.hy * -20;
+        const bank = sway + Math.max(-14, Math.min(14, b.hx * 12));
+        b.el.style.transform = `translate(${((b.x / 100) * rect.width).toFixed(1)}px, ${((b.y / 100) * rect.height).toFixed(1)}px) translate(-50%, -50%) perspective(520px) rotateX(${pitch.toFixed(1)}deg) rotateY(${yaw.toFixed(1)}deg) rotateZ(${bank.toFixed(1)}deg)`;
 
         // 闪粉尾迹只在飞行时撒；歇脚/悬停时偶尔还掉一颗小星星(更安静)。
         if (moving && now - b.lastSpark > 210) {
