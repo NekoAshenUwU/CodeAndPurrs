@@ -82,8 +82,11 @@ type ButterflyState = {
   mode: 'wander' | 'dip' | 'perch';
   pause: number; // 秒，>0 表示悬停/歇脚中
   phase: number; // 飞行起伏/侧倾的相位
-  hx: number; // 平滑后的朝向(横)，驱动视角切换 + rotateY 三维侧转
+  vx: number; // 速度向量(%/s)——平滑转向，飞出弧线弯而不是死角弯
+  vy: number;
+  hx: number; // 平滑后的朝向(横)=速度方向，驱动 rotateY 三维侧转
   hy: number; // 平滑后的朝向(纵)，驱动 rotateX 俯仰
+  tux: number; // 指向当前目标的单位方向(横)——视角图按它定，一段航程一张图
   bias: 'top' | 'quarter' | 'side'; // 飞行习性(见 pickWander)
   view: 'top' | 'quarter' | 'side'; // 当前用的哪张视角图
   facing: 1 | -1; // 脸朝向(1=右)，|hx|>0.15 才更新，防竖直飞时左右翻面抽搐
@@ -259,8 +262,11 @@ export function MurmursAmbient({
         mode: 'wander',
         pause: 0,
         phase: rand(0, Math.PI * 2),
+        vx: 0,
+        vy: 0,
         hx: 0,
         hy: 0,
+        tux: 0,
         bias: cfg.bias,
         view: 'top',
         facing: 1,
@@ -333,14 +339,21 @@ export function MurmursAmbient({
             moving = true;
             const ux = dx / dist;
             const uy = dy / dist;
-            b.x += ux * b.speed * dt;
+            b.tux = ux;
+            // 真机反馈"卡顿不自然"返工：位置不再直奔目标(直线+死角拐弯，
+            // 机械感)，改成速度向量平滑转向——期望速度指着目标，实际速度
+            // 花小半秒转过去，飞出来的是弧线弯。
+            const k = Math.min(1, dt * 2.2);
+            b.vx += (ux * b.speed - b.vx) * k;
+            b.vy += (uy * b.speed - b.vy) * k;
+            b.x += b.vx * dt;
             // 飞行中上下轻颤——扇一下浮一下的那种起伏感。
-            b.y += uy * b.speed * dt + Math.sin((now / 1000) * 7 + b.phase) * 1.6 * dt;
-            // 朝向平滑跟随速度方向(指数趋近)：换航点时 hx/hy 不会瞬跳，
-            // 而是花小半秒转过去——这段过渡本身就是"转弯"。
-            const k = Math.min(1, dt * 2.6);
-            b.hx += (ux - b.hx) * k;
-            b.hy += (uy - b.hy) * k;
+            b.y += b.vy * dt + Math.sin((now / 1000) * 7 + b.phase) * 1.6 * dt;
+            const sp = Math.hypot(b.vx, b.vy);
+            if (sp > 0.5) {
+              b.hx = b.vx / sp;
+              b.hy = b.vy / sp;
+            }
           }
         }
         if (!moving) {

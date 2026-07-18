@@ -4912,7 +4912,7 @@ a {
     transform: scaleX(1);
   }
   to {
-    transform: scaleX(0.72) rotate(-2deg);
+    transform: scaleX(0.66) rotate(-2.5deg);
   }
 }
 @keyframes murmursBflyGlow {
