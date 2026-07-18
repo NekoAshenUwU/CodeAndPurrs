@@ -24,7 +24,8 @@ type PerchTarget = { x: number; y: number };
 const BUTTERFLIES = [
   {
     src: 'ice_blue_flap.webp',
-    side: 'ice_blue_side.webp',
+    side: 'ice_blue_side2.webp',
+    sideFlapMs: 750, // 侧面扇翅循环时长，跟俯视图节奏一致
     quarter: 'ice_blue_quarter.webp',
     bias: 'side' as const, // 横穿党——常看到侧面
     size: 84,
@@ -35,7 +36,8 @@ const BUTTERFLIES = [
   },
   {
     src: 'peach_pink_flap.webp',
-    side: 'peach_pink_side.webp',
+    side: 'peach_pink_side2.webp',
+    sideFlapMs: 600,
     quarter: 'peach_pink_quarter.webp',
     bias: 'quarter' as const, // 斜切党——常看到四分之三
     size: 70,
@@ -46,7 +48,8 @@ const BUTTERFLIES = [
   },
   {
     src: 'moon_lavender_flap.webp',
-    side: 'moon_lavender_side.webp',
+    side: 'moon_lavender_side2.webp',
+    sideFlapMs: 480,
     quarter: 'moon_lavender_quarter.webp',
     bias: 'top' as const, // 纵游党——常看到俯视
     size: 60,
@@ -93,6 +96,7 @@ type ButterflyState = {
   starGlow: string;
   srcs: { top: string; quarter: string; side: string };
   el: HTMLElement;
+  flipEl: HTMLElement;
   imgEl: HTMLImageElement;
 };
 
@@ -269,6 +273,7 @@ export function MurmursAmbient({
         starGlow: cfg.starGlow,
         srcs,
         el,
+        flipEl: el.querySelector<HTMLElement>('.murmurs-bfly__flip')!,
         imgEl: el.querySelector<HTMLImageElement>('.murmurs-bfly__img')!,
       };
       pickWander(b);
@@ -366,9 +371,12 @@ export function MurmursAmbient({
           b.view = desired;
           b.lastViewSwitch = now;
           b.imgEl.src = b.srcs[desired];
+          // 新版侧面图是静态单帧(老婆挑的新画风+自己抠的图)，扇翅由 CSS
+          // 压放动画来做(murmursSideFlap)——只在侧面视角挂这个类。
+          b.imgEl.classList.toggle('murmurs-bfly__img--sideflap', desired === 'side');
         }
         const mirror = b.view !== 'top' && b.facing < 0;
-        b.imgEl.style.transform = mirror ? 'scaleX(-1)' : '';
+        b.flipEl.style.transform = mirror ? 'scaleX(-1)' : '';
         const ART_ANGLE = { top: 0, quarter: 28, side: 42 } as const;
         const sway = Math.sin((now / 1000) * 1.65 + b.phase) * (moving ? 7 : 3);
         const yaw = b.hx * 42 - b.facing * ART_ANGLE[b.view];
@@ -448,14 +456,18 @@ export function MurmursAmbient({
               height: `${cfg.size}px`,
               '--glow': cfg.glow,
               '--glowDur': `${4.4 + i * 0.5}s`,
+              // alternate 动画一去一回是一个循环，所以时长给一半
+              '--sideFlap': `${Math.round(cfg.sideFlapMs / 2)}ms`,
             } as React.CSSProperties
           }
         >
-          <img
-            className="murmurs-bfly__img"
-            src={`${import.meta.env.BASE_URL}assets/butterflies/${cfg.src}?v=2`}
-            alt=""
-          />
+          <div className="murmurs-bfly__flip">
+            <img
+              className="murmurs-bfly__img"
+              src={`${import.meta.env.BASE_URL}assets/butterflies/${cfg.src}?v=2`}
+              alt=""
+            />
+          </div>
         </div>
       ))}
       {[0, 1, 2].map((i) => (
