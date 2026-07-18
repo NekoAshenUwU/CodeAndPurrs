@@ -209,6 +209,13 @@ async function fetchMurmursFlowersRaw() {
     size: importanceToSize(row.importance),
     position: sorted.length > 1 ? Math.round((i / (sorted.length - 1)) * 1000) / 1000 : 1,
     title: String(row.title || '').trim() || '一段没有标题的心事',
+    // 弹窗要显示"那段日记里最重要的话"而不是被截断的短标题(2026-07-19
+    // 老婆反馈"只几个字我看不明白")——把记忆行里可能存全文/摘要的字段
+    // 都试一遍透传给前端；棠予酿那边一个都没给就是 null，前端退回只显示
+    // title。字段名按常见命名猜了一圈，哪个命中用哪个。
+    excerpt:
+      String(row.highlight || row.summary || row.content || row.body || row.text || '')
+        .trim() || null,
     date: row.created_at || null,
     // 花色改由前端用 valence/arousal 连续计算，这里只透传原始数值。
     valence: clampedNumber(row.valence, VALENCE_DEFAULT, VALENCE_RANGE),

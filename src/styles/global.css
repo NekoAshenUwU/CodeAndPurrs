@@ -5142,6 +5142,32 @@ a {
   pointer-events: none;
   opacity: 0.85;
 }
+/* 新日记的花(24 小时内)：底下垫一圈暖白金光环呼吸——一眼能认出"这朵是
+   新写的"。用独立元素+透明度动画(合成器)，不碰花朵本体的 filter。 */
+.murmurs-flower--new::before {
+  content: '';
+  position: absolute;
+  inset: -26%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 250, 220, 0.85) 0%, rgba(255, 236, 170, 0.5) 40%, transparent 70%);
+  animation: murmursNewGlow 2.6s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes murmursNewGlow {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 0.95;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .murmurs-flower--new::before {
+    animation: none;
+    opacity: 0.7;
+  }
+}
 /* to 里故意不写 opacity——远景花的常驻透明度是 JS inline 给的(0.78~1)，
    写死 opacity:1 会在动画结束那一帧从 1 跳回 inline 值(远景花肉眼可见地
    "闪"一下)；省略掉，浏览器自动从 0 补间到元素自己的底值，稳稳落位。 */
@@ -5209,7 +5235,9 @@ a {
   align-items: center;
   gap: 6px;
   width: max-content;
-  max-width: 280px;
+  /* 有了'最重要的话'整段内容后 280px 太挤，放宽一档；没有长文时卡片仍
+     跟着文字收缩(width:max-content 不变)。 */
+  max-width: 336px;
   min-width: 150px;
   padding: 28px 24px 30px;
   border-radius: 22px;
@@ -5264,6 +5292,21 @@ a {
   font-size: 1.08rem;
   color: #3d3454;
   text-shadow: 0 1px 3px rgba(255, 255, 255, 0.55);
+}
+/* 那段日记里最重要的话(2026-07-19 老婆反馈"只几个字看不明白")：标题下
+   完整显示，不截断——太长就在卡片内自己滚动，卡片不撑爆屏幕。 */
+.murmurs-detail__excerpt {
+  font-family: "GaiShiKeAiTianTianQuan", var(--display);
+  font-weight: 400;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: #4a4062;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.45);
+  text-align: left;
+  margin: 4px 0 6px;
+  max-height: 38vh;
+  overflow-y: auto;
+  white-space: pre-wrap;
 }
 /* 日期改成右下角落款式角标(不再单独占一行)：同款字体、字号缩到题字的
    0.55 倍左右、颜色减淡、位置往下沉一点，像照片角落烧录的日期戳。格式是

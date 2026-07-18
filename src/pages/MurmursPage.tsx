@@ -22,6 +22,7 @@ type MurmursFlower = {
   size: number; // 0.4~1.0，来自 importance，越重要花越大
   position: number; // 0~1，按 created_at 排序：0=最旧，1=最新
   title: string;
+  excerpt?: string | null; // 那段日记里最重要的话(棠予酿给全文/摘要字段才有)
   date: string | null;
   moodLabel?: string | null; // 纯文字心情词(平静/开心/伤心…)，弹出卡片用，不参与花色
   valence: number; // 实测约 -0.3~0.8，负=冷色调，正=暖色调
@@ -177,6 +178,14 @@ function stripLeadingDatePrefix(title: string, dateIso: string | null): string {
 // 45% 高度处——WATER_LINE_PERCENT 留了 3% 余量，花的落点(含抖动)不会贴到
 // 岸边/樱花树那一侧。FAR/NEAR 是"远景→近景"落点带，都在水面线以下。
 const WATER_LINE_PERCENT = 45;
+
+// 新日记的花发光多久：24 小时(老婆提议"新日记要一整天发光"，就按一整天)。
+const NEW_FLOWER_GLOW_MS = 24 * 60 * 60 * 1000;
+function isNewFlower(flower: MurmursFlower): boolean {
+  if (!flower.date) return false;
+  const t = Date.parse(flower.date);
+  return Number.isFinite(t) && Date.now() - t < NEW_FLOWER_GLOW_MS;
+}
 const FAR_TOP_PERCENT = WATER_LINE_PERCENT + 3;
 const NEAR_TOP_PERCENT = 90;
 
@@ -353,10 +362,11 @@ function FlowerBloom({
     }),
     [flower.id],
   );
+  const fresh = isNewFlower(flower);
   return (
     <button
       type="button"
-      className={`murmurs-flower${isExiting ? ' murmurs-flower--exiting' : ''}`}
+      className={`murmurs-flower${isExiting ? ' murmurs-flower--exiting' : ''}${fresh ? ' murmurs-flower--new' : ''}`}
       style={
         {
           top: `${top}%`,
@@ -446,6 +456,13 @@ function useFlowerRotation(flowers: MurmursFlower[] | null) {
       while (usedIdx.has(idx) && idx < flowers.length - 1) idx++;
       usedIdx.add(idx);
       initial.push(flowers[idx]);
+    }
+    // 新日记(24 小时内)保证首屏就在场——等距抽样多半抽不中最新那几条，
+    // "写了新日记怎么没看到"的另一半原因(另一半在后端数据链路)。用新花
+    // 从头部(最旧的抽样)开始顶替。
+    const fresh = flowers.filter((f) => isNewFlower(f) && !initial.some((x) => x.id === f.id));
+    for (let i = 0; i < fresh.length && i < initial.length; i++) {
+      initial[i] = fresh[i];
     }
     visibleRef.current = initial;
     setVisible(initial);
@@ -701,6 +718,9 @@ export function MurmursPage() {
             </button>
             {selected.moodLabel ? <span className="murmurs-detail__mood">{selected.moodLabel}</span> : null}
             <span className="murmurs-detail__title">{stripLeadingDatePrefix(selected.title, selected.date)}</span>
+            {selected.excerpt && selected.excerpt !== selected.title ? (
+              <p className="murmurs-detail__excerpt">{selected.excerpt}</p>
+            ) : null}
             {fmtDateStamp(selected.date) ? (
               <span className="murmurs-detail__stamp">{fmtDateStamp(selected.date)}</span>
             ) : null}
