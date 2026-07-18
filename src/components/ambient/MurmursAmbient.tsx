@@ -18,9 +18,14 @@ type PerchTarget = { x: number; y: number };
 // 三只蝴蝶的配置基本照搬素材包展示页(辉光/闪粉/星星配色是配好的一套)。
 // 尺寸走过一个来回：第九轮怕抢记忆花的戏缩到 58~80px，真机验收老婆说
 // "蝴蝶调大一些"——现在 74~104px，介于初版和展示页(98~156px)之间。
+// 2026-07-18 真·多角度：每只除俯视(src)外新增 side(正右侧)/quarter(右前
+// 45°)两张视角图(也是 GPT 出的 8 帧扇翅 webp，帧时长在入库时用 webpmux
+// 重设成各自的节奏)，按飞行方向实时切换，朝左飞用镜像。
 const BUTTERFLIES = [
   {
     src: 'ice_blue_flap.webp',
+    side: 'ice_blue_side.webp',
+    quarter: 'ice_blue_quarter.webp',
     size: 104,
     glow: 'rgba(146, 193, 255, 0.55)',
     spark: 'rgba(198, 229, 255, 0.95)',
@@ -29,6 +34,8 @@ const BUTTERFLIES = [
   },
   {
     src: 'peach_pink_flap.webp',
+    side: 'peach_pink_side.webp',
+    quarter: 'peach_pink_quarter.webp',
     size: 86,
     glow: 'rgba(255, 160, 218, 0.48)',
     spark: 'rgba(255, 219, 240, 0.92)',
@@ -37,6 +44,8 @@ const BUTTERFLIES = [
   },
   {
     src: 'moon_lavender_flap.webp',
+    side: 'moon_lavender_side.webp',
+    quarter: 'moon_lavender_quarter.webp',
     size: 74,
     glow: 'rgba(188, 162, 255, 0.52)',
     spark: 'rgba(231, 213, 255, 0.95)',
@@ -67,15 +76,19 @@ type ButterflyState = {
   mode: 'wander' | 'dip' | 'perch';
   pause: number; // 秒，>0 表示悬停/歇脚中
   phase: number; // 飞行起伏/侧倾的相位
-  hx: number; // 平滑后的朝向(横)，驱动 rotateY 三维侧转
+  hx: number; // 平滑后的朝向(横)，驱动视角切换 + rotateY 三维侧转
   hy: number; // 平滑后的朝向(纵)，驱动 rotateX 俯仰
+  view: 'top' | 'quarter' | 'side'; // 当前用的哪张视角图
+  lastViewSwitch: number; // 上次换视角图的时间戳(ms)，做切换冷却
   lastSpark: number; // 上次撒闪粉的时间戳(ms)
   lastDust: number; // 上次撒金粉的时间戳(ms)
   lastStar: number; // 上次掉小星星的时间戳(ms)
   spark: string;
   star: string;
   starGlow: string;
+  srcs: { top: string; quarter: string; side: string };
   el: HTMLElement;
+  imgEl: HTMLImageElement;
 };
 
 type PetalState = {
@@ -192,6 +205,18 @@ export function MurmursAmbient({
       root.querySelectorAll<HTMLElement>('.murmurs-bfly'),
     ).map((el, i) => {
       const cfg = BUTTERFLIES[i % BUTTERFLIES.length];
+      const base = `${import.meta.env.BASE_URL}assets/butterflies/`;
+      const srcs = {
+        top: `${base}${cfg.src}?v=2`,
+        quarter: `${base}${cfg.quarter}`,
+        side: `${base}${cfg.side}`,
+      };
+      // 三张视角图开场就预热进缓存——飞到一半才第一次加载 side 图的话，
+      // 切换瞬间会闪空白。
+      for (const url of [srcs.quarter, srcs.side]) {
+        const img = new Image();
+        img.src = url;
+      }
       const b: ButterflyState = {
         x: rand(FLY_X[0], FLY_X[1]),
         y: rand(FLY_Y[0], FLY_Y[1]),
@@ -203,13 +228,17 @@ export function MurmursAmbient({
         phase: rand(0, Math.PI * 2),
         hx: 0,
         hy: 0,
+        view: 'top',
+        lastViewSwitch: 0,
         lastSpark: 0,
         lastDust: 0,
         lastStar: performance.now() + i * 900,
         spark: cfg.spark,
         star: cfg.star,
         starGlow: cfg.starGlow,
+        srcs,
         el,
+        imgEl: el.querySelector<HTMLImageElement>('.murmurs-bfly__img')!,
       };
       pickWander(b);
       return b;
@@ -284,13 +313,24 @@ export function MurmursAmbient({
           b.hx -= b.hx * k;
           b.hy -= b.hy * k;
         }
-        // 多角度(2026-07-18 老婆要求"不要只是一面，可以转弯")：素材只有俯视
-        // 一张，但配合 perspective 做真 3D 旋转，同一张图就能转出侧面来——
-        // rotateY 往飞行方向侧成四分之三视角(往左飞就看到它左倾的侧颜)，
-        // rotateX 俯冲前倾/爬升后仰，rotateZ 是原有的呼吸摆+转弯压翼
-        // (朝向还没跟上目标方向的差值=正在转弯，往弯心压)。
+        // 真·多角度(2026-07-18 第二弹)：GPT 补齐了每只的 side(正右侧)/
+        // quarter(右前 45°)视角图，按平滑朝向的水平分量 |hx| 换图——
+        // 基本横着飞用侧面、斜着飞用四分之三、竖着飞/悬停用俯视；朝左飞
+        // 就把图镜像(素材只出朝右的)。380ms 切换冷却防止在阈值附近抖来
+        // 抖去。3D 透视保留做"两张图之间"的过渡：用的视角图越贴合当前
+        // 方向，rotateY 残余量越小(俯视 42°→侧面 6°)，切换不跳变。
+        const ax = Math.abs(b.hx);
+        const desired: 'top' | 'quarter' | 'side' = ax > 0.8 ? 'side' : ax > 0.42 ? 'quarter' : 'top';
+        if (desired !== b.view && now - b.lastViewSwitch > 380) {
+          b.view = desired;
+          b.lastViewSwitch = now;
+          b.imgEl.src = b.srcs[desired];
+        }
+        const mirror = b.view !== 'top' && b.hx < 0;
+        b.imgEl.style.transform = mirror ? 'scaleX(-1)' : '';
+        const yawMax = b.view === 'side' ? 6 : b.view === 'quarter' ? 16 : 42;
         const sway = Math.sin((now / 1000) * 1.65 + b.phase) * (moving ? 7 : 3);
-        const yaw = b.hx * 42; // 最大约 ±42°，足够看出"另一面"又不至于薄成一条线
+        const yaw = b.hx * yawMax;
         const pitch = b.hy * -20;
         const bank = sway + Math.max(-14, Math.min(14, b.hx * 12));
         b.el.style.transform = `translate(${((b.x / 100) * rect.width).toFixed(1)}px, ${((b.y / 100) * rect.height).toFixed(1)}px) translate(-50%, -50%) perspective(520px) rotateX(${pitch.toFixed(1)}deg) rotateY(${yaw.toFixed(1)}deg) rotateZ(${bank.toFixed(1)}deg)`;
@@ -353,13 +393,14 @@ export function MurmursAmbient({
   return (
     <div className="murmurs-ambient" ref={rootRef} aria-hidden="true">
       {BUTTERFLIES.map((cfg, i) => (
-        <img
+        // 外层 div 由 rAF 写"定位+3D 姿态"，内层 img 管"当前视角图+镜像+
+        // 辉光"——镜像的 scaleX(-1) 和姿态的 rotate 系列必须分在两层，
+        // 挤在同一个 transform 里每帧拼字符串既乱又容易写错符号。
+        // ?v=2：俯视图扇翅重编版(三只不同频率)。webp 内容变了但文件名没变，
+        // 不带版本号浏览器会拿缓存里的旧图，三只又齐步扇回去。
+        <div
           key={i}
           className="murmurs-bfly"
-          // ?v=2：扇翅重编版(三只不同频率)。webp 内容变了但文件名没变，
-          // 不带版本号浏览器会拿缓存里的旧图，三只又齐步扇回去。
-          src={`${import.meta.env.BASE_URL}assets/butterflies/${cfg.src}?v=2`}
-          alt=""
           style={
             {
               width: `${cfg.size}px`,
@@ -368,7 +409,13 @@ export function MurmursAmbient({
               '--glowDur': `${4.4 + i * 0.5}s`,
             } as React.CSSProperties
           }
-        />
+        >
+          <img
+            className="murmurs-bfly__img"
+            src={`${import.meta.env.BASE_URL}assets/butterflies/${cfg.src}?v=2`}
+            alt=""
+          />
+        </div>
       ))}
       {[0, 1, 2].map((i) => (
         <svg key={i} className="murmurs-petal" viewBox="0 0 24 24" style={{ width: `${11 + i * 2}px` }}>
