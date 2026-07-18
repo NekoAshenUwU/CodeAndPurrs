@@ -335,7 +335,9 @@ export function MurmursAmbient({
         <img
           key={i}
           className="murmurs-bfly"
-          src={`${import.meta.env.BASE_URL}assets/butterflies/${cfg.src}`}
+          // ?v=2：扇翅重编版(三只不同频率)。webp 内容变了但文件名没变，
+          // 不带版本号浏览器会拿缓存里的旧图，三只又齐步扇回去。
+          src={`${import.meta.env.BASE_URL}assets/butterflies/${cfg.src}?v=2`}
           alt=""
           style={
             {
