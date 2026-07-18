@@ -26,6 +26,7 @@ const BUTTERFLIES = [
     src: 'ice_blue_flap.webp',
     side: 'ice_blue_side.webp',
     quarter: 'ice_blue_quarter.webp',
+    bias: 'side' as const, // 横穿党——常看到侧面
     size: 84,
     glow: 'rgba(146, 193, 255, 0.55)',
     spark: 'rgba(198, 229, 255, 0.95)',
@@ -36,6 +37,7 @@ const BUTTERFLIES = [
     src: 'peach_pink_flap.webp',
     side: 'peach_pink_side.webp',
     quarter: 'peach_pink_quarter.webp',
+    bias: 'quarter' as const, // 斜切党——常看到四分之三
     size: 70,
     glow: 'rgba(255, 160, 218, 0.48)',
     spark: 'rgba(255, 219, 240, 0.92)',
@@ -46,6 +48,7 @@ const BUTTERFLIES = [
     src: 'moon_lavender_flap.webp',
     side: 'moon_lavender_side.webp',
     quarter: 'moon_lavender_quarter.webp',
+    bias: 'top' as const, // 纵游党——常看到俯视
     size: 60,
     glow: 'rgba(188, 162, 255, 0.52)',
     spark: 'rgba(231, 213, 255, 0.95)',
@@ -78,6 +81,7 @@ type ButterflyState = {
   phase: number; // 飞行起伏/侧倾的相位
   hx: number; // 平滑后的朝向(横)，驱动视角切换 + rotateY 三维侧转
   hy: number; // 平滑后的朝向(纵)，驱动 rotateX 俯仰
+  bias: 'top' | 'quarter' | 'side'; // 飞行习性(见 pickWander)
   view: 'top' | 'quarter' | 'side'; // 当前用的哪张视角图
   facing: 1 | -1; // 脸朝向(1=右)，|hx|>0.15 才更新，防竖直飞时左右翻面抽搐
   lastViewSwitch: number; // 上次换视角图的时间戳(ms)，做切换冷却
@@ -106,11 +110,35 @@ type PetalState = {
   el: HTMLElement;
 };
 
+// 挑下一个漫游航点。2026-07-18 "有的侧面有的俯视"：三只各有飞行习性
+// (bias)，让同一时刻屏幕上自然出现不同视角——横穿党常给侧面、斜切党常给
+// 四分之三、纵游党常给俯视。30% 概率无视习性自由飞，路线不至于太死板。
 function pickWander(b: ButterflyState) {
   b.mode = 'wander';
-  b.tx = rand(FLY_X[0], FLY_X[1]);
-  b.ty = rand(FLY_Y[0], FLY_Y[1]);
   b.speed = rand(6, 11);
+  const free = Math.random() < 0.3;
+  if (free || !b.bias) {
+    b.tx = rand(FLY_X[0], FLY_X[1]);
+    b.ty = rand(FLY_Y[0], FLY_Y[1]);
+    return;
+  }
+  const clampX = (v: number) => Math.max(FLY_X[0], Math.min(FLY_X[1], v));
+  const clampY = (v: number) => Math.max(FLY_Y[0], Math.min(FLY_Y[1], v));
+  if (b.bias === 'side') {
+    // 横穿：往画面另一侧飞，纵向基本持平 → |hx| 大 → 侧面图
+    b.tx = b.x < 50 ? rand(62, FLY_X[1]) : rand(FLY_X[0], 38);
+    b.ty = clampY(b.y + rand(-7, 7));
+  } else if (b.bias === 'quarter') {
+    // 斜切：横纵各走一段 → |hx| 中等 → 四分之三图
+    const dx = rand(22, 38) * (b.x < 50 ? 1 : -1);
+    const dy = rand(14, 24) * (b.y < 55 ? 1 : -1);
+    b.tx = clampX(b.x + dx);
+    b.ty = clampY(b.y + dy);
+  } else {
+    // 纵游：基本竖着走 → |hx| 小 → 俯视图
+    b.tx = clampX(b.x + rand(-9, 9));
+    b.ty = b.y < 55 ? rand(66, FLY_Y[1]) : rand(FLY_Y[0], 46);
+  }
 }
 
 function respawnPetal(p: PetalState, firstRound: boolean) {
@@ -229,6 +257,7 @@ export function MurmursAmbient({
         phase: rand(0, Math.PI * 2),
         hx: 0,
         hy: 0,
+        bias: cfg.bias,
         view: 'top',
         facing: 1,
         lastViewSwitch: 0,
