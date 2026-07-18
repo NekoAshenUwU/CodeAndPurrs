@@ -16,8 +16,8 @@ type DropRipple = (u: number, v: number, radiusScale?: number, strength?: number
 type PerchTarget = { x: number; y: number };
 
 // 三只蝴蝶的配置基本照搬素材包展示页(辉光/闪粉/星星配色是配好的一套)。
-// 尺寸走过一个来回：第九轮怕抢记忆花的戏缩到 58~80px，真机验收老婆说
-// "蝴蝶调大一些"——现在 74~104px，介于初版和展示页(98~156px)之间。
+// 尺寸走过两个来回：第九轮 58~80px → 老婆说"调大一些"提到 74~104px →
+// 多角度版又说"太大只了"，落定 60~84px。
 // 2026-07-18 真·多角度：每只除俯视(src)外新增 side(正右侧)/quarter(右前
 // 45°)两张视角图(也是 GPT 出的 8 帧扇翅 webp，帧时长在入库时用 webpmux
 // 重设成各自的节奏)，按飞行方向实时切换，朝左飞用镜像。
@@ -26,7 +26,7 @@ const BUTTERFLIES = [
     src: 'ice_blue_flap.webp',
     side: 'ice_blue_side.webp',
     quarter: 'ice_blue_quarter.webp',
-    size: 104,
+    size: 84,
     glow: 'rgba(146, 193, 255, 0.55)',
     spark: 'rgba(198, 229, 255, 0.95)',
     star: '#fff3c7',
@@ -36,7 +36,7 @@ const BUTTERFLIES = [
     src: 'peach_pink_flap.webp',
     side: 'peach_pink_side.webp',
     quarter: 'peach_pink_quarter.webp',
-    size: 86,
+    size: 70,
     glow: 'rgba(255, 160, 218, 0.48)',
     spark: 'rgba(255, 219, 240, 0.92)',
     star: '#ffe6bb',
@@ -46,7 +46,7 @@ const BUTTERFLIES = [
     src: 'moon_lavender_flap.webp',
     side: 'moon_lavender_side.webp',
     quarter: 'moon_lavender_quarter.webp',
-    size: 74,
+    size: 60,
     glow: 'rgba(188, 162, 255, 0.52)',
     spark: 'rgba(231, 213, 255, 0.95)',
     star: '#fff0c2',
@@ -79,6 +79,7 @@ type ButterflyState = {
   hx: number; // 平滑后的朝向(横)，驱动视角切换 + rotateY 三维侧转
   hy: number; // 平滑后的朝向(纵)，驱动 rotateX 俯仰
   view: 'top' | 'quarter' | 'side'; // 当前用的哪张视角图
+  facing: 1 | -1; // 脸朝向(1=右)，|hx|>0.15 才更新，防竖直飞时左右翻面抽搐
   lastViewSwitch: number; // 上次换视角图的时间戳(ms)，做切换冷却
   lastSpark: number; // 上次撒闪粉的时间戳(ms)
   lastDust: number; // 上次撒金粉的时间戳(ms)
@@ -229,6 +230,7 @@ export function MurmursAmbient({
         hx: 0,
         hy: 0,
         view: 'top',
+        facing: 1,
         lastViewSwitch: 0,
         lastSpark: 0,
         lastDust: 0,
@@ -313,24 +315,34 @@ export function MurmursAmbient({
           b.hx -= b.hx * k;
           b.hy -= b.hy * k;
         }
-        // 真·多角度(2026-07-18 第二弹)：GPT 补齐了每只的 side(正右侧)/
-        // quarter(右前 45°)视角图，按平滑朝向的水平分量 |hx| 换图——
-        // 基本横着飞用侧面、斜着飞用四分之三、竖着飞/悬停用俯视；朝左飞
-        // 就把图镜像(素材只出朝右的)。380ms 切换冷却防止在阈值附近抖来
-        // 抖去。3D 透视保留做"两张图之间"的过渡：用的视角图越贴合当前
-        // 方向，rotateY 残余量越小(俯视 42°→侧面 6°)，切换不跳变。
+        // 真·多角度(2026-07-18 第二弹，第三弹修"抽抽")：按平滑朝向的水平
+        // 分量 |hx| 在俯视/quarter(右前45°)/side(正右侧)三张图之间切换。
+        // 真机反馈"像在抽抽"的三个根源逐个治：
+        // 1. 换图跳变——图片本身画的角度(ART_ANGLE：俯视0°/四分之三28°/
+        //    侧面42°)在切换瞬间跳一档，CSS 的 rotateY 必须同步减掉这一档
+        //    (yaw = 总角度 - 当前图自带的角度)，视觉总角度才是连续的；
+        // 2. 阈值抖动——升档/降档用不同阈值(迟滞区间)，方向在临界值附近
+        //    徘徊时不会图片换来换去，另加 600ms 冷却兜底；
+        // 3. 镜像翻面——朝向 |hx|<0.15 时保持上一次的脸朝向不翻(接近竖直
+        //    飞时 hx 会在 0 附近晃，跟着晃就左右翻面抽搐)。
+        if (Math.abs(b.hx) > 0.15) b.facing = b.hx > 0 ? 1 : -1;
         const ax = Math.abs(b.hx);
-        const desired: 'top' | 'quarter' | 'side' = ax > 0.8 ? 'side' : ax > 0.42 ? 'quarter' : 'top';
-        if (desired !== b.view && now - b.lastViewSwitch > 380) {
+        let desired = b.view;
+        if (b.view === 'top' && ax > 0.48) desired = 'quarter';
+        else if (b.view === 'quarter') {
+          if (ax > 0.84) desired = 'side';
+          else if (ax < 0.34) desired = 'top';
+        } else if (b.view === 'side' && ax < 0.72) desired = 'quarter';
+        if (desired !== b.view && now - b.lastViewSwitch > 600) {
           b.view = desired;
           b.lastViewSwitch = now;
           b.imgEl.src = b.srcs[desired];
         }
-        const mirror = b.view !== 'top' && b.hx < 0;
+        const mirror = b.view !== 'top' && b.facing < 0;
         b.imgEl.style.transform = mirror ? 'scaleX(-1)' : '';
-        const yawMax = b.view === 'side' ? 6 : b.view === 'quarter' ? 16 : 42;
+        const ART_ANGLE = { top: 0, quarter: 28, side: 42 } as const;
         const sway = Math.sin((now / 1000) * 1.65 + b.phase) * (moving ? 7 : 3);
-        const yaw = b.hx * yawMax;
+        const yaw = b.hx * 42 - b.facing * ART_ANGLE[b.view];
         const pitch = b.hy * -20;
         const bank = sway + Math.max(-14, Math.min(14, b.hx * 12));
         b.el.style.transform = `translate(${((b.x / 100) * rect.width).toFixed(1)}px, ${((b.y / 100) * rect.height).toFixed(1)}px) translate(-50%, -50%) perspective(520px) rotateX(${pitch.toFixed(1)}deg) rotateY(${yaw.toFixed(1)}deg) rotateZ(${bank.toFixed(1)}deg)`;
