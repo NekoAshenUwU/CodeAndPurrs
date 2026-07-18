@@ -162,7 +162,13 @@ async function loadDiaryComposed() {
 // 不额外引入第二份 key、不硬编码任何密钥。
 let _murmursFlowersCache = { at: 0, flowers: null };
 const MURMURS_CACHE_MS = Number(process.env.MURMURS_FLOWERS_CACHE_MS || 60_000);
+// 页面最多要 40 朵花；但 diary/list 是"从旧到新排序再截断"的(2026-07-19
+// 真机抓包实锤：库里 96 条、limit=3 拉回来的是半个月前的 Day 190-191)——
+// 直接 limit=40 拿到的永远是最旧的 40 条，记忆一超 40 条新日记就全被截在
+// 门外("写了新日记怎么没看到"的根因)。所以拉的时候放大限额把全量捞回来，
+// 排序后自己挑最新的 MURMURS_LIMIT 条。
 const MURMURS_LIMIT = 40;
+const MURMURS_FETCH_LIMIT = 500;
 
 // valence/arousal 实测范围(棠予酿真实数据校准)：没有这两个字段或不是有限数字时
 // 落到这个区间的中点，不让花色计算收到 NaN。
@@ -191,7 +197,7 @@ async function fetchMurmursFlowersRaw() {
     return [];
   }
   const base = process.env.TANG_MCP_BASE_URL || 'http://127.0.0.1:8890';
-  const r = await fetch(`${base}/internal/diary/list?limit=${MURMURS_LIMIT}`, {
+  const r = await fetch(`${base}/internal/diary/list?limit=${MURMURS_FETCH_LIMIT}`, {
     headers: { 'X-Internal-Key': key },
     signal: AbortSignal.timeout(4000), // 别让页面加载被棠予酿卡住
   });
@@ -201,8 +207,11 @@ async function fetchMurmursFlowersRaw() {
 
   // position 按 created_at 从旧到新排序(旧记忆越飘越远、新记忆在前)，
   // 归一化成 0~1：0=最旧/最远，1=最新/最近——具体落到屏幕哪个像素由前端决定，
-  // 这里只负责给出稳定的相对顺序。
-  const sorted = [...rows].sort((a, b) => (Date.parse(a?.created_at) || 0) - (Date.parse(b?.created_at) || 0));
+  // 这里只负责给出稳定的相对顺序。排序后只保留最新的 MURMURS_LIMIT 条
+  // (slice 负数=从尾部取)，最旧的溢出条目让位给新日记。
+  const sorted = [...rows]
+    .sort((a, b) => (Date.parse(a?.created_at) || 0) - (Date.parse(b?.created_at) || 0))
+    .slice(-MURMURS_LIMIT);
 
   return sorted.map((row, i) => ({
     id: String(row.id ?? i),
