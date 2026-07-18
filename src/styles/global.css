@@ -4881,48 +4881,65 @@ a {
   top: 0;
   will-change: transform;
 }
+/* 辉光呼吸改用背后一层光晕 div 做透明度动画——原来是在 img 的 filter 上
+   做动画，手机每帧都要重新光栅化三层 drop-shadow("卡卡的"另一个元凶)；
+   透明度动画走合成器，几乎零成本。img 上的 drop-shadow 保留但改成静态。 */
+.murmurs-bfly__halo {
+  position: absolute;
+  inset: -32%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 0%, var(--glow) 34%, transparent 68%);
+  opacity: 0.55;
+  pointer-events: none;
+  animation: murmursHaloBreath var(--glowDur, 4.6s) ease-in-out infinite alternate;
+  will-change: opacity;
+}
+@keyframes murmursHaloBreath {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 0.75;
+  }
+}
 /* flip 层只管左右镜像(rAF 写 scaleX(-1))——镜像和 img 上的扇翅动画各占
    一层 transform，互不覆盖。 */
 .murmurs-bfly__flip {
+  position: relative;
   width: 100%;
   height: 100%;
 }
+/* 三张视角图叠放常驻，is-on 显示当前那张——不换 src 就不会触发手机上的
+   webp 重解码，切换零顿挫。隐藏用 visibility(不是 display:none)，解码结果
+   留在显存里。 */
 .murmurs-bfly__img {
-  display: block;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  will-change: transform, filter;
-  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 13px var(--glow))
-    drop-shadow(0 7px 12px rgba(71, 52, 114, 0.14));
-  animation: murmursBflyGlow var(--glowDur, 4.6s) ease-in-out infinite alternate;
+  visibility: hidden;
+  will-change: transform;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 12px var(--glow));
+}
+.murmurs-bfly__img.is-on {
+  visibility: visible;
 }
 /* 新版侧面图(2026-07-18 老婆挑画风+亲手抠图)是静态单帧，扇翅由这条 CSS
    压放动画做：侧视角下翅膀朝镜头扇过来，投影就是横向一压一放——绕身体
-   (图中身体在右侧约 84% 处)做 scaleX 压缩+微转。alternate 一去一回是一个
-   完整扇翅循环，--sideFlap 传的是半程时长(每只不同，继承各自节奏)。
-   注意 animation 要把辉光呼吸一起带上——animation 简写会整份覆盖。 */
+   (图中身体在右侧约 84% 处)做 scaleX 压缩+回转。真机反馈"扇动幅度可以
+   大一些"：压到 0.52。alternate 一去一回是一个完整扇翅循环，--sideFlap
+   传的是半程时长(每只不同，继承各自节奏)。 */
 .murmurs-bfly__img--sideflap {
   transform-origin: 84% 62%;
-  animation: murmursBflyGlow var(--glowDur, 4.6s) ease-in-out infinite alternate,
-    murmursSideFlap var(--sideFlap, 300ms) ease-in-out infinite alternate;
+  animation: murmursSideFlap var(--sideFlap, 300ms) ease-in-out infinite alternate;
 }
 @keyframes murmursSideFlap {
   from {
     transform: scaleX(1);
   }
   to {
-    transform: scaleX(0.66) rotate(-2.5deg);
-  }
-}
-@keyframes murmursBflyGlow {
-  from {
-    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.85)) drop-shadow(0 0 10px var(--glow))
-      drop-shadow(0 7px 11px rgba(71, 52, 114, 0.12));
-  }
-  to {
-    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 18px var(--glow))
-      drop-shadow(0 9px 14px rgba(71, 52, 114, 0.18));
+    transform: scaleX(0.52) rotate(-3deg);
   }
 }
 /* 蝴蝶飞行时撒的闪粉(mote)和偶尔一颗 ✦ 小星星——keyframes 改自素材包

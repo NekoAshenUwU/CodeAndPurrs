@@ -17,7 +17,7 @@ type PerchTarget = { x: number; y: number };
 
 // 三只蝴蝶的配置基本照搬素材包展示页(辉光/闪粉/星星配色是配好的一套)。
 // 尺寸走过两个来回：第九轮 58~80px → 老婆说"调大一些"提到 74~104px →
-// 多角度版又说"太大只了"，落定 60~84px。
+// 多角度版又说"太大只了"落定 60~84 → 真机又嫌粉/紫大，粉 58/紫 50，蓝不动。
 // 2026-07-18 真·多角度：每只除俯视(src)外新增 side(正右侧)/quarter(右前
 // 45°)两张视角图(也是 GPT 出的 8 帧扇翅 webp，帧时长在入库时用 webpmux
 // 重设成各自的节奏)，按飞行方向实时切换，朝左飞用镜像。
@@ -40,7 +40,7 @@ const BUTTERFLIES = [
     sideFlapMs: 600,
     quarter: 'peach_pink_quarter.webp',
     bias: 'quarter' as const, // 斜切党——常看到四分之三
-    size: 70,
+    size: 58,
     glow: 'rgba(255, 160, 218, 0.48)',
     spark: 'rgba(255, 219, 240, 0.92)',
     star: '#ffe6bb',
@@ -52,7 +52,7 @@ const BUTTERFLIES = [
     sideFlapMs: 480,
     quarter: 'moon_lavender_quarter.webp',
     bias: 'top' as const, // 纵游党——常看到俯视
-    size: 60,
+    size: 50,
     glow: 'rgba(188, 162, 255, 0.52)',
     spark: 'rgba(231, 213, 255, 0.95)',
     star: '#fff0c2',
@@ -97,10 +97,11 @@ type ButterflyState = {
   spark: string;
   star: string;
   starGlow: string;
-  srcs: { top: string; quarter: string; side: string };
   el: HTMLElement;
   flipEl: HTMLElement;
-  imgEl: HTMLImageElement;
+  // 三张视角图常驻 DOM(见 JSX)，切换=显隐——换 src 的老方案在手机上每次
+  // 都可能重新解码一次 webp，肉眼可见地顿一下("卡卡的"元凶之一)。
+  imgEls: Record<'top' | 'quarter' | 'side', HTMLImageElement>;
 };
 
 type PetalState = {
@@ -241,18 +242,6 @@ export function MurmursAmbient({
       root.querySelectorAll<HTMLElement>('.murmurs-bfly'),
     ).map((el, i) => {
       const cfg = BUTTERFLIES[i % BUTTERFLIES.length];
-      const base = `${import.meta.env.BASE_URL}assets/butterflies/`;
-      const srcs = {
-        top: `${base}${cfg.src}?v=2`,
-        quarter: `${base}${cfg.quarter}`,
-        side: `${base}${cfg.side}`,
-      };
-      // 三张视角图开场就预热进缓存——飞到一半才第一次加载 side 图的话，
-      // 切换瞬间会闪空白。
-      for (const url of [srcs.quarter, srcs.side]) {
-        const img = new Image();
-        img.src = url;
-      }
       const b: ButterflyState = {
         x: rand(FLY_X[0], FLY_X[1]),
         y: rand(FLY_Y[0], FLY_Y[1]),
@@ -277,10 +266,13 @@ export function MurmursAmbient({
         spark: cfg.spark,
         star: cfg.star,
         starGlow: cfg.starGlow,
-        srcs,
         el,
         flipEl: el.querySelector<HTMLElement>('.murmurs-bfly__flip')!,
-        imgEl: el.querySelector<HTMLImageElement>('.murmurs-bfly__img')!,
+        imgEls: {
+          top: el.querySelector<HTMLImageElement>('.murmurs-bfly__img--top')!,
+          quarter: el.querySelector<HTMLImageElement>('.murmurs-bfly__img--quarter')!,
+          side: el.querySelector<HTMLImageElement>('.murmurs-bfly__img--side')!,
+        },
       };
       pickWander(b);
       return b;
@@ -372,21 +364,22 @@ export function MurmursAmbient({
         //    徘徊时不会图片换来换去，另加 600ms 冷却兜底；
         // 3. 镜像翻面——朝向 |hx|<0.15 时保持上一次的脸朝向不翻(接近竖直
         //    飞时 hx 会在 0 附近晃，跟着晃就左右翻面抽搐)。
-        if (Math.abs(b.hx) > 0.15) b.facing = b.hx > 0 ? 1 : -1;
-        const ax = Math.abs(b.hx);
-        let desired = b.view;
-        if (b.view === 'top' && ax > 0.48) desired = 'quarter';
-        else if (b.view === 'quarter') {
-          if (ax > 0.84) desired = 'side';
-          else if (ax < 0.34) desired = 'top';
-        } else if (b.view === 'side' && ax < 0.72) desired = 'quarter';
-        if (desired !== b.view && now - b.lastViewSwitch > 600) {
+        // 视角图/镜像按"目标方向"(tux)定——它只在选新航点那一刻变一次，
+        // 一段航程从头到尾同一张图，转弯的视觉过渡完全交给 3D rotateY 的
+        // 连续变化(ART_ANGLE 补偿保证换图瞬间总角度不跳)。以前跟着实时
+        // 平滑朝向走，转弯必扫过所有阈值→一次转弯换两三次图，屏幕上大半
+        // 时间在放"换图瞬间"，侧面扇翅动画根本没机会连续播("像滑行"元凶)。
+        if (Math.abs(b.tux) > 0.15) b.facing = b.tux > 0 ? 1 : -1;
+        const ax = Math.abs(b.tux);
+        const desired: 'top' | 'quarter' | 'side' = ax > 0.75 ? 'side' : ax > 0.4 ? 'quarter' : 'top';
+        if (desired !== b.view && now - b.lastViewSwitch > 300) {
           b.view = desired;
           b.lastViewSwitch = now;
-          b.imgEl.src = b.srcs[desired];
-          // 新版侧面图是静态单帧(老婆挑的新画风+自己抠的图)，扇翅由 CSS
-          // 压放动画来做(murmursSideFlap)——只在侧面视角挂这个类。
-          b.imgEl.classList.toggle('murmurs-bfly__img--sideflap', desired === 'side');
+          // 三张视角图常驻 DOM，切换=显隐——换 src 会触发手机重新解码
+          // webp，肉眼可见顿一下。
+          for (const v of ['top', 'quarter', 'side'] as const) {
+            b.imgEls[v].classList.toggle('is-on', v === desired);
+          }
         }
         const mirror = b.view !== 'top' && b.facing < 0;
         b.flipEl.style.transform = mirror ? 'scaleX(-1)' : '';
@@ -474,10 +467,22 @@ export function MurmursAmbient({
             } as React.CSSProperties
           }
         >
+          <div className="murmurs-bfly__halo" aria-hidden="true" />
           <div className="murmurs-bfly__flip">
             <img
-              className="murmurs-bfly__img"
+              className="murmurs-bfly__img murmurs-bfly__img--top is-on"
               src={`${import.meta.env.BASE_URL}assets/butterflies/${cfg.src}?v=2`}
+              alt=""
+            />
+            <img
+              className="murmurs-bfly__img murmurs-bfly__img--quarter"
+              src={`${import.meta.env.BASE_URL}assets/butterflies/${cfg.quarter}`}
+              alt=""
+            />
+            {/* 侧面图是静态单帧，扇翅=CSS 压放动画(murmursSideFlap)，常挂 */}
+            <img
+              className="murmurs-bfly__img murmurs-bfly__img--side murmurs-bfly__img--sideflap"
+              src={`${import.meta.env.BASE_URL}assets/butterflies/${cfg.side}`}
               alt=""
             />
           </div>
