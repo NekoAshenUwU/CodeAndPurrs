@@ -375,6 +375,12 @@ export function MurmursPage() {
   const [flowers, setFlowers] = useState<MurmursFlower[] | null>(null); // null = 加载中
   const [selected, setSelected] = useState<MurmursFlower | null>(null);
   const [ripplesReady, setRipplesReady] = useState(false);
+  // 点开花朵后按需拉这条记忆的全文——花朵列表接口(/api/murmurs/flowers)只带
+  // 截断过的短标题(棠予酿存 title 时就截断了，"…"是数据里自带的)，全文在
+  // memories 表的 content 字段里，走后端早就开好白名单的
+  // /api/tangyuniang/diary/{id} 单篇详情通道现取。
+  const [detail, setDetail] = useState<{ title: string; content: string } | null>(null);
+  const [detailState, setDetailState] = useState<'idle' | 'loading' | 'error'>('idle');
   const pageRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<WaterRipples | null>(null);
@@ -394,6 +400,37 @@ export function MurmursPage() {
       cancelled = true;
     };
   }, []);
+
+  const selectedId = selected?.id ?? null;
+  useEffect(() => {
+    if (!selectedId) {
+      setDetail(null);
+      setDetailState('idle');
+      return;
+    }
+    let cancelled = false;
+    setDetail(null);
+    setDetailState('loading');
+    fetch(`/api/tangyuniang/diary/${encodeURIComponent(selectedId)}`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`diary detail ${r.status}`);
+        return r.json();
+      })
+      .then((row) => {
+        if (cancelled) return;
+        setDetail({
+          title: String(row?.title ?? '').trim(),
+          content: String(row?.content ?? '').trim(),
+        });
+        setDetailState('idle');
+      })
+      .catch(() => {
+        if (!cancelled) setDetailState('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId]);
 
   // 接落予棠同款 WebGL 触摸涟漪(真水波，不是这里额外画的)——跟 SweetiePocketPage
   // 一模一样的接入方式：只调 waterRipples.ts 已经导出的公开入口(createWaterRipples/
@@ -503,7 +540,15 @@ export function MurmursPage() {
               ×
             </button>
             {selected.moodLabel ? <span className="murmurs-detail__mood">{selected.moodLabel}</span> : null}
-            <span className="murmurs-detail__title">{stripLeadingDatePrefix(selected.title, selected.date)}</span>
+            {/* 详情接口带回来的 title 是完整版，优先用它盖掉列表里截断的短标题 */}
+            <span className="murmurs-detail__title">
+              {stripLeadingDatePrefix(detail?.title || selected.title, selected.date)}
+            </span>
+            {detailState === 'loading' ? <span className="murmurs-detail__hint">正在展开这一页…</span> : null}
+            {detailState === 'error' ? (
+              <span className="murmurs-detail__hint">这一页暂时翻不开，等会儿再试试</span>
+            ) : null}
+            {detail?.content ? <p className="murmurs-detail__content">{detail.content}</p> : null}
             {fmtDateStamp(selected.date) ? (
               <span className="murmurs-detail__stamp">{fmtDateStamp(selected.date)}</span>
             ) : null}
