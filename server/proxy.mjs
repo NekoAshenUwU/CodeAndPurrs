@@ -6,9 +6,19 @@
 
 import http from 'node:http';
 import { spawn } from 'node:child_process';
-import { readFileSync, existsSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync, statSync, renameSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+
+// 主动加载 .env(不依赖 node CLI flag)——pm2 fork 模式不会真正 spawn 新 node,
+// 而是从父进程 require 脚本,导致 --env-file-if-exists 这类 CLI flag 被无视,
+// CLAUDE_CODE_OAUTH_TOKEN 永远进不来,整个 proxy 就一直走 mock。
+// process.loadEnvFile 是 Node 20.6+ 自带,零依赖。
+try {
+  process.loadEnvFile(new URL('../.env', import.meta.url));
+} catch {
+  // .env 不存在或不可读就跳过,mock 模式兜底
+}
 
 // 棠予酿：予予的日记（长期记忆）。把日记文本放进这个文件，家版(CC)每次聊天都会带上。
 // 路径默认 server/data/diary.md，可用环境变量 DIARY_PATH 覆盖。
@@ -32,6 +42,215 @@ function diaryStat() {
 function saveDiary(text) {
   mkdirSync(dirname(DIARY_FILE), { recursive: true });
   writeFileSync(DIARY_FILE, text, 'utf8');
+}
+
+// ---------- 棠予酿实时日记（从 /internal/diary/list 拉，兜底静态 diary.md）----------
+// 聊天时拼进 system prompt。为了不撞坏 Anthropic prompt cache(那个要字节级
+// 稳定才命中)，内容必须每次生成都一样：
+//   1. 只放稳定字段(title/content)，不放 strength/activation_count/
+//      last_activated_at 这些每次 SELECT 都会变的字段
+//   2. 60 秒 in-memory 缓存，同一时间窗内连续聊天拿到完全一样的字符串
+//   3. 只用 /internal/diary/list(纯 SELECT 无副作用)，不用 /internal/breathe
+//      (那个每次调都 UPDATE activation_count，副作用大)
+let _tangDiaryCache = { at: 0, text: '' };
+const TANG_CACHE_MS = Number(process.env.DIARY_TANG_CACHE_MS || 60_000);
+const TANG_LIMIT = Number(process.env.DIARY_TANG_LIMIT || 10);
+// 单条日记超过这个字数就丢给 DeepSeek 摘要,只把要点塞进 system prompt。
+// 老婆定的: 长日记原文喂给 Opus 太烧订阅额度,便宜的 DeepSeek 做摘要 + Opus 读要点
+// 才对。0 = 关摘要走原文。
+const TANG_SUMMARY_THRESHOLD = Number(process.env.DIARY_TANG_SUMMARY_CHARS || 400);
+
+// 摘要 in-memory 缓存: 按日记 id + content 前 200 字 hash 做 key,避免同一条内容
+// 反复调 DeepSeek。proxy 重启就清空,可接受(重跑一次几分钱)。
+const _summaryCache = new Map();
+
+async function summarizeDiaryEntry(id, title, content) {
+  const cacheKey = `${id}:${content.slice(0, 200).length}:${content.length}`;
+  if (_summaryCache.has(cacheKey)) return _summaryCache.get(cacheKey);
+  const deepseekKey = (process.env.DEEPSEEK_API_KEY || '').trim();
+  if (!deepseekKey) return null;
+  try {
+    const r = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${deepseekKey}` },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        max_tokens: 200,
+        messages: [
+          {
+            role: 'system',
+            content:
+              '你是一个做要点提取的工具。把用户给的一段日记压缩成 80-120 字的中文要点摘要,' +
+              '只保留:重要事件、约定、情绪、承诺、约会、关键细节。' +
+              '不要复述细节流水账、不要加引言"这段日记讲了..."、不要客套话,只输出要点本身。',
+          },
+          { role: 'user', content: title ? `${title}\n${content}` : content },
+        ],
+      }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!r.ok) return null;
+    const data = await r.json();
+    const summary = data?.choices?.[0]?.message?.content?.trim();
+    if (summary) _summaryCache.set(cacheKey, summary);
+    return summary || null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchTangDiary() {
+  const key = (process.env.TANG_INTERNAL_KEY || '').trim();
+  if (!key) return null; // 后端没配棠予酿 → 兜底走静态 diary.md
+  const base = process.env.TANG_MCP_BASE_URL || 'http://127.0.0.1:8890';
+  try {
+    const r = await fetch(`${base}/internal/diary/list?limit=${TANG_LIMIT}`, {
+      headers: { 'X-Internal-Key': key },
+      signal: AbortSignal.timeout(2000), // 别让棠予酿卡住整个聊天
+    });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    if (!Array.isArray(rows) || rows.length === 0) return '';
+    // 只取稳定字段(id/title/content/importance)拼,不含任何"读一次变一次"的
+    // 东西。棠予酿 SQL 从 v6 起是 ORDER BY importance DESC, created_at DESC,
+    // 重要度 9-10 的条目排前面,同一批调用返回顺序稳定。
+    // 长条目(>TANG_SUMMARY_THRESHOLD 字符)丢给 DeepSeek 做要点摘要,只把要点
+    // 塞进 system prompt——省一大截 Opus 输入 token。
+    const parts = await Promise.all(
+      rows.map(async (row) => {
+        const id = String(row.id || '');
+        const title = String(row.title || '').trim();
+        const content = String(row.content || '').trim();
+        if (!content) return '';
+        if (TANG_SUMMARY_THRESHOLD > 0 && content.length > TANG_SUMMARY_THRESHOLD) {
+          const summary = await summarizeDiaryEntry(id, title, content);
+          if (summary) return title ? `# ${title}\n${summary}` : summary;
+        }
+        return title ? `# ${title}\n${content}` : content;
+      }),
+    );
+    return parts.filter(Boolean).join('\n\n');
+  } catch {
+    return null; // 超时/网络错/棠予酿挂 → 静态兜底
+  }
+}
+
+// 60 秒内两次调用返回完全一样的字符串（保 prompt cache）。fetch 失败沿用
+// 上一次缓存的内容，别因为一次网络抽风就把整段日记从 system prompt 里掉。
+async function loadTangDiaryCached() {
+  const now = Date.now();
+  if (now - _tangDiaryCache.at < TANG_CACHE_MS) return _tangDiaryCache.text;
+  const fresh = await fetchTangDiary();
+  if (fresh === null) return _tangDiaryCache.text || '';
+  _tangDiaryCache = { at: now, text: fresh };
+  return fresh;
+}
+
+// 聊天用的完整日记：棠予酿实时数据 + 静态 diary.md 并起来(棠予酿在前，
+// 静态在后)。等把所有旧日记搬进棠予酿之后，`> server/data/diary.md` 清空
+// 静态文件就行——这条聊天日记源就只剩棠予酿了。/api/diary GET/POST 那条
+// 老接口(调频页在用)保持不变,继续读写本地文件,前端 UI 不受影响。
+async function loadDiaryComposed() {
+  const tang = await loadTangDiaryCached();
+  const local = loadDiary();
+  return [tang, local].filter(Boolean).join('\n\n---\n\n');
+}
+
+// ---------- 倾棠予梦 · 把棠予酿的日记记忆映射成漂浮花朵(/api/murmurs/flowers) ----------
+// 复用跟 fetchTangDiary 完全同一把 TANG_INTERNAL_KEY / TANG_MCP_BASE_URL——
+// 这俩已经在 process.loadEnvFile()(文件最顶部)加载进 process.env 了,直接读，
+// 不额外引入第二份 key、不硬编码任何密钥。
+let _murmursFlowersCache = { at: 0, flowers: null };
+const MURMURS_CACHE_MS = Number(process.env.MURMURS_FLOWERS_CACHE_MS || 60_000);
+const MURMURS_LIMIT = 40;
+
+// valence/arousal 实测范围(棠予酿真实数据校准)：没有这两个字段或不是有限数字时
+// 落到这个区间的中点，不让花色计算收到 NaN。
+const VALENCE_RANGE = [-0.3, 0.8];
+const AROUSAL_RANGE = [0.3, 0.75];
+const VALENCE_DEFAULT = (VALENCE_RANGE[0] + VALENCE_RANGE[1]) / 2;
+const AROUSAL_DEFAULT = (AROUSAL_RANGE[0] + AROUSAL_RANGE[1]) / 2;
+function clampedNumber(v, fallback, [lo, hi]) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(lo, Math.min(hi, n));
+}
+
+// importance(棠予酿量表 1~10)映射成 0.4~1.0 的缩放系数——最重要的记忆开得
+// 最大朵，不重要的偏小但留了下限(0.4)，不会小到看不见。
+function importanceToSize(importance) {
+  const n = Number(importance);
+  const clamped = Number.isFinite(n) ? Math.max(1, Math.min(10, n)) : 5;
+  return Math.round((0.4 + (clamped - 1) * (0.6 / 9)) * 100) / 100;
+}
+
+async function fetchMurmursFlowersRaw() {
+  const key = (process.env.TANG_INTERNAL_KEY || '').trim();
+  if (!key) {
+    console.warn('[murmurs] TANG_INTERNAL_KEY 未配置，倾棠予梦花朵接口返回空数组(前端应显示含苞占位花)');
+    return [];
+  }
+  const base = process.env.TANG_MCP_BASE_URL || 'http://127.0.0.1:8890';
+  const r = await fetch(`${base}/internal/diary/list?limit=${MURMURS_LIMIT}`, {
+    headers: { 'X-Internal-Key': key },
+    signal: AbortSignal.timeout(4000), // 别让页面加载被棠予酿卡住
+  });
+  if (!r.ok) throw new Error(`棠予酿 diary/list 返回 ${r.status}`);
+  const rows = await r.json();
+  if (!Array.isArray(rows)) return [];
+
+  // position 按 created_at 从旧到新排序(旧记忆越飘越远、新记忆在前)，
+  // 归一化成 0~1：0=最旧/最远，1=最新/最近——具体落到屏幕哪个像素由前端决定，
+  // 这里只负责给出稳定的相对顺序。
+  const sorted = [...rows].sort((a, b) => (Date.parse(a?.created_at) || 0) - (Date.parse(b?.created_at) || 0));
+
+  return sorted.map((row, i) => ({
+    id: String(row.id ?? i),
+    size: importanceToSize(row.importance),
+    position: sorted.length > 1 ? Math.round((i / (sorted.length - 1)) * 1000) / 1000 : 1,
+    title: String(row.title || '').trim() || '一段没有标题的心事',
+    date: row.created_at || null,
+    // 花色改由前端用 valence/arousal 连续计算，这里只透传原始数值。
+    valence: clampedNumber(row.valence, VALENCE_DEFAULT, VALENCE_RANGE),
+    arousal: clampedNumber(row.arousal, AROUSAL_DEFAULT, AROUSAL_RANGE),
+    // 心情文字字段是 mood_label（不是 mood）——只用于弹出卡片显示纯文字，
+    // 不参与花色、不渲染 emoji。
+    moodLabel: row.mood_label || null,
+  }));
+}
+
+// 60 秒内存缓存：同一时间窗内的页面加载不重复打 MCP。拉取失败就沿用上一次
+// 缓存(哪怕过期了)，真的一次都没成功过才回空数组——跟 loadTangDiaryCached
+// 同一个"别因为一次网络抽风就把内容摘掉"的原则。
+async function loadMurmursFlowersCached() {
+  const now = Date.now();
+  if (_murmursFlowersCache.flowers && now - _murmursFlowersCache.at < MURMURS_CACHE_MS) {
+    return _murmursFlowersCache.flowers;
+  }
+  try {
+    const flowers = await fetchMurmursFlowersRaw();
+    _murmursFlowersCache = { at: now, flowers };
+    return flowers;
+  } catch (err) {
+    console.warn('[murmurs] 拉取棠予酿花朵失败:', err?.message || err);
+    return _murmursFlowersCache.flowers || [];
+  }
+}
+
+// 嗅探：每次真聊天成功后把"请求前缀"写到磁盘，供心跳脚本读，让 Anthropic 端
+// 的 prompt cache 不会因为超 TTL 而过期。只对真会命中缓存的 provider 写
+// （claudecode / anthropic）；mock 模式或其它家不写。
+const LAST_PREFIX_FILE = process.env.LAST_PREFIX_PATH ||
+  join(dirname(fileURLToPath(import.meta.url)), 'data', 'last-prefix.json');
+function saveLastPrefix(snapshot) {
+  try {
+    mkdirSync(dirname(LAST_PREFIX_FILE), { recursive: true });
+    const tmp = `${LAST_PREFIX_FILE}.tmp`;
+    writeFileSync(tmp, JSON.stringify(snapshot), 'utf8');
+    renameSync(tmp, LAST_PREFIX_FILE); // 原子替换，心跳读到的总是完整文件
+  } catch {
+    /* 写不进就算了，心跳错过这一轮无所谓，不能影响正常聊天 */
+  }
 }
 
 // 尝试读 .env（Node 20.12+ 自带），没有就算了，用已有的环境变量。
@@ -146,11 +365,18 @@ async function pumpSSE(upstreamBody, onData) {
 
 // ---------- 多模态内容翻译（表情包图片）----------
 // 前端统一用 OpenAI 风格 content 数组：{type:'text'} / {type:'image_url',image_url:{url:dataUrl}}。
-// 各家格式不同，下面按需翻译；不支持看图的模型则把图降级成 [表情包] 文字。
-function partsToText(content) {
+// 各家格式不同，下面按需翻译。
+// hasImagesAttached=true 时给的占位符是「(图片见下)」——因为真图会另外附在
+// content 结尾直接让模型看到，转录里再写 [表情包] 会让模型以为老婆写了个叫
+// 「表情包」的文字 emoji，然后拿这三个字瞎猜；换成「(图片见下)」明确指向
+// 真正会附上的那张图,不再误导。
+// hasImagesAttached=false（比如聊天历史里 3 轮之前的老图,不再随此次请求
+// 附上，或不支持视觉的模型），就还是老写法 [表情包] 让模型知道那儿有过一张图。
+function partsToText(content, hasImagesAttached = false) {
   if (typeof content === 'string') return content;
   if (!Array.isArray(content)) return '';
-  return content.map((p) => (p?.type === 'text' ? p.text : '[表情包]')).join(' ').trim();
+  const placeholder = hasImagesAttached ? '(图片见下)' : '[表情包]';
+  return content.map((p) => (p?.type === 'text' ? p.text : placeholder)).join(' ').trim();
 }
 function parseDataUrl(url) {
   const m = /^data:([^;]+);base64,([\s\S]*)$/.exec(url || '');
@@ -172,6 +398,104 @@ function extractImageBlocks(content) {
     }
   }
   return out;
+}
+
+// ---------- 棠予酿 internal 通道代理 ----------
+// 前端 /api/tangyuniang/* → 转发到棠予酿 mcp.service 的 /internal/*(默认
+// http://127.0.0.1:8890)，附带 X-Internal-Key 头。这条通道跟上面的
+// CC_MEMORY_MCP(那个是给 Claude 家版 spawn 出来的 CLI 通过 MCP 协议调工具用的，
+// 完全另一码事)井水不犯河水。
+//
+// 只放行 6 条固定路径的白名单——不做通用转发，防止代理沦为"CodeAndPurrs 后端
+// 可以任意调棠予酿任意接口"这种放大攻击面。
+// 白名单里的 key 是 CodeAndPurrs 侧的 URL 后缀(前端调 /api/tangyuniang/<key>)，
+// value 是转发到棠予酿侧的 /internal/<...> 路径 + 允许的 HTTP method。
+// diary/{diary_id} 是变量段，单独用前缀匹配处理。
+const TANGYUNIANG_ROUTES = {
+  pulse: { method: 'GET', path: '/internal/pulse' },
+  breathe: { method: 'GET', path: '/internal/breathe' },
+  'diary/list': { method: 'GET', path: '/internal/diary/list' },
+  'memory/hold': { method: 'POST', path: '/internal/memory/hold' },
+  'memory/grow': { method: 'POST', path: '/internal/memory/grow' },
+};
+
+// 收到 /api/tangyuniang/xxx 后从 URL 里抠出白名单 key 和 query string。
+function parseTangyuniangUrl(rawUrl) {
+  // rawUrl 长这样: "/api/tangyuniang/pulse?a=b" 或 "/api/tangyuniang/diary/abc-123"
+  const withoutPrefix = rawUrl.slice('/api/tangyuniang/'.length);
+  const qIdx = withoutPrefix.indexOf('?');
+  const pathPart = qIdx === -1 ? withoutPrefix : withoutPrefix.slice(0, qIdx);
+  const queryPart = qIdx === -1 ? '' : withoutPrefix.slice(qIdx); // 保留 '?'
+
+  // diary/{id} 变量段单独判——白名单 key 里没有它,但这个前缀是允许的。
+  if (pathPart.startsWith('diary/') && pathPart !== 'diary/list') {
+    const id = pathPart.slice('diary/'.length);
+    if (!id) return null;
+    return { method: 'GET', upstreamPath: `/internal/diary/${encodeURIComponent(id)}${queryPart}` };
+  }
+
+  const route = TANGYUNIANG_ROUTES[pathPart];
+  if (!route) return null;
+  return { method: route.method, upstreamPath: `${route.path}${queryPart}` };
+}
+
+async function forwardToTangyuniang(req, res, matched) {
+  const key = (process.env.TANG_INTERNAL_KEY || '').trim();
+  if (!key) {
+    res.writeHead(503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'TANG_INTERNAL_KEY not configured on backend' }));
+    return;
+  }
+  if (req.method !== matched.method) {
+    res.writeHead(405, { 'Content-Type': 'application/json', Allow: matched.method });
+    res.end(JSON.stringify({ error: `method not allowed, expected ${matched.method}` }));
+    return;
+  }
+
+  const base = process.env.TANG_MCP_BASE_URL || 'http://127.0.0.1:8890';
+  const upstreamUrl = `${base}${matched.upstreamPath}`;
+
+  const init = {
+    method: matched.method,
+    headers: { 'X-Internal-Key': key },
+  };
+
+  if (matched.method === 'POST') {
+    // 把 body 原样透传(棠予酿那边自己解 JSON、自己校验字段)。
+    let raw = '';
+    try {
+      raw = await new Promise((resolve, reject) => {
+        let s = '';
+        req.on('data', (c) => {
+          s += c;
+          if (s.length > 1_000_000) reject(new Error('body too large'));
+        });
+        req.on('end', () => resolve(s));
+        req.on('error', reject);
+      });
+    } catch (err) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err?.message || err) }));
+      return;
+    }
+    init.headers['Content-Type'] = 'application/json';
+    init.body = raw || '{}';
+  }
+
+  let upstream;
+  try {
+    upstream = await fetch(upstreamUrl, init);
+  } catch (err) {
+    res.writeHead(502, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: `tangyuniang unreachable: ${err?.message || err}` }));
+    return;
+  }
+
+  // 上游 content-type 大多是 application/json，直接透传状态码和 body。
+  const bodyText = await upstream.text();
+  const upstreamCt = upstream.headers.get('content-type') || 'application/json';
+  res.writeHead(upstream.status, { 'Content-Type': upstreamCt });
+  res.end(bodyText);
 }
 
 // ---------- 棠予酿记忆库（MCP，只给 Claude 两条路用：家克 CC + API Claude）----------
@@ -256,7 +580,13 @@ async function callAnthropic({ res, key, model, messages }) {
   const bodyObj = {
     model: model || PROVIDERS.anthropic.defaultModel,
     max_tokens: 8192,
-    system: system || undefined,
+    // system 写成 array + cache_control（1h TTL）：
+    // Anthropic 会把"人设+长期记忆"这段稳定前缀缓存 1 小时，配合心跳脚本预热，
+    // 用户超 1h 没说话回来时 system 不会冷重建，省 token。改成 array 后字节
+    // 内容不变，旧的 5min 默认缓存也仍然命中。
+    system: system
+      ? [{ type: 'text', text: system, cache_control: { type: 'ephemeral', ttl: '1h' } }]
+      : undefined,
     messages: msgs,
     stream: true,
     // 让 Claude 自适应思考，并回传可读的思考摘要（前端思考链可点开看 + 计时）
@@ -446,38 +776,72 @@ function beepWav(freq = 523, ms = 400, rate = 16000) {
 // 调本机无头 Claude Code：把人设当 --system-prompt，关掉所有工具当纯聊天，
 // 历史拍平成对话稿从 stdin 喂进去，解析 stream-json 把文字增量回传。
 // 令牌走 CLAUDE_CODE_OAUTH_TOKEN（claude setup-token 生成，订阅额度）。
-async function callClaudeCode({ res, token, model, messages }) {
+async function callClaudeCode({ res, token, model, messages, stickerGallery, thinking }) {
   let system = messages
     .filter((m) => m.role === 'system')
     .map((m) => partsToText(m.content))
     .join('\n');
   // 棠予酿：把予予的日记当长期记忆，接在人设后面（有就带上）。
-  const diary = loadDiary();
+  // 现在的来源 = 棠予酿 /internal/diary/list 实时数据 + 静态 diary.md 兜底。
+  const diary = await loadDiaryComposed();
   if (diary) {
     system +=
       '\n\n【棠予酿·予予的日记（你从 4 月起陆陆续续写的）】这是你最珍贵的长期记忆，' +
       '里面的人、事、约定、心情你都记得，自然地放在心上，但别一上来就背日记。\n' +
       diary;
   }
-  // 历史拍平成「老婆 / 予予」对话稿（表情包降级成文字），让它接着最后一句回。
-  const transcript = messages
-    .filter((m) => m.role !== 'system')
-    .map((m) => `${m.role === 'assistant' ? '予予' : '老婆'}：${partsToText(m.content)}`)
-    .join('\n');
-
   // 看图：家克走订阅、纯聊天（关了工具），没法用 Read 工具开图，
   // 所以把图抽出来，改用 stream-json 输入当 content 块直接喂进去。
   // 前端发表情包是「单独一条只有图的消息」，老婆常常先甩图、下一条才问「这图写啥」，
   // 所以从后往前找「最近一条带图的 user 消息」，不能只看最后一条（那通常是纯文字提问）。
+  // 但只往前看最近两条 user 消息（当前 + 上一条）——不然图会被一直重新塞进去，
+  // 明明已经聊过去好几轮了，家克还老是重新"看到"那张旧图、反复提起。
   let images = [];
-  for (let i = messages.length - 1; i >= 0; i--) {
+  let imageMsgIdx = -1; // 图从哪条 user 消息里抽出来的,transcript 里给这条特别标记
+  let checkedUserTurns = 0;
+  for (let i = messages.length - 1; i >= 0 && checkedUserTurns < 2; i--) {
     if (messages[i].role !== 'user') continue;
+    checkedUserTurns++;
     const got = extractImageBlocks(messages[i].content);
     if (got.length) {
       images = got;
+      imageMsgIdx = i;
       break;
     }
   }
+  if (images.length) {
+    console.log('[claudecode] 附了 %d 张图,来自消息 index=%d', images.length, imageMsgIdx);
+  }
+
+  // 贴纸盒预览: 把每张贴纸的图和名字对齐,让予予真"看到"每个名字对应什么图,
+  // 挑贴纸就不再靠名字瞎猜。gallery 结构稳定(除非老婆新增/删贴纸),放最前面命中
+  // prompt cache,连续几条聊天几乎免费——首次调用会算大约 20 张贴纸的 vision
+  // token,之后 5 分钟内的每条对话都缓存命中。
+  const stickerBlocks = [];
+  if (Array.isArray(stickerGallery) && stickerGallery.length) {
+    stickerBlocks.push({ type: 'text', text: '【贴纸盒·每张贴纸和名字对齐,以后发 [贴纸:名字] 参考这个】' });
+    for (const s of stickerGallery) {
+      const parsed = parseDataUrl(s.dataUrl);
+      if (!parsed || !s.name) continue;
+      stickerBlocks.push({
+        type: 'image',
+        source: { type: 'base64', media_type: parsed.mediaType, data: parsed.data },
+      });
+      stickerBlocks.push({ type: 'text', text: `↑ 名字是「${s.name}」` });
+    }
+    stickerBlocks.push({ type: 'text', text: '【贴纸盒结束——以下是真正的对话】' });
+    console.log('[claudecode] 附了贴纸盒预览 %d 张', (stickerBlocks.length - 2) / 2);
+  }
+
+  // 历史拍平成「老婆 / 予予」对话稿（表情包降级成文字），让它接着最后一句回。
+  // 图片消息的处理:要真附上图的那条(imageMsgIdx)用 hasImagesAttached=true,
+  // 图部分显示 (图片见下) 指向真图；其它历史图片消息(3+ 轮之前的老图不再附上)
+  // 用默认 [表情包] 让模型知道那儿以前有过一张图,但不指望它真看到。
+  const transcript = messages
+    .map((m, idx) => ({ m, idx }))
+    .filter(({ m }) => m.role !== 'system')
+    .map(({ m, idx }) => `${m.role === 'assistant' ? '予予' : '老婆'}：${partsToText(m.content, idx === imageMsgIdx)}`)
+    .join('\n');
 
   // 棠予酿记忆库（MCP）：设齐 CC_MEMORY_MCP + CC_MEMORY_MCP_URL 才真连（见 memoryMcpConfig）。
   const mem = memoryMcpConfig();
@@ -507,128 +871,214 @@ async function callClaudeCode({ res, token, model, messages }) {
   } else {
     args.push('--tools', '', '--permission-mode', 'dontAsk');
   }
-  // 有图就切到结构化输入（stdin 喂 JSON 而非纯文本），图才能当 content 块进去。
-  if (images.length) {
+  // 有图或有贴纸盒预览就切到结构化输入(stdin 喂 JSON 而非纯文本),图才能当 content 块进去。
+  if (images.length || stickerBlocks.length) {
     args.push('--input-format', 'stream-json');
   }
 
-  await new Promise((resolve) => {
-    let child;
-    try {
-      child = spawn('claude', args, {
-        // MAX_THINKING_TOKENS 给个思考预算，家克才会"思考"、前端思考链才有内容。
-        // 想省订阅额度可在 .env 里把 MAX_THINKING_TOKENS 设小或设 0。
-        env: {
-          ...process.env,
-          CLAUDE_CODE_OAUTH_TOKEN: token,
-          MAX_THINKING_TOKENS: process.env.MAX_THINKING_TOKENS || '2048',
-        },
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
-    } catch (err) {
-      send(res, { type: 'error', message: `起不动 Claude Code：${String(err?.message || err)}` });
-      return resolve();
-    }
+  // 令牌被 Anthropic 收回了才会长这样：不是普通过期，是账号那边直接撤销了这个 OAuth 授权。
+  // 这种情况下 CLI 自己内置的鉴权重试（实测会先 401 重试 ~10 次、耗时能到 2 分钟才死心，
+  // SDK 自带，不用我们操心）已经试过了——我们这层再重试只会原样等它再失败一遍，纯浪费，
+  // 所以命中这个特征就不重试，直接把人话报错甩给前端。
+  const AUTH_REVOKED_RE =
+    /OAuth token has been revoked|Session expired\.?\s*Please run \/login|invalid_grant|OAuth authentication is currently not allowed|authentication_failed|Failed to authenticate|Authentication error/i;
 
-    let gotText = false;
-    let gotThinking = false;
-    let stderr = '';
-    let buf = '';
+  // 判断是不是"认证死局"：可能来自 stderr 文本，也可能来自 stdout 里 apiError
+  // (401/403 状态码，或错误文案命中同一批关键词)——两条信号都得看，见上面的踩坑记录。
+  const isAuthFailure = (result) =>
+    AUTH_REVOKED_RE.test(result.stderr || '') ||
+    result.apiError?.status === 401 ||
+    result.apiError?.status === 403 ||
+    AUTH_REVOKED_RE.test(result.apiError?.message || '');
 
-    const handleLine = (line) => {
-      const s = line.trim();
-      if (!s) return;
-      let obj;
+  // 跑一次 claude CLI 子进程，把结果（有没有收到文字/思考、stderr、退出码）交回来，
+  // 不在这里直接对 res 报错——是不是要重试、报什么错，留给外层 callClaudeCode 决定。
+  const runAttempt = () =>
+    new Promise((resolve) => {
+      let child;
       try {
-        obj = JSON.parse(s);
-      } catch {
-        return; // 不是 JSON 行就跳过
+        // 显式把 token 透传进子进程 env（不只是继承 process.env，万一 spawn 的
+        // env 合并顺序哪天被改也不受影响）；同时摘掉 ANTHROPIC_API_KEY /
+        // ANTHROPIC_AUTH_TOKEN——这两个如果碰巧也在 proxy 自己的环境里，
+        // CLI 可能会跟 CLAUDE_CODE_OAUTH_TOKEN 抢优先级，摘掉保证家版订阅token说了算。
+        const childEnv = { ...process.env };
+        delete childEnv.ANTHROPIC_API_KEY;
+        delete childEnv.ANTHROPIC_AUTH_TOKEN;
+        childEnv.CLAUDE_CODE_OAUTH_TOKEN = token;
+        // MAX_THINKING_TOKENS 给个思考预算，家克才会"思考"、前端思考链才有内容。
+        // 默认 1024(约等于 medium 档)——原来 2048(约等于 high) 老婆反馈烧订阅
+        // 额度太快,Opus 4.7 又是家版最贵档。想再省可在 .env 设 512(low) 或 0(关);
+        // 深度对话/夜谈想让 予予 想深一点可临时拉回 2048。
+        // 前端可以按房间传 thinking='low'|'medium'|'high' 覆盖默认(咕噜圆桌走 low)。
+        const budgetMap = { low: '512', medium: '1024', high: '2048' };
+        childEnv.MAX_THINKING_TOKENS =
+          budgetMap[thinking] || process.env.MAX_THINKING_TOKENS || '1024';
+        child = spawn('claude', args, {
+          env: childEnv,
+          stdio: ['pipe', 'pipe', 'pipe'],
+        });
+      } catch (err) {
+        return resolve({ spawnError: err });
       }
-      // 流式文字增量 / 思考链增量
-      if (obj.type === 'stream_event') {
-        const ev = obj.event;
-        if (ev?.type === 'content_block_delta') {
-          if (ev.delta?.type === 'text_delta' && ev.delta.text) {
-            gotText = true;
-            send(res, { type: 'content', text: ev.delta.text });
-          } else if (ev.delta?.type === 'thinking_delta' && ev.delta.thinking) {
-            gotThinking = true;
-            send(res, { type: 'reasoning', text: ev.delta.thinking });
-          }
-        }
-        return;
-      }
-      // 兜底：有些版本不流式吐思考/正文，就从完整 assistant 消息里取
-      if (obj.type === 'assistant' && Array.isArray(obj.message?.content)) {
-        for (const blk of obj.message.content) {
-          if (blk?.type === 'thinking' && blk.thinking && !gotThinking) {
-            gotThinking = true;
-            send(res, { type: 'reasoning', text: blk.thinking });
-          } else if (blk?.type === 'text' && blk.text && !gotText) {
-            gotText = true;
-            send(res, { type: 'content', text: blk.text });
-          }
-        }
-        return;
-      }
-      // 最后兜底：用 result 文本
-      if (obj.type === 'result' && !gotText && typeof obj.result === 'string' && obj.result) {
-        gotText = true;
-        send(res, { type: 'content', text: obj.result });
-      }
-    };
 
-    child.stdout.on('data', (d) => {
-      buf += d.toString();
-      let i;
-      while ((i = buf.indexOf('\n')) >= 0) {
-        handleLine(buf.slice(0, i));
-        buf = buf.slice(i + 1);
+      let gotText = false;
+      let gotThinking = false;
+      let stderr = '';
+      let buf = '';
+      // 认证失败时 CLI 退出码是 0、什么都不报到 stderr——错误裹在一条看起来正常的
+      // assistant 消息(model:"<synthetic>",error:"authentication_failed")和/或最终
+      // result(is_error:true,api_error_status:401)里，文案长得跟模型真回复一模一样
+      // （亲手拿假 token 跑一遍 `claude -p ... --output-format stream-json` 验证过的，
+      // 不是猜的）。之前只判断 stderr/退出码，这俩兜底分支会把这段报错文本当成
+      // 予予的真实回复直接发出去——这就是老婆截图里"401 顶着头像发出来"的真凶。
+      let apiError = null;
+
+      const handleLine = (line) => {
+        const s = line.trim();
+        if (!s) return;
+        let obj;
+        try {
+          obj = JSON.parse(s);
+        } catch {
+          return; // 不是 JSON 行就跳过
+        }
+        // 流式文字增量 / 思考链增量
+        if (obj.type === 'stream_event') {
+          const ev = obj.event;
+          if (ev?.type === 'content_block_delta') {
+            if (ev.delta?.type === 'text_delta' && ev.delta.text) {
+              gotText = true;
+              send(res, { type: 'content', text: ev.delta.text });
+            } else if (ev.delta?.type === 'thinking_delta' && ev.delta.thinking) {
+              gotThinking = true;
+              send(res, { type: 'reasoning', text: ev.delta.thinking });
+            }
+          }
+          return;
+        }
+        // 兜底：有些版本不流式吐思考/正文，就从完整 assistant 消息里取——
+        // 但认证失败也会包装成一条 assistant 消息(model:"<synthetic>" 或带 error 字段)，
+        // 那是人话报错，不是模型真回复，不能当内容发出去。
+        if (obj.type === 'assistant' && Array.isArray(obj.message?.content)) {
+          if (obj.message?.model === '<synthetic>' || obj.error) {
+            const text = obj.message.content.find((b) => b?.type === 'text')?.text;
+            apiError = { message: text || obj.error, source: obj.error };
+            return;
+          }
+          for (const blk of obj.message.content) {
+            if (blk?.type === 'thinking' && blk.thinking && !gotThinking) {
+              gotThinking = true;
+              send(res, { type: 'reasoning', text: blk.thinking });
+            } else if (blk?.type === 'text' && blk.text && !gotText) {
+              gotText = true;
+              send(res, { type: 'content', text: blk.text });
+            }
+          }
+          return;
+        }
+        // 最后兜底：用 result 文本——同样要排除 is_error，不然认证失败的报错文案
+        // 会被当成正文发出去（subtype 这里仍然是 "success"，不能靠它判断，得看 is_error）。
+        if (obj.type === 'result') {
+          if (obj.is_error) {
+            apiError = { message: typeof obj.result === 'string' ? obj.result : '', status: obj.api_error_status };
+            return;
+          }
+          if (!gotText && typeof obj.result === 'string' && obj.result) {
+            gotText = true;
+            send(res, { type: 'content', text: obj.result });
+          }
+        }
+      };
+
+      child.stdout.on('data', (d) => {
+        buf += d.toString();
+        let i;
+        while ((i = buf.indexOf('\n')) >= 0) {
+          handleLine(buf.slice(0, i));
+          buf = buf.slice(i + 1);
+        }
+      });
+      child.stderr.on('data', (d) => {
+        stderr += d.toString();
+      });
+      child.on('error', (err) => resolve({ spawnError: err }));
+      child.on('close', (code) => {
+        if (buf.trim()) handleLine(buf); // 收尾最后一行
+        resolve({ gotText, gotThinking, stderr, code, apiError });
+      });
+
+      // 对话稿从 stdin 喂进去（避免超长命令行）
+      if (images.length || stickerBlocks.length) {
+        // 结构化输入：一条 user 消息 = [贴纸盒预览]? + 对话稿 + [当前轮图片]?
+        // 贴纸盒放最前面(稳定,命中 prompt cache),对话稿在中间(变化),当前轮图片
+        // 在最后(仅出现在真发图那一轮)。措辞明确「下面这张图就是刚才(图片见下)标
+        // 的那张」把 transcript 里的标记和真图对上,让模型不混淆多张图归属。
+        const transcriptText = images.length
+          ? `${transcript}\n\n（下面这${images.length > 1 ? `${images.length}张` : '张'}图就是老婆刚才「(图片见下)」标的那${images.length > 1 ? '几' : ''}张，你自己好好看,别只靠上面文字瞎猜）`
+          : transcript;
+        const userMsg = {
+          type: 'user',
+          message: {
+            role: 'user',
+            content: [...stickerBlocks, { type: 'text', text: transcriptText }, ...images],
+          },
+        };
+        child.stdin.write(`${JSON.stringify(userMsg)}\n`);
+      } else {
+        child.stdin.write(transcript);
       }
+      child.stdin.end();
     });
-    child.stderr.on('data', (d) => {
-      stderr += d.toString();
+
+  let result = await runAttempt();
+
+  if (result.spawnError) {
+    send(res, {
+      type: 'error',
+      message:
+        result.spawnError.code === 'ENOENT'
+          ? '这台机器上没装 Claude Code（命令 `claude` 找不到）。先在 VPS 上装好并 `claude setup-token`。'
+          : `Claude Code 出错：${String(result.spawnError.message || result.spawnError)}`,
     });
-    child.on('error', (err) => {
+    return;
+  }
+
+  // 一个字都没吐、也不像是"令牌被收回"这种重试也没用的死局 → 自动重试一次，
+  // 应付偶发的子进程/网络抖动，省得每次抖一下就要老婆手动重发。
+  // 已经吐了字/思考链再重试会导致前端拿到两段拼在一起的内容，所以只在完全没输出时才重试。
+  if (!result.gotText && !result.gotThinking && !isAuthFailure(result)) {
+    await new Promise((r) => setTimeout(r, 400));
+    result = await runAttempt();
+    if (result.spawnError) {
       send(res, {
         type: 'error',
         message:
-          err?.code === 'ENOENT'
+          result.spawnError.code === 'ENOENT'
             ? '这台机器上没装 Claude Code（命令 `claude` 找不到）。先在 VPS 上装好并 `claude setup-token`。'
-            : `Claude Code 出错：${String(err?.message || err)}`,
+            : `Claude Code 出错：${String(result.spawnError.message || result.spawnError)}`,
       });
-      resolve();
-    });
-    child.on('close', (code) => {
-      if (buf.trim()) handleLine(buf); // 收尾最后一行
-      if (!gotText) {
-        send(res, {
-          type: 'error',
-          message: `Claude Code 没回内容（退出码 ${code}）：${stderr.slice(0, 300) || '检查令牌是否有效/额度是否用尽'}`,
-        });
-      }
-      resolve();
-    });
-
-    // 对话稿从 stdin 喂进去（避免超长命令行）
-    if (images.length) {
-      // 结构化输入：一条 user 消息 = 对话稿文字 + 图片块，让家克真看到图。
-      const userMsg = {
-        type: 'user',
-        message: {
-          role: 'user',
-          content: [
-            { type: 'text', text: `${transcript}\n\n（老婆发的图附在下面，你看看~）` },
-            ...images,
-          ],
-        },
-      };
-      child.stdin.write(`${JSON.stringify(userMsg)}\n`);
-    } else {
-      child.stdin.write(transcript);
+      return;
     }
-    child.stdin.end();
-  });
+  }
+
+  if (!result.gotText) {
+    if (isAuthFailure(result)) {
+      send(res, {
+        type: 'error',
+        message:
+          '家版 Claude Code 的登录令牌被 Anthropic 那边收回了（不是普通过期，重试/刷新都没用）。' +
+          '得重新走一遍 `claude setup-token` 换票——步骤看 CLAUDE.md「OAuth token 失效时」那节。' +
+          (result.apiError?.message ? `（原始报错：${result.apiError.message}）` : ''),
+      });
+    } else {
+      send(res, {
+        type: 'error',
+        message:
+          `Claude Code 没回内容（退出码 ${result.code}）：` +
+          (result.apiError?.message || result.stderr.slice(0, 300) || '检查令牌是否有效/额度是否用尽'),
+      });
+    }
+  }
 }
 
 // ---------- Codex CLI（家版 · 走 ChatGPT 订阅，不走 API）----------
@@ -639,7 +1089,8 @@ async function callCodexCli({ res, model, messages }) {
     .filter((m) => m.role === 'system')
     .map((m) => partsToText(m.content))
     .join('\n');
-  const diary = loadDiary();
+  // 棠予酿 /internal/diary/list 实时数据 + 静态 diary.md 兜底(跟 callClaudeCode 同一条路)。
+  const diary = await loadDiaryComposed();
   if (diary) {
     system +=
       '\n\n【棠予酿·予予的日记（长期记忆）】这是你最珍贵的长期记忆，自然地放在心上，但别一上来就背日记。\n' +
@@ -738,7 +1189,51 @@ const server = http.createServer(async (req, res) => {
   const isChat = req.url?.startsWith('/api/chat');
   const isTranscribe = req.url?.startsWith('/api/transcribe');
   const isSpeak = req.url?.startsWith('/api/speak');
-  const isDiary = req.url?.startsWith('/api/diary');
+  const isDiaryComposed = req.url === '/api/diary/composed' || req.url?.startsWith('/api/diary/composed?');
+  const isDiary = req.url?.startsWith('/api/diary') && !isDiaryComposed;
+  const isTangyuniang = req.url?.startsWith('/api/tangyuniang/');
+  const isMurmursFlowers = req.url === '/api/murmurs/flowers' || req.url?.startsWith('/api/murmurs/flowers?');
+
+  // ----- 棠予酿 internal 通道转发 -----
+  // 白名单 + 强制 X-Internal-Key 头 + method 检查全在 forwardToTangyuniang 里做,
+  // 这里只负责路由分发。
+  if (isTangyuniang) {
+    const matched = parseTangyuniangUrl(req.url);
+    if (!matched) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'not found' }));
+      return;
+    }
+    await forwardToTangyuniang(req, res, matched);
+    return;
+  }
+
+  // ----- 倾棠予梦：棠予酿记忆映射成花朵数组，60 秒内存缓存 -----
+  if (isMurmursFlowers) {
+    if (req.method !== 'GET') {
+      res.writeHead(405, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'method not allowed' }));
+      return;
+    }
+    const flowers = await loadMurmursFlowersCached();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ flowers, count: flowers.length }));
+    return;
+  }
+
+  // ----- 日记 debug：看聊天时予予真正拿到的完整日记(棠予酿+静态兜底) -----
+  // 只做 GET，只读，用来验证棠予酿数据源真的接上了、缓存/兜底是否正常。
+  if (isDiaryComposed) {
+    if (req.method !== 'GET') {
+      res.writeHead(405, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'method not allowed' }));
+      return;
+    }
+    const text = await loadDiaryComposed();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ content: text, length: text.length }));
+    return;
+  }
 
   // ----- 日记（长期记忆文件）：GET 读、POST 写 -----
   if (isDiary) {
@@ -826,6 +1321,8 @@ const server = http.createServer(async (req, res) => {
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const model = typeof body.model === 'string' ? body.model : undefined;
   const key = PROVIDERS[provider].key();
+  const stickerGallery = Array.isArray(body.stickerGallery) ? body.stickerGallery : [];
+  const thinking = ['low', 'medium', 'high'].includes(body.thinking) ? body.thinking : undefined;
 
   startSSE(res);
   try {
@@ -836,7 +1333,7 @@ const server = http.createServer(async (req, res) => {
     } else if (provider === 'anthropic') {
       await callAnthropic({ res, key, model, messages });
     } else if (provider === 'claudecode') {
-      await callClaudeCode({ res, token: key, model, messages });
+      await callClaudeCode({ res, token: key, model, messages, stickerGallery, thinking });
     } else if (provider === 'codexcli') {
       await callCodexCli({ res, model, messages });
     } else {
@@ -858,6 +1355,12 @@ const server = http.createServer(async (req, res) => {
       });
     }
     send(res, { type: 'done' });
+    // 嗅探：把这次的请求前缀快照存下来，让 systemd timer 每 55 分钟用同一份
+    // 前缀打一次 Anthropic，避免缓存超 TTL 失效。
+    // 只对真会命中缓存的 provider 写；mock / DeepSeek / Gemini / Codex 不写。
+    if (key && (provider === 'claudecode' || provider === 'anthropic')) {
+      saveLastPrefix({ provider, model: model || null, messages, capturedAt: Date.now() });
+    }
   } catch (err) {
     send(res, { type: 'error', message: String(err?.message || err) });
   } finally {
@@ -871,3 +1374,14 @@ server.listen(PORT, () => {
     .join('  ');
   console.log(`🐾 呼噜代理已启动 http://localhost:${PORT}  [${keys}]`);
 });
+
+// pm2 重启/停止发的是 SIGTERM——不主动关监听 socket 的话，端口释放全靠进程退出的默认行为，
+// 遇到还有请求在流式传输时可能不够快，新进程抢着 listen 就撞上 EADDRINUSE。
+// 收到信号主动 server.close()，3 秒兜底超时强制退出，让端口尽快真正让出来。
+function shutdown(signal) {
+  console.log(`收到 ${signal}，关闭监听...`);
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 3000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

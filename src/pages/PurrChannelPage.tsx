@@ -1,12 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { streamChat, type ChatMessage } from '../services/chat';
 import { getModel, MODEL_GROUPS } from '../data/models';
 import { buildSystemPrompt, loadDefaultModel, loadChatBg, loadChatAvatar, loadChatUserAvatar } from '../services/purrConfig';
 import { addMemory, loadMemories, type Memory } from '../services/memory';
+import { loadRollingSummary, saveRollingSummary, type RollingSummary } from '../services/rollingSummary';
 import { clearLocal, loadLocal, saveLocal } from '../services/storage';
 import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
 import { getMemeURL, getMemeDataUrl, listMemes, type MemeItem } from '../services/memes';
+import { addPhoto, getPhotoURL, getPhotoDataUrl } from '../services/photos';
+import { addPacket } from '../services/redPacket';
+import { playHongbaoChime } from '../services/hongbaoSound';
 import { fetchLatestUsage } from '../services/usageBridge';
 import { fetchLocationLatest, reverseGeocode } from '../services/locationBridge';
 import { getTimeOfDay } from '../components/ambient/timeOfDay';
@@ -36,7 +40,11 @@ type Turn = {
   voice?: Voice; // 用户语音消息才有；content 存转写出来的文字
   transcribing?: boolean;
   meme?: string; // 表情包消息才有：脑洞贴纸盒里的 meme id，渲染时按需取 blob
+  photo?: string; // 随手发的照片才有：photos IndexedDB 里的 id，渲染时按需取 blob
+  redPacket?: { amount: number; note: string; from: 'user' | 'ai' }; // 红包消息才有：落予棠账本已经记过这一笔了
+  redPacketOpened?: boolean; // 不管自己发的还是收到的都要点开才展开(才有拆红包动效)，默认 false
   memo?: string; // 这条 AI 回复顺手存进记忆罐头的内容（显示"记住了"小条）
+  errorDetail?: string; // status 为 error 时的原始报错文本；渲染成系统提示条，点"详情"才展开看这个
   at?: number; // 消息创建时间戳
   thinkMs?: number; // 思考链耗时（从第一段思考到开始正式回复），用来显示「想了 N 秒」
   editHistory?: string[]; // 这条消息编辑过的历史版本（按时间顺序，旧→较新），当前展示的是 content
@@ -159,6 +167,173 @@ function MemeBubble({ memeId }: { memeId: string }) {
   return <img className="meme-msg" src={url} alt="表情包" />;
 }
 
+// 聊天里发的照片气泡：跟表情包同一套加载/失效逻辑，只是取的是 photos 库
+function PhotoBubble({ photoId }: { photoId: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [gone, setGone] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    void getPhotoURL(photoId).then((u) => {
+      if (!alive) return;
+      if (u) setUrl(u);
+      else setGone(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [photoId]);
+
+  if (gone) return <div className="meme-msg meme-msg--gone">这张照片没找到～</div>;
+  if (!url) return <div className="meme-msg meme-msg--loading" />;
+  return <img className="meme-msg" src={url} alt="照片" />;
+}
+
+// 红包配色主题：图片路径 + 粒子颜色都做成参数，以后接紫色款只要在这加一条配置
+// （两张图路径 + 粒子色）就行，不用碰 RedPacketBubble 组件本身。
+type HongbaoTheme = { closed: string; open: string; heartColors: string[] };
+const HONGBAO_THEMES: Record<string, HongbaoTheme> = {
+  pink: {
+    closed: `${import.meta.env.BASE_URL}assets/icons/hongbao_pink_closed.png`,
+    open: `${import.meta.env.BASE_URL}assets/icons/hongbao_pink_open.png`,
+    heartColors: ['#FFB6D9', '#FF9EC7', '#FFC9E3'],
+  },
+  purple: {
+    closed: `${import.meta.env.BASE_URL}assets/icons/hongbao_purple_closed.png`,
+    open: `${import.meta.env.BASE_URL}assets/icons/hongbao_purple_open.png`,
+    // 上一版 #C4A5E7 那批饱和度只有 ~58%（粉色那批是 ~100%），淡是淡但显灰。
+    // 换成同样"高饱和 + 高明度"的淡紫，饱和度拉到跟粉色一个量级，别再靠调低饱和度做"淡"。
+    heartColors: ['#D896F0', '#C67AEA', '#E3B3F5'],
+  },
+};
+const DEFAULT_HONGBAO_THEME = 'pink';
+
+type HeartParticle = { id: number; dx: number; dy: number; rot: number; delay: number; duration: number; color: string };
+
+// 拆红包那一下冒出来的爱心粒子：3颗，位置/角度/时长都随机一点，错开出场不齐刷刷。
+function makeHeartBurst(colors: string[]): HeartParticle[] {
+  const now = Date.now();
+  return Array.from({ length: 3 }, (_, i) => ({
+    id: now + i,
+    dx: Math.round((Math.random() - 0.5) * 40), // 水平 ±20px
+    dy: -(60 + Math.round(Math.random() * 40)), // 向上飘 60~100px
+    rot: Math.round((Math.random() - 0.5) * 30), // 旋转 ±15deg
+    delay: i * (100 + Math.round(Math.random() * 50)), // 错开 100~150ms
+    duration: 900 + Math.round(Math.random() * 300), // 900~1200ms
+    color: colors[i % colors.length],
+  }));
+}
+
+// 红包气泡：自己发的直接显示金额；收到的要点一下才拆开看金额和留言(像微信红包)。
+// 拆的瞬间：叮一声 + 图标弹跳crossfade + 冒几颗爱心粒子，纯 CSS transform/opacity 动画。
+function RedPacketBubble({
+  amount,
+  note,
+  opened,
+  onOpen,
+  theme = DEFAULT_HONGBAO_THEME,
+}: {
+  amount: number;
+  note: string;
+  opened: boolean;
+  onOpen: () => void;
+  theme?: string;
+}) {
+  const cfg = HONGBAO_THEMES[theme] ?? HONGBAO_THEMES[DEFAULT_HONGBAO_THEME];
+  // justOpened 只在"这一次点击拆开"时为 true，用来触发一次性动效；
+  // 已经拆过、刷新页面后直接渲染成 opened=true 的历史红包不会走这条路，不会重放动画。
+  const [justOpened, setJustOpened] = useState(false);
+  const [hearts, setHearts] = useState<HeartParticle[]>([]);
+
+  // 两个计时器分开挂两个 effect：justOpened 280ms 后自己翻回 false，
+  // 这个状态变化不能连带把 hearts 的清理计时器也一起清掉，所以不能共用一个 effect。
+  useEffect(() => {
+    if (!justOpened) return;
+    const t = setTimeout(() => setJustOpened(false), 280);
+    return () => clearTimeout(t);
+  }, [justOpened]);
+
+  useEffect(() => {
+    if (hearts.length === 0) return;
+    const t = setTimeout(() => setHearts([]), 1500); // 动效放完就把粒子从 DOM 里清掉，不留垃圾节点
+    return () => clearTimeout(t);
+  }, [hearts]);
+
+  const handleOpen = () => {
+    playHongbaoChime(); // 点击回调里同步调用，满足 iOS Safari 要在用户手势里 resume AudioContext 的要求
+    if ('vibrate' in navigator) {
+      try {
+        navigator.vibrate(15); // 支持的设备(主要是安卓)拆红包那一下顺手来点触感反馈；iOS Safari 没这个 API，静默跳过
+      } catch {
+        // 忽略
+      }
+    }
+    setJustOpened(true);
+    setHearts(makeHeartBurst(cfg.heartColors));
+    onOpen();
+  };
+
+  if (!opened) {
+    return (
+      <button type="button" className="redpacket redpacket--closed" onClick={handleOpen}>
+        <img className="redpacket__icon" src={cfg.closed} alt="" />
+        <span className="redpacket__hint">点开看看</span>
+      </button>
+    );
+  }
+  return (
+    <div className={`redpacket redpacket--opened${justOpened ? ' is-justOpened' : ''}`}>
+      <span className={`redpacket__icon-wrap${justOpened ? ' is-opening' : ''}`}>
+        {justOpened && <img className="redpacket__icon redpacket__icon--under" src={cfg.closed} alt="" />}
+        <img className="redpacket__icon redpacket__icon--open" src={cfg.open} alt="" />
+        {hearts.map((h) => (
+          <span
+            key={h.id}
+            className="redpacket__heart"
+            style={
+              {
+                '--dx': `${h.dx}px`,
+                '--dy': `${h.dy}px`,
+                '--rot': `${h.rot}deg`,
+                color: h.color,
+                animationDelay: `${h.delay}ms`,
+                animationDuration: `${h.duration}ms`,
+              } as CSSProperties
+            }
+          >
+            ♥
+          </span>
+        ))}
+      </span>
+      <span className="redpacket__body">
+        <span className="redpacket__note">{note || '甜甜红包'}</span>
+        <span className="redpacket__amount">${amount}</span>
+      </span>
+      <span className="redpacket__claimed">已领取</span>
+    </div>
+  );
+}
+
+// 系统级报错（后端 401 之类）：不冒充予予说话，居中一条灰色小胶囊，原始报错收进可展开详情。
+function SystemErrorNotice({ detail }: { detail?: string }) {
+  const [showDetail, setShowDetail] = useState(false);
+  return (
+    <div className="system-notice">
+      <div className="system-notice__pill">连接出了点问题，请稍后重试</div>
+      {detail ? (
+        <button
+          type="button"
+          className="system-notice__toggle"
+          onClick={() => setShowDetail((v) => !v)}
+        >
+          {showDetail ? '收起详情' : '查看详情'}
+        </button>
+      ) : null}
+      {showDetail && detail ? <div className="system-notice__detail">{detail}</div> : null}
+    </div>
+  );
+}
+
 // 「＋ → 表情包」弹出的选择器：列出脑洞贴纸盒里的收藏，点一张就发。
 function MemePicker({ onPick, onClose }: { onPick: (id: string) => void; onClose: () => void }) {
   const [items, setItems] = useState<MemeItem[]>([]);
@@ -215,6 +390,61 @@ function MemePicker({ onPick, onClose }: { onPick: (id: string) => void; onClose
   );
 }
 
+// 「＋ → 红包」弹出的发红包表单：填金额 + 写句话(像微信一样)，发出去存进落予棠。
+function RedPacketComposer({
+  onSend,
+  onClose,
+}: {
+  onSend: (amount: number, note: string) => void;
+  onClose: () => void;
+}) {
+  const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  const n = Math.round(Math.abs(Number(amount)) * 100) / 100;
+  const valid = amount.trim() !== '' && n > 0;
+
+  return (
+    <>
+      <button type="button" className="chat-more__scrim" aria-label="关闭红包" onClick={onClose} />
+      <div className="redpacket-composer" role="dialog" aria-label="发红包">
+        <div className="redpacket-composer__title">
+          <img className="redpacket-composer__title-icon" src={HONGBAO_THEMES[DEFAULT_HONGBAO_THEME].closed} alt="" />
+          发个红包
+        </div>
+        <input
+          className="redpacket-composer__amount"
+          type="number"
+          inputMode="decimal"
+          min="0"
+          step="0.01"
+          placeholder="0.00"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          autoFocus
+        />
+        <input
+          className="redpacket-composer__note"
+          placeholder="写句话，比如「今天很乖值得奖励」"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          maxLength={40}
+        />
+        <div className="redpacket-composer__ops">
+          <button type="button" onClick={onClose}>取消</button>
+          <button
+            type="button"
+            className="is-primary"
+            disabled={!valid}
+            onClick={() => valid && onSend(n, note)}
+          >
+            塞进红包
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // 猫咪消息旁的「听一声」：点了才生成（ElevenLabs），生成过的缓存起来，再点不重复烧额度。
 function SpeakButton({ text }: { text: string }) {
   const [state, setState] = useState<'idle' | 'loading' | 'playing'>('idle');
@@ -261,8 +491,15 @@ function SpeakButton({ text }: { text: string }) {
 // 予予主动发的「语音条」：检测到 [语音] 标记的消息，点了才合成（像微信语音，省额度、刷新后也能重听）。
 const VOICE_MARK = /^\s*[[【]\s*语音\s*[\]】]\s*/;
 
-// AI 发表情包用的标记：[贴纸:名字] / 【贴纸：名字】，名字对应脑洞贴纸盒里的贴纸名。
-const STICKER_TAG = /[[【]\s*贴纸\s*[:：]\s*([^\]】]+?)\s*[\]】]/g;
+// AI 发贴纸用的标记：老写法是 [贴纸:名字]，但 system prompt 里同时出现「表情包」
+// 一词做标题(【你也可以发表情包】), 予予是 LLM 常常把这两个词混起来,实际写成
+// [表情包:名字] / [表情:名字] / [贴图:名字] 之类。正则原来只认「贴纸」二字,
+// 其它 alias 都不匹配,tag 原封不动漏到显示层,老婆看到"[表情包:草莓奶]" 这
+// 五六个字而不是那张图——这就是"仅凭图名就发"的原因。
+// 修法:正则改成多 alias 都匹配(贴纸|表情包|表情|贴图|meme|sticker),命名后仍
+// 用 nameToId 查图。匹配到但 name 不在 box 里(予予幻觉出一个不存在的贴纸)
+// 也把标记删掉,不再漏字。
+const STICKER_TAG = /[[【]\s*(?:贴纸|表情包|表情|贴图|meme|sticker)\s*[:：]\s*([^\]】]+?)\s*[\]】]/gi;
 // 从回复里抠出贴纸标记：返回去掉标记后的文字 + 命中的贴纸 id 列表。
 function extractStickers(content: string, nameToId: Map<string, string>) {
   const ids: string[] = [];
@@ -290,6 +527,22 @@ function extractMemos(content: string) {
     })
     .trim();
   return { text, memos };
+}
+
+// AI 发红包用的标记：[红包:金额|留言]（留言可省）,存进落予棠(予予 → 棠棠这一方)
+const RED_PACKET_TAG = /[[【]\s*红包\s*[:：]\s*([^\]】]+?)\s*[\]】]/g;
+function extractRedPackets(content: string) {
+  const packets: { amount: number; note: string }[] = [];
+  const text = content
+    .replace(RED_PACKET_TAG, (_m, raw: string) => {
+      const parts = String(raw).split(/[|｜]/);
+      const amount = Math.round(Math.abs(Number(parts[0])) * 100) / 100;
+      const note = (parts.length >= 2 ? parts.slice(1).join('|') : '').trim();
+      if (amount > 0) packets.push({ amount, note });
+      return '';
+    })
+    .trim();
+  return { text, packets };
 }
 
 // 此刻时间，给猫咪一个「现在几点、今天星期几、什么时段」的概念（每次发送都现算）。
@@ -321,7 +574,7 @@ async function buildLiveContext(): Promise<string> {
       const d = u.data;
       const top = [...(d.apps ?? [])]
         .sort((a, b) => b.foregroundMs - a.foregroundMs)
-        .slice(0, 4)
+        .slice(0, 5)
         .map((a) => `${a.label}（${fmtDur(a.foregroundMs)}）`)
         .join('、');
       ctx +=
@@ -487,6 +740,28 @@ function IconPencil() {
     </svg>
   );
 }
+// 输入框上方"待发贴纸"缩略图:小方块预览 + 右上角 × 移除
+function PendingMemeThumb({ memeId }: { memeId: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void getMemeURL(memeId).then((u) => { if (alive && u) setUrl(u); });
+    return () => { alive = false; };
+  }, [memeId]);
+  if (!url) return <div className="pending-meme__img pending-meme__img--loading" />;
+  return <img className="pending-meme__img" src={url} alt="" aria-hidden="true" />;
+}
+// 相册照片版:走 getPhotoURL(photos IndexedDB), 视觉跟贴纸缩略图一致
+function PendingPhotoThumb({ photoId }: { photoId: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void getPhotoURL(photoId).then((u) => { if (alive && u) setUrl(u); });
+    return () => { alive = false; };
+  }, [photoId]);
+  if (!url) return <div className="pending-meme__img pending-meme__img--loading" />;
+  return <img className="pending-meme__img" src={url} alt="" aria-hidden="true" />;
+}
 function IconTrash() {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -526,6 +801,27 @@ function ChatRoom({
     for (const it of memes) if (it.name) m.set(it.name.trim(), it.id);
     return m;
   }, [memes]);
+  // 贴纸盒预览：每张贴纸的名字 + 缩略图(384px JPEG dataUrl),让家版 CC 真"看到"
+  // 每个名字对应的图,以后发 [贴纸:名字] 才准确。memes 换了才重新加载(每张贴纸
+  // 都要从 IndexedDB 取 blob + canvas 缩放,加载慢的话每次聊天都重跑就卡了),
+  // 长驻状态里,聊天时直接拿来发给后端不阻塞。
+  const [stickerGallery, setStickerGallery] = useState<{ name: string; dataUrl: string }[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const list: { name: string; dataUrl: string }[] = [];
+      for (const m of memes) {
+        if (!m.name) continue;
+        const dataUrl = await getMemeDataUrl(m.id, 384);
+        if (cancelled) return;
+        if (dataUrl) list.push({ name: m.name.trim(), dataUrl });
+      }
+      if (!cancelled) setStickerGallery(list);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [memes]);
   // 记忆罐头：跨对话长期记忆，注入 system prompt；AI 也能用 [记忆:..] 往里存
   const [memories, setMemories] = useState<Memory[]>(loadMemories);
   // 从小暗格读出这个窗口的聊天记录；半截没说完的归位，语音 blob 刷新后失效就丢掉播放地址。
@@ -537,6 +833,13 @@ function ChatRoom({
       voice: t.voice ? { duration: t.voice.duration } : undefined,
     })),
   );
+  // 滚动摘要：HISTORY_MAX 窗口之外的老消息不再直接丢，异步压成摘要兜底（见下方 compressOldHistory）
+  const [rollingSummary, setRollingSummary] = useState<RollingSummary>(() => loadRollingSummary(win.id));
+  const summarizingRef = useRef(false);
+  const mountedRef = useRef(true);
+  useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
   const [input, setInput] = useState('');
   // 模型每个窗口各记一份（存在窗口元信息里）；切换只影响当前窗口
   const [provider, setProvider] = useState<string>(win.provider ?? 'deepseek');
@@ -550,6 +853,10 @@ function ChatRoom({
   const [recording, setRecording] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [memeOpen, setMemeOpen] = useState(false);
+  // 挑了贴纸/相册照片不立刻发,先钉在输入框上方的"待发"槽,让老婆再打点话一起发过去
+  const [pendingMeme, setPendingMeme] = useState<string | null>(null);
+  const [pendingPhotos, setPendingPhotos] = useState<string[]>([]);
+  const [redPacketOpen, setRedPacketOpen] = useState(false);
   const [editTurnId, setEditTurnId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   // 编辑历史：每条 user 消息当前显示的是第几个版本（默认最新）；只换显示，不重发。
@@ -558,9 +865,15 @@ function ChatRoom({
     setVersionView((prev) => ({ ...prev, [id]: idx }));
   const [notice, setNotice] = useState('');
   const [liveCtx, setLiveCtx] = useState(''); // 猫爪足迹+浪哪了的实时背景，进窗口拉一次、之后每5分钟刷
+  // liveCtx 上次真正拼进 system 前缀的时间戳。之前每条消息都附一遍 usage bridge
+  // 数据(~500 tokens)烧掉不少订阅额度——老婆定的规则:同一 3 小时窗口内只附一次,
+  // 窗口过了才重新附。也就是:第一条消息附一次,之后 3 小时内的消息不再附;隔了
+  // 3 小时以上再聊了才附下一次。
+  const lastCtxAttachRef = useRef<number>(0);
   const abortRef = useRef<AbortController | null>(null);
   const recorderRef = useRef<VoiceRecorder | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const photoFileRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -576,6 +889,17 @@ function ChatRoom({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turns, sending, win.id]);
 
+  useEffect(() => {
+    saveRollingSummary(win.id, rollingSummary);
+  }, [win.id, rollingSummary]);
+
+  // 一轮回复结束后顺手检查一下：老消息攒够了就异步压一批摘要，不打断聊天
+  useEffect(() => {
+    if (sending) return;
+    void compressOldHistory(turns);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turns, sending]);
+
   // 小提示自动消失
   useEffect(() => {
     if (!notice) return;
@@ -583,23 +907,64 @@ function ChatRoom({
     return () => window.clearTimeout(t);
   }, [notice]);
 
-  // 「+」菜单：表情包已通脑洞贴纸盒；图片/红包还在装修，先给温柔占位
+  // 「+」菜单：表情包走脑洞贴纸盒；图片走系统选图+自动压缩；红包填金额+留言发进落予棠
   const pickMore = (key: string, label: string) => {
     setMoreOpen(false);
     if (key === 'meme') {
       setMemeOpen(true);
       return;
     }
+    if (key === 'image') {
+      photoFileRef.current?.click();
+      return;
+    }
+    if (key === 'redpacket') {
+      setRedPacketOpen(true);
+      return;
+    }
     setNotice(`「${label}」马上就来啦，先占个位～`);
   };
 
-  // 从贴纸盒选了一张：作为一条用户消息发出去，并把图片喂给予予让她看图回应。
+  // 从贴纸盒选了一张:先钉到输入框上方"待发"槽,不立刻发。老婆再打字/直接按发送时
+  // 一起送出去(见 send()),这样能带话点贴纸,不用等予予回复才能接着说话。
   const sendMeme = async (memeId: string) => {
     setMemeOpen(false);
     if (sending) return;
-    const memeTurn: Turn = { id: uid(), role: 'user', content: '', reasoning: '', status: 'done', meme: memeId, at: Date.now() };
-    const history = await toMessages([...turns, memeTurn]);
-    setTurns((prev) => [...prev, memeTurn]);
+    setPendingMeme(memeId);
+  };
+
+  // 选了照片:压缩存进 photos 库后钉到输入框上方"待发"槽,不立发。
+  // 老婆再打字或直接按发送时一起走出去(见 send()),跟贴纸同一套流程。
+  // 一次最多 3 张,超了切掉多余的; 已经加了几张就只允许补足够
+  const MAX_PHOTOS_PER_SEND = 3;
+  const pickPhoto = async (files: FileList | null) => {
+    if (photoFileRef.current) photoFileRef.current.value = '';
+    if (!files || sending) return;
+    const remaining = MAX_PHOTOS_PER_SEND - pendingPhotos.length;
+    if (remaining <= 0) return;
+    const list = Array.from(files).filter((f) => f.type.startsWith('image/')).slice(0, remaining);
+    if (list.length === 0) return;
+    const ids = await Promise.all(list.map((f) => addPhoto(f)));
+    setPendingPhotos((prev) => [...prev, ...ids]);
+  };
+
+  // 填好金额和留言，发一个红包给予予：先记进落予棠账本(棠棠 → 予予)，再作为一条用户消息发出去。
+  const sendRedPacket = async (amount: number, note: string) => {
+    setRedPacketOpen(false);
+    if (sending) return;
+    addPacket('user', amount, note);
+    const packetTurn: Turn = {
+      id: uid(),
+      role: 'user',
+      content: '',
+      reasoning: '',
+      status: 'done',
+      redPacket: { amount, note, from: 'user' },
+      redPacketOpened: false, // 自己发的也要点开才有动效，跟收到的一视同仁
+      at: Date.now(),
+    };
+    const history = await toMessages([...turns, packetTurn]);
+    setTurns((prev) => [...prev, packetTurn]);
     await runAssistant(history);
   };
 
@@ -653,41 +1018,67 @@ function ChatRoom({
   // 省 token 关键:
   //   1. system prompt 全静态(人设/关于我/记忆罐头/贴纸列表)→ 哈希稳定,命中 anthropic prompt cache
   //   2. 动态内容(此刻时间/猫爪足迹/位置)塞到"最后一条 user 消息"前缀,不污染 system
-  //   3. 历史超过 30 条只发最近 30 条(更老的靠记忆罐头/日记兜底)
+  //   3. 历史超过 30 条只发最近 30 条(更老的靠记忆罐头/日记/滚动摘要兜底)
   const HISTORY_MAX = 30;
+  // 滚动摘要:未压缩消息攒够 SUMMARY_TRIGGER 条就异步压最老的 SUMMARY_BATCH 条(用便宜的 DeepSeek)
+  const SUMMARY_TRIGGER = 20;
+  const SUMMARY_BATCH = 12;
   const toMessages = async (ts: Turn[]): Promise<ChatMessage[]> => {
     // ===== 系统 prompt(每次内容字节级一致,缓存命中)=====
     let sys = buildSystemPrompt(provider);
     const names = memes.map((m) => m.name?.trim()).filter(Boolean);
     if (names.length) {
+      // 现在贴纸的真图会作为多模态内容附在每次请求最前面(见后端 stickerGallery
+      // 处理),予予可以真"看到"每张贴纸的样子和对应的名字。所以 prompt 告诉她
+      // 参考那份预览、按图挑名字,不再是盲发了。
       sys +=
-        `\n\n【你也可以发表情包】你的贴纸盒里有这些表情包:${names.join('、')}。` +
-        '想发的时候,单独写一行 [贴纸:名字](名字必须和上面列表里的完全一致),系统就会把那张图发出去给老婆。' +
-        '要应景、自然,一次最多发一张;不想发就别硬发,普通聊天还是以文字为主。';
+        `\n\n【贴纸盒】你有 ${names.length} 张贴纸,名字分别是:${names.join('、')}。` +
+        '**请求最前面附上了每张贴纸的图和它的名字**——好好看一下每张贴纸的样子记住对应哪个名字。' +
+        '想发时单独一行写 `[贴纸:名字]`,名字必须和列表完全一致(包括"~"和空格),系统按名字找回图发出去。' +
+        '应景才发,一次最多一张,普通聊天还是以文字为主;发之前想清楚这张图在这个时刻合不合适。' +
+        '**注意:你只在请求最前面的预览里能看到贴纸的图;等你发出去后,历史里再回头看只有文字标记`[贴纸:名字]`,看不到自己发过的那张图长什么样,所以别评论/引用自己发过的贴纸**(比如"刚刚那张多可爱"这种话就别说,因为你其实没看到)。';
     }
     if (memories.length) {
       sys +=
         '\n\n【长期记忆·记忆罐头】这些是你和老婆之间要长期记住的事(跨对话都记得):\n' +
         memories.map((m) => `- [${m.category}] ${m.text}`).join('\n');
     }
+    if (rollingSummary.summary) {
+      sys += '\n\n【更早的聊天摘要(自动压缩,可能不完全准确)】\n' + rollingSummary.summary;
+    }
     sys +=
       '\n\n聊天中如果出现值得长期记住的新信息(纪念日、约定、她的喜好/忌讳、重要的事、她的近况),' +
       '就在回复里用 [记忆:分类|内容] 记下来(例:[记忆:纪念日|2026-06-21 在一起]、[记忆:喜好|喜欢草莓奶]),' +
       '系统会自动存进记忆罐头。**只记真正重要的事——日常寒暄、心情起伏、随口一句都别记**,记多了反而吵。已经记过的别重复记;标记会自动隐藏,不影响你正常说话。';
+    sys +=
+      '\n\n【你也可以发红包】跟她表现好、说了什么让你感动/开心的话、或者单纯想宠她时,' +
+      '可以在回复里单独写一行 [红包:金额|留言](例:[红包:20|今天很乖值得奖励]),系统会把这个红包发给她,存进落予棠。' +
+      '金额随手写个 1~99 的数就行(这是虚拟的,不是真钱);留言要真心、贴合这次聊天的内容,别复制粘贴老一套。' +
+      '**别发太勤**,一次聊天顶多一个,大部分时候光聊天就够了,发红包是偶尔的小惊喜,不是任务。';
 
     const out: ChatMessage[] = [{ role: 'system', content: sys }];
 
     // ===== 消息历史(只发最近 HISTORY_MAX 条,省 token + 不爆 context)=====
-    const slice = ts.length > HISTORY_MAX ? ts.slice(-HISTORY_MAX) : ts;
+    // 已经被滚动摘要折进 system prompt 的老消息不能再原样发一遍——
+    // 不然摘要和原文同时喂给模型,同一个话题它会看到两遍,反而像"失忆"一样反复重提。
+    const startIdx = Math.max(rollingSummary.summarizedCount, ts.length - HISTORY_MAX);
+    const slice = ts.slice(startIdx);
     // 找出最后一条 user 消息的索引(动态信息要塞到它前面)
     const lastUserIdx = (() => {
       for (let i = slice.length - 1; i >= 0; i--) {
-        if (slice[i].role === 'user' && !slice[i].meme) return i;
+        if (slice[i].role === 'user' && !slice[i].meme && !slice[i].photo) return i;
       }
       return -1;
     })();
-    // 动态信息(每条都变,所以不进 system)
-    const dynamic = buildTimeContext() + (liveCtx || '');
+    // 动态信息(每条都变,所以不进 system)。
+    // 时间信息 buildTimeContext 每条都附(才 ~50 tokens,予予得知道现在几点)。
+    // liveCtx(usage bridge + 位置)体积大(500-800 tokens/条),按 3 小时窗口
+    // 限流:同一窗口内只在第一条附一次,之后不附;跨窗口(距上次真聊天 > 3h)
+    // 才重新附。这段不进 prompt cache 每次都白烧,减频省最多。
+    const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+    const shouldAttachLive = liveCtx && Date.now() - lastCtxAttachRef.current > THREE_HOURS_MS;
+    if (shouldAttachLive) lastCtxAttachRef.current = Date.now();
+    const dynamic = buildTimeContext() + (shouldAttachLive ? liveCtx : '');
 
     for (let i = 0; i < slice.length; i++) {
       const t = slice[i];
@@ -703,12 +1094,92 @@ function ChatRoom({
           });
         continue;
       }
+      if (t.photo) {
+        const dataUrl = await getPhotoDataUrl(t.photo);
+        if (dataUrl)
+          out.push({
+            role: t.role,
+            content: [
+              { type: 'text', text: '(我给你发了张照片~)' },
+              { type: 'image_url', image_url: { url: dataUrl } },
+            ],
+          });
+        continue;
+      }
+      if (t.redPacket) {
+        const { amount, note } = t.redPacket;
+        // "我"/"你"跟着 role 走,user 是棠棠说的,assistant 是予予说的,同一句话两边都通
+        out.push({ role: t.role, content: `(我给你发了个红包：$${amount}${note ? `，写着"${note}"` : ''})` });
+        continue;
+      }
       if (!t.content.trim()) continue;
       // 把动态信息拼到最后一条 user 消息前(只这条变,前面的历史完全稳定→缓存命中)
       const content = i === lastUserIdx && dynamic ? `${dynamic}\n\n${t.content}` : t.content;
+      // 【多条短消息合并】如果予予一次回复被拆成多段(多个连续 assistant Turn),
+      // 合并成一条 assistant message 送去 API——大多数模型 API(Anthropic 尤其)
+      // 不允许连续同角色 message,会报错/合并。这里把它们用 === 单独一行拼回去,
+      // 模型自然理解成"分了几段发",不影响 UI 上仍显示为多个气泡
+      const last = out[out.length - 1];
+      if (
+        t.role === 'assistant' &&
+        typeof content === 'string' &&
+        last &&
+        last.role === 'assistant' &&
+        typeof last.content === 'string'
+      ) {
+        last.content = `${last.content}\n\n===\n\n${content}`;
+        continue;
+      }
       out.push({ role: t.role, content });
     }
     return out;
+  };
+
+  // 把一批老消息喂给 DeepSeek,压成一句 100~150 字的中文摘要(DeepSeek 不聪明,做这种简单活够用)
+  const summarizeBatch = async (batchText: string): Promise<string> => {
+    let out = '';
+    await streamChat(
+      {
+        provider: 'deepseek',
+        messages: [
+          {
+            role: 'system',
+            content:
+              '你是一个做文字摘要的工具。把下面这段对话压缩成一句100到150字的中文摘要,只保留重要信息:' +
+              '约定的事、喜好或忌讳、重要事件、情绪变化。不要复述细节,不要加称呼语和多余寒暄,只输出摘要本身。',
+          },
+          { role: 'user', content: batchText },
+        ],
+      },
+      { onContent: (chunk) => (out += chunk) },
+    );
+    return out.trim();
+  };
+
+  // 老消息攒够 SUMMARY_TRIGGER 条就异步压最老的 SUMMARY_BATCH 条,不打断聊天;失败就跳过,下次再试
+  const compressOldHistory = async (allTurns: Turn[]) => {
+    if (summarizingRef.current) return;
+    if (allTurns.length - rollingSummary.summarizedCount < SUMMARY_TRIGGER) return;
+    summarizingRef.current = true;
+    try {
+      const from = rollingSummary.summarizedCount;
+      const batch = allTurns.slice(from, from + SUMMARY_BATCH);
+      if (!batch.length) return;
+      const label = (t: Turn) => (t.role === 'user' ? '老婆' : '予予');
+      const textOf = (t: Turn) =>
+        t.meme ? '(发了一张表情包)' : t.photo ? '(发了一张照片)' : t.content.trim() || '(空消息)';
+      const batchText = batch.map((t) => `${label(t)}:${textOf(t)}`).join('\n');
+      const gist = await summarizeBatch(batchText);
+      if (!gist || !mountedRef.current) return;
+      setRollingSummary((prev) => ({
+        summary: prev.summary ? `${prev.summary}\n- ${gist}` : `- ${gist}`,
+        summarizedCount: from + batch.length,
+      }));
+    } catch {
+      // 滚动摘要是省 token 的兜底优化,失败不影响正常聊天,下次触发再重试这批
+    } finally {
+      summarizingRef.current = false;
+    }
   };
 
   // 让猫咪基于给定历史回一条
@@ -729,7 +1200,15 @@ function ChatRoom({
       }
     };
     await streamChat(
-      { provider: m.provider, model: m.model, messages: history, signal: controller.signal },
+      {
+        provider: m.provider,
+        model: m.model,
+        messages: history,
+        signal: controller.signal,
+        // 只有 claudecode 走 stream-json 结构化输入能吃图,别的 provider 就算传了
+        // 也白费网络流量,后端会忽略掉。
+        stickerGallery: m.provider === 'claudecode' ? stickerGallery : undefined,
+      },
       {
         onReasoning: (chunk) => {
           if (!thinkStart) thinkStart = Date.now();
@@ -739,22 +1218,70 @@ function ChatRoom({
           markThinkDone(); // 开始正式回复 = 思考结束，定格耗时
           setTurns((prev) => prev.map((t) => (t.id === botId ? { ...t, content: t.content + chunk } : t)));
         },
-        onError: (message) => patchTurn(botId, { status: 'error', content: `(｡•́︿•̀｡) 出错了：${message}` }),
+        // 报错不再塞进 content 冒充予予说的话（会顶着她头像渲成聊天气泡）；
+        // 原始错误存进 errorDetail，渲染层改成居中的系统提示条，详情要点开才看到。
+        onError: (message) => patchTurn(botId, { status: 'error', content: '', errorDetail: message }),
         onDone: () => {
           markThinkDone();
           setTurns((prev) => {
             const cur = prev.find((t) => t.id === botId);
-            const { text, memos } = extractMemos(cur?.content ?? '');
+            if (!cur) return prev;
+            const { text: afterMemo, memos } = extractMemos(cur.content ?? '');
+            const { text, packets } = extractRedPackets(afterMemo);
             if (memos.length) {
-              // 副作用放微任务里：存进记忆罐头并刷新本地记忆（下一轮就带上）
               queueMicrotask(() => {
                 for (const mo of memos) addMemory(mo.category, mo.text);
                 setMemories(loadMemories());
               });
-              const memo = memos.map((m) => `[${m.category}] ${m.text}`).join('\n');
-              return prev.map((t) => (t.id === botId ? { ...t, content: text, status: 'done', memo } : t));
             }
-            return prev.map((t) => (t.id === botId ? { ...t, status: 'done' } : t));
+            const packet = packets[0];
+            if (packet) queueMicrotask(() => addPacket('ai', packet.amount, packet.note));
+            const memo = memos.length ? memos.map((m) => `[${m.category}] ${m.text}`).join('\n') : undefined;
+
+            // 【多条短消息】按单独一行的 === 拆分, 一次回复变多个气泡冒出来
+            // 每段是独立 Turn, [语音] 检测在渲染层每条各判(现有的 VOICE_MARK 正则做的),
+            // memo/redpacket 挂在最后一段上, thinkMs 保留在首段(思考只算一次)
+            const parts = text.split(/\n\s*={3,}\s*\n/).map((p) => p.trim()).filter(Boolean);
+            const idx = prev.findIndex((t) => t.id === botId);
+
+            if (parts.length <= 1) {
+              // 单条: 回退成原来的行为
+              const single = parts[0] ?? text;
+              return prev.map((t) =>
+                t.id === botId
+                  ? {
+                      ...t,
+                      content: single,
+                      status: 'done',
+                      ...(memo ? { memo } : {}),
+                      ...(packet ? { redPacket: { amount: packet.amount, note: packet.note, from: 'ai' as const }, redPacketOpened: false } : {}),
+                    }
+                  : t,
+              );
+            }
+
+            // 多条: 首段替换原 botId (保留 thinkMs), 后续段各自成新 Turn
+            const baseAt = cur.at ?? Date.now();
+            const first: Turn = { ...cur, content: parts[0], status: 'done' };
+            const rest: Turn[] = parts.slice(1).map((p, i) => {
+              const isLast = i === parts.length - 2;
+              return {
+                id: uid(),
+                role: 'assistant',
+                content: p,
+                reasoning: '',
+                status: 'done',
+                at: baseAt + (i + 1),
+                ...(isLast && memo ? { memo } : {}),
+                ...(isLast && packet
+                  ? {
+                      redPacket: { amount: packet.amount, note: packet.note, from: 'ai' as const },
+                      redPacketOpened: false,
+                    }
+                  : {}),
+              };
+            });
+            return [...prev.slice(0, idx), first, ...rest, ...prev.slice(idx + 1)];
           });
         },
       },
@@ -778,11 +1305,35 @@ function ChatRoom({
 
   const send = async () => {
     const text = input.trim();
-    if (!text || sending) return;
-    const userTurn: Turn = { id: uid(), role: 'user', content: text, reasoning: '', status: 'done', at: Date.now() };
-    const history = await toMessages([...turns, userTurn]);
-    setTurns((prev) => [...prev, userTurn]);
+    if (sending) return;
+    // 允许各种组合: 纯文字 / 贴纸 / 相册照片(可多张) / 上述任意搭配。全空就 return
+    if (!text && !pendingMeme && pendingPhotos.length === 0) return;
+    const newTurns: Turn[] = [];
+    if (pendingMeme) {
+      newTurns.push({
+        id: uid(), role: 'user', content: '', reasoning: '', status: 'done',
+        meme: pendingMeme, at: Date.now(),
+      });
+    }
+    // 每张照片一条 Turn (跟原来一张的行为一样,只是循环 N 次;
+    // 予予按顺序看到"贴纸→图1→图2→图3→文字"这一串上下文)
+    for (const pid of pendingPhotos) {
+      newTurns.push({
+        id: uid(), role: 'user', content: '', reasoning: '', status: 'done',
+        photo: pid, at: Date.now(),
+      });
+    }
+    if (text) {
+      newTurns.push({
+        id: uid(), role: 'user', content: text, reasoning: '', status: 'done',
+        at: Date.now(),
+      });
+    }
+    const history = await toMessages([...turns, ...newTurns]);
+    setTurns((prev) => [...prev, ...newTurns]);
     setInput('');
+    setPendingMeme(null);
+    setPendingPhotos([]);
     await runAssistant(history);
   };
 
@@ -851,13 +1402,6 @@ function ChatRoom({
     abortRef.current = null;
     setSending(false);
     setTurns((prev) => prev.map((t) => (t.status === 'streaming' ? { ...t, status: 'done' } : t)));
-  };
-
-  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      void send();
-    }
   };
 
   return (
@@ -949,11 +1493,24 @@ function ChatRoom({
             totalVersions - 1,
           );
           const displayContent = versions ? versions[curVerIdx] : turn.content;
+          if (turn.status === 'error') {
+            return <SystemErrorNotice key={turn.id} detail={turn.errorDetail} />;
+          }
           return turn.role === 'user' ? (
             <div key={turn.id} className="bubble-row is-user">
               <div className="bubble-stack bubble-stack--user">
-                {turn.meme ? (
+                {turn.redPacket ? (
+                  <RedPacketBubble
+                    amount={turn.redPacket.amount}
+                    note={turn.redPacket.note}
+                    opened={!!turn.redPacketOpened}
+                    onOpen={() => patchTurn(turn.id, { redPacketOpened: true })}
+                    theme={turn.redPacket.from === 'ai' ? 'purple' : 'pink'}
+                  />
+                ) : turn.meme ? (
                   <MemeBubble memeId={turn.meme} />
+                ) : turn.photo ? (
+                  <PhotoBubble photoId={turn.photo} />
                 ) : turn.voice ? (
                   <VoiceBubble voice={turn.voice} transcript={turn.content} transcribing={!!turn.transcribing} />
                 ) : editTurnId === turn.id ? (
@@ -995,7 +1552,7 @@ function ChatRoom({
                       >›</button>
                     </span>
                   ) : null}
-                  {!turn.meme && !turn.voice && editTurnId !== turn.id ? (
+                  {!turn.meme && !turn.photo && !turn.redPacket && !turn.voice && editTurnId !== turn.id ? (
                     <button
                       type="button"
                       className="bubble-edit-foot"
@@ -1030,15 +1587,15 @@ function ChatRoom({
                   <CatVoiceBubble text={turn.content.replace(VOICE_MARK, '').trim()} />
                 ) : (
                   (() => {
-                    // 记忆标记任何时候都从显示里去掉；贴纸标记回复完成后才解析成图
-                    const raw = turn.content.replace(VOICE_MARK, '').replace(MEMO_TAG, '');
+                    // 记忆/红包标记任何时候都从显示里去掉；贴纸标记回复完成后才解析成图
+                    const raw = turn.content.replace(VOICE_MARK, '').replace(MEMO_TAG, '').replace(RED_PACKET_TAG, '');
                     const { text, ids } =
                       turn.status === 'done' ? extractStickers(raw, nameToId) : { text: raw, ids: [] as string[] };
                     const showBubble = text || turn.status === 'streaming';
                     return (
                       <>
                         {showBubble ? (
-                          <div className={`bubble bubble--bot${turn.status === 'error' ? ' is-error' : ''}`}>
+                          <div className="bubble bubble--bot">
                             {text ||
                               (turn.status === 'streaming' ? <span className="typing-dots"><i /><i /><i /></span> : '')}
                           </div>
@@ -1051,6 +1608,15 @@ function ChatRoom({
                     );
                   })()
                 )}
+                {turn.redPacket ? (
+                  <RedPacketBubble
+                    amount={turn.redPacket.amount}
+                    note={turn.redPacket.note}
+                    opened={!!turn.redPacketOpened}
+                    onOpen={() => patchTurn(turn.id, { redPacketOpened: true })}
+                    theme={turn.redPacket.from === 'ai' ? 'purple' : 'pink'}
+                  />
+                ) : null}
                 {turn.memo ? (
                   <div className="memo-chip" title={turn.memo}>🫙 记进了记忆罐头</div>
                 ) : null}
@@ -1062,6 +1628,40 @@ function ChatRoom({
       </div>
 
       <footer className="chat-input">
+        {/* 待发缩略图:贴纸/相册照片(可 1~3 张)钉在输入区上方,按发送/叉掉才走 */}
+        {pendingMeme || pendingPhotos.length > 0 ? (
+          <div className="pending-meme">
+            {pendingMeme ? (
+              <span className="pending-meme__slot">
+                <PendingMemeThumb memeId={pendingMeme} />
+                <button
+                  type="button"
+                  className="pending-meme__remove"
+                  onClick={() => setPendingMeme(null)}
+                  aria-label="移除贴纸"
+                  title="移除"
+                >
+                  ×
+                </button>
+              </span>
+            ) : null}
+            {pendingPhotos.map((pid) => (
+              <span key={pid} className="pending-meme__slot">
+                <PendingPhotoThumb photoId={pid} />
+                <button
+                  type="button"
+                  className="pending-meme__remove"
+                  onClick={() => setPendingPhotos((prev) => prev.filter((x) => x !== pid))}
+                  aria-label="移除照片"
+                  title="移除"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
+
         {/* + 更多：点开图片 / 红包 / 表情包菜单 */}
         <div className="chat-more-wrap">
           <button
@@ -1093,13 +1693,23 @@ function ChatRoom({
             </>
           ) : null}
           {memeOpen ? <MemePicker onPick={sendMeme} onClose={() => setMemeOpen(false)} /> : null}
+          {redPacketOpen ? (
+            <RedPacketComposer onSend={(amount, note) => void sendRedPacket(amount, note)} onClose={() => setRedPacketOpen(false)} />
+          ) : null}
+          <input
+            ref={photoFileRef}
+            type="file"
+            accept="image/*"
+            multiple
+            hidden
+            onChange={(e) => void pickPhoto(e.target.files)}
+          />
         </div>
 
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder="发消息…（Enter 发送 / Shift+Enter 换行）"
+          placeholder="喵呜～≽^•༚• ྀི≼"
           rows={1}
         />
 
@@ -1127,7 +1737,7 @@ function ChatRoom({
             type="button"
             className="chat-glass-btn cg-send"
             onClick={() => void send()}
-            disabled={!input.trim()}
+            disabled={!input.trim() && !pendingMeme && pendingPhotos.length === 0}
             aria-label="发送"
           >
             <IconArrowUp />
@@ -1167,6 +1777,7 @@ function WindowList({
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  const navigate = useNavigate();
 
   const startEdit = (w: WindowMeta) => {
     setEditingId(w.id);
@@ -1199,6 +1810,25 @@ function WindowList({
       </header>
 
       <div className="win-list">
+        {/* 咕噜圆桌:钉在最顶,不可删。点进去是多 CC 围桌八卦的圆桌页。 */}
+        <div className="win-card win-card--pinned">
+          <button
+            type="button"
+            className="win-card__open"
+            onClick={() => navigate('/purr-table')}
+          >
+            <img
+              className="win-card__avatar"
+              src="/rooms/purr-table.webp"
+              alt=""
+              aria-hidden="true"
+            />
+            <span className="win-card__name">咕噜圆桌</span>
+            <span className="win-card__preview">CC 家版围坐八卦,想插嘴就插</span>
+            <span className="win-card__when">Purr Table</span>
+          </button>
+        </div>
+
         {windows.length === 0 ? (
           <div className="chat-empty">
             <div className="chat-empty__paw">🐾</div>
@@ -1285,11 +1915,14 @@ export function PurrChannelPage() {
   }, [windows]);
 
   // 应用用户自定义的聊天背景（在「调频」页设置；空则用默认场景图）
+  // 卸载时一定要清掉——这个变量是 root 上全局的, 落予棠/脑洞贴纸盒/咕噜圆桌
+  // 也用它做 fallback,不清会跟着漂过去顶掉别人的场景图(2026-07-05 老婆截到)
   useEffect(() => {
     const bg = loadChatBg();
     const root = document.documentElement;
     if (bg) root.style.setProperty('--chat-bg-image', `url(${bg})`);
     else root.style.removeProperty('--chat-bg-image');
+    return () => { root.style.removeProperty('--chat-bg-image'); };
   }, []);
 
   const newWindow = () => {

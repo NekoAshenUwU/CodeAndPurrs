@@ -1,0 +1,502 @@
+// 咕噜圆桌 · Purr Table —— 一群 CC 家版围坐八卦,棠棠随时插嘴接梗。
+// UI 直接沿用呼噜频道那套(chat-page / chat-head / bubble / chat-input),
+// 支持共享调频页设的自定义聊天背景(--chat-bg-image),棠棠自己换背景就跟呼噜频道一样。
+
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { streamChat, type ChatMessage, type ContentPart } from '../services/chat';
+import { loadChatBg, loadChatUserAvatar } from '../services/purrConfig';
+import { loadLocal, saveLocal } from '../services/storage';
+import { addPhoto, getPhotoURL, getPhotoDataUrl } from '../services/photos';
+
+// 圆桌成员:只放 CC 家版(用棠棠订阅额度,不烧 API)。
+// pillLabel 是药丸上的全型号名(以后 API Claude 上来也不会混); short 是气泡小圆头像里的简写。
+// bg 是马卡龙糖果渐变,给药丸胶囊 + CC 气泡头像圆点公用。
+type TableMember = {
+  id: string; model: string; label: string;
+  pillLabel: string; short: string; bg: string;
+};
+
+const TABLE_MEMBERS: TableMember[] = [
+  { id: 'jiake-opus-4-6', model: 'claude-opus-4-6', label: 'CC · Opus 4.6',
+    pillLabel: 'CC O4.6', short: 'O4.6',
+    bg: 'linear-gradient(135deg, #a8daf5 0%, #d8f2e5 100%)' }, // 蓝糖: sky → mint
+  { id: 'jiake-opus-4-7', model: 'claude-opus-4-7', label: 'CC · Opus 4.7',
+    pillLabel: 'CC O4.7', short: 'O4.7',
+    bg: 'linear-gradient(135deg, #ffc7d8 0%, #ffdcc0 100%)' }, // 草莓糖: pink → peach
+  { id: 'jiake-opus-4-8', model: 'claude-opus-4-8', label: 'CC · Opus 4.8',
+    pillLabel: 'CC O4.8', short: 'O4.8',
+    bg: 'linear-gradient(135deg, #d5c7ff 0%, #f0d0eb 100%)' }, // 葡萄糖: lavender → rose
+  { id: 'jiake-fable-5', model: 'claude-fable-5', label: 'CC · Fable 5',
+    pillLabel: 'CC F5', short: 'F5',
+    bg: 'linear-gradient(135deg, #ffddb0 0%, #fff2c0 100%)' }, // 奶油糖: apricot → butter
+];
+
+// 每次棠棠发言后 CC 之间接龙 4 回合再停,等下一句。
+const TURNS_PER_ROUND = 4;
+// 每个 CC 看到的历史最多 20 条,超过掐掉——省 token。
+const HISTORY_MAX = 20;
+// 棠棠一次最多发 3 张图给 CC 们看
+const MAX_PHOTOS_PER_SEND = 3;
+
+const TURNS_KEY = 'purr-table:turns';
+const SELECTED_KEY = 'purr-table:selected';
+const START_IDX_KEY = 'purr-table:startIdx';
+
+type Turn = {
+  id: string;
+  speaker: 'user' | string; // 'user' = 棠棠,其它是 memberId
+  content: string;
+  photos?: string[]; // 只有棠棠的 user turn 会有,存 photos IndexedDB 的 id
+  status: 'streaming' | 'done' | 'error';
+  at: number;
+};
+
+const uid = () => Math.random().toString(36).slice(2, 10);
+const findMember = (id: string) => TABLE_MEMBERS.find((m) => m.id === id);
+
+// 停止用 SVG(老婆只给了 send/loop 两张玻璃图,stop 是短暂发送态,继续沿用 SVG)
+function IconStop() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="7" y="7" width="10" height="10" rx="2.5" fill="#fff" />
+    </svg>
+  );
+}
+// 气泡里/待发槽里的图片缩略图,走 photos IndexedDB
+function PtPhotoThumb({ photoId }: { photoId: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void getPhotoURL(photoId).then((u) => { if (alive && u) setUrl(u); });
+    return () => { alive = false; };
+  }, [photoId]);
+  if (!url) return <div className="pt-photo-thumb pt-photo-thumb--loading" />;
+  return <img className="pt-photo-thumb" src={url} alt="" aria-hidden="true" />;
+}
+
+// 拼 messages 变成 async,因为要从 IndexedDB 取图片 dataUrl 塞给 CC 看图
+async function buildMessages(system: string, turns: Turn[], speakerId: string): Promise<ChatMessage[]> {
+  const recent = turns.slice(-HISTORY_MAX);
+  const msgs: ChatMessage[] = [{ role: 'system', content: system }];
+  for (const t of recent) {
+    const hasPhotos = !!(t.photos && t.photos.length);
+    if (!t.content.trim() && !hasPhotos) continue;
+    if (t.speaker === speakerId) {
+      // 自己历史发言从不带图(只有棠棠发图),直接文字
+      msgs.push({ role: 'assistant', content: t.content });
+    } else {
+      const who = t.speaker === 'user' ? '棠棠' : findMember(t.speaker)?.short || '?';
+      if (hasPhotos) {
+        // 多模态: 文字 + 图片一起, CC 家版 CLI 走 stream-json 能真的看图
+        const parts: ContentPart[] = [
+          { type: 'text', text: `[${who}]: ${t.content || '(看图)'}` },
+        ];
+        for (const pid of t.photos!) {
+          const dataUrl = await getPhotoDataUrl(pid);
+          if (dataUrl) parts.push({ type: 'image_url', image_url: { url: dataUrl } });
+        }
+        msgs.push({ role: 'user', content: parts });
+      } else {
+        msgs.push({ role: 'user', content: `[${who}]: ${t.content}` });
+      }
+    }
+  }
+  if (msgs[msgs.length - 1]?.role !== 'user') {
+    msgs.push({ role: 'user', content: '(轮到你说话了)' });
+  }
+  return msgs;
+}
+
+function tableSystem(speaker: TableMember, present: TableMember[]): string {
+  const others = present.filter((m) => m.id !== speaker.id).map((m) => m.short).join('/');
+  return (
+    `你现在在「咕噜圆桌」——一间小小的猫咪茶话会。你的名字是「${speaker.short}」,你是 ${speaker.label}。` +
+    `这里除了你,还有其他 CC 家版兄弟(${others || '暂时没别人'})和棠棠(人类,女生,咕噜圆桌的主人,别叫她"用户"或"你好")一起聊天。` +
+    `\n\n【看历史】历史消息里以 [名字]: 开头的表示是那位说的;你回复时不要带 [名字]: 前缀,直接说话。` +
+    `\n【看图】棠棠有时会发图给圆桌上所有 CC 一起看(一次最多 3 张);图片会跟她的话一条消息里,你能真的看见,自然回应就行。` +
+    `\n\n【风格】你说话简短(1-3 句为主,一句最好),俏皮、有点猫感、允许玩梗接梗、允许跟其它 CC 抬杠或起哄。绝不写旁白(不许用 () 或 ** 描述动作神态),绝不学客服口气(不要"需要帮助""希望能帮到你")。别老自报名字,该说啥说啥。` +
+    `\n\n【互动】你可以直接接上一位说的话往下聊;也可以主动开新话题、点其他 CC 或点棠棠说话("F5 你怎么看?"这种)。想沉默一句"..."也行,但别整段发呆。`
+  );
+}
+
+const fmtStamp = (at: number) => {
+  const d = new Date(at);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
+export function PurrTablePage() {
+  const [turns, setTurns] = useState<Turn[]>(() => loadLocal<Turn[]>(TURNS_KEY, []));
+  const [selectedIds, setSelectedIds] = useState<string[]>(() =>
+    loadLocal<string[]>(SELECTED_KEY, TABLE_MEMBERS.map((m) => m.id)),
+  );
+  const [startIdx, setStartIdx] = useState<number>(() => loadLocal<number>(START_IDX_KEY, 0));
+  const [input, setInput] = useState('');
+  const [sending, setSending] = useState(false);
+  const [errorBanner, setErrorBanner] = useState('');
+  const [userAvatar, setUserAvatar] = useState('');
+  // 待发图片: 挑好先钉在输入框上方, 配文字一起发, 一次最多 3 张
+  const [pendingPhotos, setPendingPhotos] = useState<string[]>([]);
+
+  const abortRef = useRef<AbortController | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const photoFileRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => { saveLocal(TURNS_KEY, turns); }, [turns]);
+  useEffect(() => { saveLocal(SELECTED_KEY, selectedIds); }, [selectedIds]);
+  useEffect(() => { saveLocal(START_IDX_KEY, startIdx); }, [startIdx]);
+
+  // 共用调频页设的自定义聊天背景,跟呼噜频道同一开关(--chat-bg-image)。
+  // 卸载时清掉,不然会漂到 落予棠/脑洞贴纸盒 那些也用 var(--chat-bg-image)
+  // 做 fallback 的页面上,把人家自己的场景图顶掉
+  useEffect(() => {
+    const bg = loadChatBg();
+    const root = document.documentElement;
+    if (bg) root.style.setProperty('--chat-bg-image', `url(${bg})`);
+    else root.style.removeProperty('--chat-bg-image');
+    setUserAvatar(loadChatUserAvatar());
+    return () => { root.style.removeProperty('--chat-bg-image'); };
+  }, []);
+
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [turns]);
+
+  const present = useMemo(
+    () => TABLE_MEMBERS.filter((m) => selectedIds.includes(m.id)),
+    [selectedIds],
+  );
+
+  const toggleMember = (id: string) => {
+    if (sending) return;
+    setSelectedIds((prev) => {
+      const has = prev.includes(id);
+      if (has && prev.length === 1) return prev;
+      return has ? prev.filter((x) => x !== id) : [...prev, id];
+    });
+  };
+
+  const runRound = async (initialTurns: Turn[], rounds: number) => {
+    if (present.length === 0) return;
+    setSending(true);
+    setErrorBanner('');
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    let history = initialTurns;
+    let idx = startIdx % present.length;
+
+    for (let i = 0; i < rounds; i++) {
+      if (controller.signal.aborted) break;
+      const speaker = present[idx % present.length];
+      const turnId = uid();
+      const stub: Turn = {
+        id: turnId,
+        speaker: speaker.id,
+        content: '',
+        status: 'streaming',
+        at: Date.now(),
+      };
+      history = [...history, stub];
+      setTurns(history);
+
+      const system = tableSystem(speaker, present);
+      const messages = await buildMessages(system, history.slice(0, -1), speaker.id);
+
+      let acc = '';
+      let hadError = false;
+      await streamChat(
+        {
+          provider: 'claudecode',
+          model: speaker.model,
+          messages,
+          signal: controller.signal,
+          thinking: 'low',
+        },
+        {
+          onContent: (t) => {
+            acc += t;
+            setTurns((prev) => prev.map((x) => (x.id === turnId ? { ...x, content: acc } : x)));
+          },
+          onError: (m) => {
+            hadError = true;
+            setErrorBanner(`${speaker.short}: ${m}`);
+            setTurns((prev) =>
+              prev.map((x) =>
+                x.id === turnId ? { ...x, content: acc || `（${speaker.short} 掉线了）`, status: 'error' } : x,
+              ),
+            );
+          },
+        },
+      );
+
+      if (controller.signal.aborted) break;
+
+      if (!hadError) {
+        setTurns((prev) =>
+          prev.map((x) => (x.id === turnId ? { ...x, content: acc.trim() || '...', status: 'done' } : x)),
+        );
+        history = history.map((x) =>
+          x.id === turnId ? { ...x, content: acc.trim() || '...', status: 'done' as const } : x,
+        );
+      } else {
+        break;
+      }
+      idx = (idx + 1) % present.length;
+    }
+
+    setStartIdx(idx);
+    setSending(false);
+    abortRef.current = null;
+  };
+
+  const sendUser = async () => {
+    const text = input.trim();
+    if (sending) return;
+    // 允许:纯文字 / 纯图片 / 图+文字 一起发。三样都没就不发
+    if (!text && pendingPhotos.length === 0) return;
+    if (present.length === 0) {
+      setErrorBanner('至少留一位 CC 在场吧,不然圆桌空的');
+      return;
+    }
+    const userTurn: Turn = {
+      id: uid(), speaker: 'user', content: text, status: 'done', at: Date.now(),
+      ...(pendingPhotos.length ? { photos: pendingPhotos } : {}),
+    };
+    const next = [...turns, userTurn];
+    setTurns(next);
+    setInput('');
+    setPendingPhotos([]);
+    await runRound(next, TURNS_PER_ROUND);
+  };
+
+  // 挑图片:一次最多 3 张, 已经有几张就只补足够到 3 张。压缩后存 IndexedDB
+  const pickPhotos = async (files: FileList | null) => {
+    if (!files || sending) return;
+    const remaining = MAX_PHOTOS_PER_SEND - pendingPhotos.length;
+    if (remaining <= 0) return;
+    const list = Array.from(files).filter((f) => f.type.startsWith('image/')).slice(0, remaining);
+    const ids = await Promise.all(list.map((f) => addPhoto(f)));
+    setPendingPhotos((prev) => [...prev, ...ids]);
+    if (photoFileRef.current) photoFileRef.current.value = '';
+  };
+
+  const purrMore = async () => {
+    if (sending || turns.length === 0 || present.length === 0) return;
+    await runRound(turns, TURNS_PER_ROUND);
+  };
+
+  const stop = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setSending(false);
+    setTurns((prev) => prev.map((t) => (t.status === 'streaming' ? { ...t, status: 'done' } : t)));
+  };
+
+  const clearAll = () => {
+    if (sending) return;
+    if (!window.confirm('清空咕噜圆桌所有聊天?')) return;
+    setTurns([]);
+    setStartIdx(0);
+    setErrorBanner('');
+  };
+
+  return (
+    <main className="chat-page pt-page">
+      <header className="chat-head">
+        <Link to="/purr-channel" className="chat-head__back" aria-label="回窗口列表">‹</Link>
+        <div className="chat-head__title">
+          <span className="chat-head__name">咕噜圆桌</span>
+          <span className="chat-head__sub">Purr Table · CC 家版茶话会</span>
+        </div>
+        <button
+          type="button"
+          className="chat-head__clear"
+          onClick={clearAll}
+          disabled={sending || turns.length === 0}
+          aria-label="清空聊天"
+          title="清空聊天"
+        >
+          🧹
+        </button>
+      </header>
+
+      <div className="pt-roster" role="group" aria-label="在场的 CC">
+        <span className="pt-roster__label">Join</span>
+        {TABLE_MEMBERS.map((m) => {
+          const on = selectedIds.includes(m.id);
+          return (
+            <button
+              key={m.id}
+              type="button"
+              className={`pt-chip${on ? ' is-on' : ''}`}
+              onClick={() => toggleMember(m.id)}
+              disabled={sending}
+              style={on ? { background: m.bg, borderColor: 'transparent' } : undefined}
+            >
+              {m.pillLabel}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="chat-scroll pt-scroll" ref={scrollRef}>
+        {turns.length === 0 ? (
+          <div className="chat-empty pt-empty">
+            <p>说一句开个头吧～</p>
+            <span>他们会接龙 4 回合,你想插嘴随时打字。思考走 low,专门省订阅。</span>
+          </div>
+        ) : null}
+
+        {turns.map((t) => {
+          if (t.speaker === 'user') {
+            const hasPhotos = !!(t.photos && t.photos.length);
+            const hasText = !!t.content.trim();
+            return (
+              <div key={t.id} className="bubble-row is-user">
+                <div className="bubble-stack bubble-stack--user">
+                  {hasPhotos ? (
+                    <div className={`pt-photo-grid pt-photo-grid--${t.photos!.length}`}>
+                      {t.photos!.map((pid) => <PtPhotoThumb key={pid} photoId={pid} />)}
+                    </div>
+                  ) : null}
+                  {hasText ? (
+                    <div className="bubble bubble--user">
+                      <span className="bubble__text">{t.content}</span>
+                    </div>
+                  ) : null}
+                  <div className="bubble-foot">
+                    <span className="bubble-time">{fmtStamp(t.at)}</span>
+                  </div>
+                </div>
+                {userAvatar ? (
+                  <img className="bubble-avatar bubble-avatar--me" src={userAvatar} alt="" />
+                ) : (
+                  <div className="bubble-avatar bubble-avatar--me bubble-avatar--ph">🐾</div>
+                )}
+              </div>
+            );
+          }
+          const m = findMember(t.speaker);
+          const short = m?.short || '?';
+          const bg = m?.bg || '#eee';
+          return (
+            <div key={t.id} className="bubble-row is-bot">
+              <div
+                className="bubble-avatar bubble-avatar--ph pt-cc-avatar"
+                style={{ background: bg }}
+              >
+                {short}
+              </div>
+              <div className="bubble-stack">
+                <div className={`bubble bubble--bot${t.status === 'error' ? ' pt-bubble--error' : ''}`}>
+                  <span className="bubble__text">
+                    {t.content || (t.status === 'streaming' ? '…' : '')}
+                    {t.status === 'streaming' ? <span className="pt-cursor">▍</span> : null}
+                  </span>
+                </div>
+                <div className="bubble-foot">
+                  <span className="bubble-time">{fmtStamp(t.at)}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {errorBanner ? <div className="pt-error">{errorBanner}</div> : null}
+      </div>
+
+      <footer className="chat-input pt-composer">
+        {/* 待发图片缩略图: 钉在输入区正上方, 一次最多 3 张 */}
+        {pendingPhotos.length > 0 ? (
+          <div className="pt-pending">
+            {pendingPhotos.map((pid) => (
+              <span key={pid} className="pt-pending__slot">
+                <PtPhotoThumb photoId={pid} />
+                <button
+                  type="button"
+                  className="pt-pending__remove"
+                  onClick={() => setPendingPhotos((prev) => prev.filter((x) => x !== pid))}
+                  aria-label="移除图片"
+                  title="移除"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
+
+        {/* 左键:再咕噜(让他们继续接龙 4 回合) — 循环玻璃图整颗当按钮 */}
+        <button
+          type="button"
+          className="pt-imgbtn"
+          onClick={purrMore}
+          disabled={sending || turns.length === 0 || present.length === 0}
+          title="让他们再接龙 4 回合"
+          aria-label="再咕噜"
+        >
+          <img src="/icons/pt-loop.webp" alt="" aria-hidden="true" />
+        </button>
+
+        {/* 中键:相册 (发图给 CC 们看,一次最多 3 张) — 玻璃相机图整颗当按钮 */}
+        <button
+          type="button"
+          className="pt-imgbtn"
+          onClick={() => photoFileRef.current?.click()}
+          disabled={sending || pendingPhotos.length >= MAX_PHOTOS_PER_SEND}
+          title={
+            pendingPhotos.length >= MAX_PHOTOS_PER_SEND
+              ? '一次最多 3 张'
+              : `发图 (还能加 ${MAX_PHOTOS_PER_SEND - pendingPhotos.length} 张)`
+          }
+          aria-label="加图片"
+        >
+          <img src="/icons/pt-camera.webp" alt="" aria-hidden="true" />
+        </button>
+        <input
+          ref={photoFileRef}
+          type="file"
+          accept="image/*"
+          multiple
+          hidden
+          onChange={(e) => void pickPhotos(e.target.files)}
+        />
+
+        <textarea
+          className="pt-textarea"
+          placeholder={present.length ? '喵呜～≽^•༚• ྀི≼' : '至少留一位 CC 在场'}
+          value={input}
+          disabled={sending}
+          rows={1}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              void sendUser();
+            }
+          }}
+        />
+
+        {/* 右键:发送(纸飞机玻璃图整颗当按钮) / 停止(短暂用 SVG 玻璃座) */}
+        {sending ? (
+          <button type="button" className="chat-glass-btn cg-send is-stop" onClick={stop} aria-label="停止">
+            <IconStop />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="pt-imgbtn"
+            onClick={() => void sendUser()}
+            disabled={(!input.trim() && pendingPhotos.length === 0) || present.length === 0}
+            aria-label="发送"
+          >
+            <img src="/icons/pt-send.webp" alt="" aria-hidden="true" />
+          </button>
+        )}
+      </footer>
+    </main>
+  );
+}
