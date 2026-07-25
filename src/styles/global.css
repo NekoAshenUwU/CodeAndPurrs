@@ -357,6 +357,79 @@ a {
   line-height: 1.6;
 }
 
+.room-preview__models {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.room-preview__model {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.room-preview__model-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(201, 184, 241, 0.42));
+  font-size: 1.15rem;
+}
+
+.room-preview__model-copy {
+  min-width: 0;
+}
+
+.room-preview__model-name,
+.room-preview__model-vendor,
+.room-preview__model-tagline {
+  display: block;
+}
+
+.room-preview__model-name {
+  color: var(--ink);
+  font-size: 0.98rem;
+  font-weight: 800;
+}
+
+.room-preview__model-default {
+  margin-left: 6px;
+  padding: 2px 8px;
+  color: #8e6472;
+  border-radius: 999px;
+  background: rgba(243, 191, 208, 0.5);
+  font-size: 0.66rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.room-preview__model-vendor {
+  margin-top: 2px;
+  color: var(--muted);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+.room-preview__model-tagline {
+  margin-top: 4px;
+  color: rgba(95, 88, 119, 0.82);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
 @media (min-width: 700px) {
   .home-page {
     padding-top: 44px;

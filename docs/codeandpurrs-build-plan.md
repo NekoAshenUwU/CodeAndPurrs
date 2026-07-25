@@ -129,6 +129,7 @@ Coming soon
 ```text
 DeepSeek V4
 Gemini 2.5 Flash
+Claude Opus 5 (CC Opus 5)
 ```
 
 要做：
@@ -139,7 +140,7 @@ Gemini 2.5 Flash
 4. 给后端预留字段：
 
 ```ts
-model: "deepseek-v4" | "gemini-2.5-flash"
+model: "deepseek-v4" | "gemini-2.5-flash" | "claude-opus-5"
 ```
 
 完成后效果：

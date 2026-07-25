@@ -7,7 +7,8 @@
 - 首页已经可以打开。
 - 已完成 12 个房间入口卡片。
 - 已完成 Purr Channel 初版聊天页。
-- 已支持 DeepSeek V4 / Gemini 2.5 Flash 的前端模型切换占位。
+- 已支持 DeepSeek V4 / Gemini 2.5 Flash / Claude Opus 5 (CC Opus 5) 的前端模型切换占位。
+- 已把模型列表统一放到 src/data/models.ts，SwitchCore 房间点开就能看到三个模型卡片，Claude Opus 5 是默认选择。
 - 已修复 CSS build 报错。
 - VPS 已可通过 178.128.127.91:5173 访问。
 

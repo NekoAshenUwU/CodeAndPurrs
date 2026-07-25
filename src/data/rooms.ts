@@ -98,7 +98,7 @@ export const rooms: Room[] = [
     englishName: 'SwitchCore',
     emoji: '🎚️',
     status: 'soon',
-    summary: '切换 DeepSeek、Gemini 和以后接进来的更多模型。',
+    summary: '切换 DeepSeek V4、Gemini 2.5 Flash、Claude Opus 5，以后接进来的模型都放这里。',
     actionLabel: '去调频',
   },
   {
