@@ -9,6 +9,7 @@
 - 已完成 Purr Channel 初版聊天页。
 - 已支持 DeepSeek V4 / Gemini 2.5 Flash / Claude Opus 5 (CC Opus 5) 的前端模型切换占位。
 - 已把模型列表统一放到 src/data/models.ts，SwitchCore 房间点开就能看到三个模型卡片，Claude Opus 5 是默认选择。
+- 已加档案 docs/cc-opus-5-integration.md，专门讲 CC Opus 5 怎么接（前端占位已完成，VPS 后端 + Purr Channel 聊天页还没写）。
 - 已修复 CSS build 报错。
 - VPS 已可通过 178.128.127.91:5173 访问。
 
