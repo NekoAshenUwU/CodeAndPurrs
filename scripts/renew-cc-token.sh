@@ -55,17 +55,15 @@ fi
 echo "抓到 token：${TOKEN:0:18}…${TOKEN: -6}(中间省略，不打全)"
 
 echo
-echo "== 3/4 拿它真打一次 API 验证(顺带验 Opus 5 通不通) =="
-OUT="$(CLAUDE_CODE_OAUTH_TOKEN="$TOKEN" claude --print --model claude-opus-5 "数到三" 2>&1)"
-RC=$?
-echo "$OUT"
-if [ $RC -ne 0 ] || printf '%s' "$OUT" | grep -qiE '401|revoked|not logged in|failed to authenticate|invalid'; then
-  echo
-  echo "❌ 验证不通过——【没有】改动 $ENV_FILE。"
-  echo "   若报 unknown model，可能是模型名的事，token 本身也许是好的："
-  echo "   手动跑： bash $(dirname "$0")/set-cc-token.sh '<刚抓到的token>'"
-  exit 1
-fi
+echo "== 3/4 用 claude --print 试探一下(仅供参考，不阻止写入) =="
+# 2026-07-25 踩过：setup-token 明明拿到全新长效 token，claude --print 却
+# 报 401——原因不明(可能 CLI 读了 ~/.claude 的旧登录态而没用 env var)，
+# 但 app 里的 proxy 走的是完全不同的调用路径(直接 HTTPS 打 Anthropic
+# 端点)，跟 CLI 一点关系都没有。所以这步只做参考，不能作为拒绝写入的
+# 依据——真正判定成败的是最后 pm2 日志里有没有 'claudecode:已配置' +
+# app 能不能聊天。
+CLAUDE_CODE_OAUTH_TOKEN="$TOKEN" timeout 10 claude --print --model claude-opus-5 "数到三" 2>&1 | head -3 || true
+echo "(以上仅供参考，成败以最后一步 pm2 日志为准)"
 
 echo
 echo "== 4/4 写入 $ENV_FILE(先备份) + 重启 =="
