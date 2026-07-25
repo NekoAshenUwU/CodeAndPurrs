@@ -30,6 +30,7 @@ export const MODELS: ModelInfo[] = [
   { id: 'jiake-opus-4-6', brand: 'Claude', label: 'CC · Opus 4.6', provider: 'claudecode', model: 'claude-opus-4-6' },
   { id: 'jiake-opus-4-7', brand: 'Claude', label: 'CC · Opus 4.7', provider: 'claudecode', model: 'claude-opus-4-7' },
   { id: 'jiake-opus-4-8', brand: 'Claude', label: 'CC · Opus 4.8', provider: 'claudecode', model: 'claude-opus-4-8' },
+  { id: 'jiake-opus-5', brand: 'Claude', label: 'CC · Opus 5', provider: 'claudecode', model: 'claude-opus-5' },
   { id: 'jiake-fable-5', brand: 'Claude', label: 'CC · Fable 5', provider: 'claudecode', model: 'claude-fable-5' },
 ];
 
