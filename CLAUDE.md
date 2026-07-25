@@ -133,18 +133,32 @@ cd /var/www/codeandpurrs && pm2 delete codeandpurrs 2>/dev/null; pm2 start ecosy
 
 如果是别的 session 帮她删 telegram 那仨进程（`purr-bot` / `purr-chat` / `purr-reminder`），**提醒它绝对不要动 codeandpurrs**——这俩职责完全分开。
 
-## OAuth token 失效时（约一个月或被清）
+## OAuth token 失效时（长效 token 一年一换；被 revoke 也走这套）
 
-聊天回 mock + proxy 日志没看到 `claudecode:已配置` → token 过期。重生成：
+聊天回 mock + proxy 日志没看到 `claudecode:已配置` → token 没了。
+先看清是哪种失效：`401 OAuth access token has been revoked` = 被吊销（改密码/网页端
+撤销授权都会），`expired` = 过期——两种都按下面重生成。
 
-1. VPS `claude setup-token` → 它打印一个 URL（终端宽度会换行，从截图重构 URL 要**逐行末→行首拼接逐字校验**，不要省）
-2. 浏览器粘 URL → Authorize → 拿到一段 code（中间可能有 `#`，整段都要）
-3. 回 VPS 终端粘 code → 回车
-4. 提取写入 .env + 重启：
+⚠️ **只认 `sk-ant-oat01-` 开头那个长效 token（valid for 1 year），
+绝对不要再去抠 `~/.claude/.credentials.json` 里的 `accessToken`**——
+那是短效的、会自动轮换，写进 `.env` 第二天就失效，
+"每天都要重新弄一次"就是这么来的（2026-07-25 踩明白）。
+
+1. VPS `claude setup-token` → 打印一个 URL（终端宽度会换行，从截图重构 URL 要**逐行末→行首拼接逐字校验**，不要省）
+2. 浏览器粘 URL → 用**有订阅的那个账号** Authorize → 拿到一段 code（中间可能有 `#`，整段都要）
+3. 回 VPS 终端粘 code → 回车。**成功时它会直接把长效 token 打在屏幕上**
+   （`✓ Long-lived authentication token created successfully!` +
+   `sk-ant-oat01-...`），**只显示这一次，先复制下来**
+4. 把那串直接写进 .env + 重启（注意用单引号，token 里可能有特殊字符）：
    ```
-   TOKEN=$(grep -oE '"accessToken"[[:space:]]*:[[:space:]]*"[^"]+"' ~/.claude/.credentials.json | head -1 | sed -E 's/.*"([^"]+)"$/\1/')
    sed -i '/^CLAUDE_CODE_OAUTH_TOKEN=/d' /var/www/codeandpurrs/.env
-   echo "CLAUDE_CODE_OAUTH_TOKEN=$TOKEN" >> /var/www/codeandpurrs/.env
+   echo 'CLAUDE_CODE_OAUTH_TOKEN=<粘贴 sk-ant-oat01- 那串>' >> /var/www/codeandpurrs/.env
    pm2 restart codeandpurrs --update-env
    ```
-5. 验证：`pm2 logs codeandpurrs --lines 5 --nostream` 应该看到 `claudecode:已配置`
+5. 验证：`pm2 logs codeandpurrs --lines 5 --nostream` 应该看到 `claudecode:已配置`；
+   再补一条端到端验证（顺带验某个模型通不通）：
+   ```
+   CLAUDE_CODE_OAUTH_TOKEN=$(grep ^CLAUDE_CODE_OAUTH_TOKEN /var/www/codeandpurrs/.env | cut -d= -f2-) claude --print --model claude-opus-5 "数到三"
+   ```
+   注意：终端里**裸跑** `claude` 用的是 `~/.claude` 那份登录态（常年是登出的），
+   跟 app 用的 `.env` token 是两个口袋——不带这个前缀测出来的 `Not logged in` 是假警报。
