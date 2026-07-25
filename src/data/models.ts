@@ -31,7 +31,9 @@ export const MODELS: ModelInfo[] = [
   { id: 'jiake-opus-4-7', brand: 'Claude', label: 'CC · Opus 4.7', provider: 'claudecode', model: 'claude-opus-4-7' },
   { id: 'jiake-opus-4-8', brand: 'Claude', label: 'CC · Opus 4.8', provider: 'claudecode', model: 'claude-opus-4-8' },
   { id: 'jiake-opus-5', brand: 'Claude', label: 'CC · Opus 5', provider: 'claudecode', model: 'claude-opus-5' },
-  { id: 'jiake-fable-5', brand: 'Claude', label: 'CC · Fable 5', provider: 'claudecode', model: 'claude-fable-5' },
+  // CC · Fable 5 已下架(2026-07-25)：Fable 5 被移出 Pro 订阅、只能按 API 计费
+  // (一条回复几刀)，挂在调频页容易手滑烧钱。哪天回归订阅把这行加回来即可：
+  // { id: 'jiake-fable-5', brand: 'Claude', label: 'CC · Fable 5', provider: 'claudecode', model: 'claude-fable-5' },
 ];
 
 export const BRAND_ORDER: ModelBrand[] = ['DeepSeek', 'Gemini', 'GPT', 'Codex', 'Claude'];
