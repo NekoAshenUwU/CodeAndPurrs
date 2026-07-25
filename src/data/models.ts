@@ -1,4 +1,8 @@
-export type ModelId = 'deepseek-v4' | 'gemini-2.5-flash' | 'claude-opus-5';
+export type ModelId =
+  | 'deepseek-v4'
+  | 'gemini-2.5-flash'
+  | 'claude-opus-4-7'
+  | 'claude-opus-5';
 
 export type Model = {
   id: ModelId;
@@ -27,13 +31,21 @@ export const models: Model[] = [
     emoji: '⚡',
   },
   {
+    id: 'claude-opus-4-7',
+    name: 'CC · Opus 4.7',
+    vendor: 'Claude Code',
+    tagline: '现在正在跑的这只，稳、会写、能记事。',
+    strengths: '日常呼噜、写作、猫爪足迹点评。',
+    emoji: '🐾',
+  },
+  {
     id: 'claude-opus-5',
-    name: 'Claude Opus 5',
-    vendor: 'Anthropic',
-    tagline: 'CC Opus 5，最会写长情书那一个。',
-    strengths: '深度写作、思考、代码 review。',
+    name: 'CC · Opus 5',
+    vendor: 'Claude Code',
+    tagline: '新到的一只，思考更深、上下文更长。',
+    strengths: '长文、深度写作、复杂多轮。',
     emoji: '🪄',
   },
 ];
 
-export const defaultModelId: ModelId = 'claude-opus-5';
+export const defaultModelId: ModelId = 'claude-opus-4-7';

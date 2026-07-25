@@ -1,230 +1,119 @@
-# 接 CC Opus 5 (Claude Code · Opus 5) 到 CodeAndPurrs
+# 接 CC Opus 5 到 CodeAndPurrs
 
-> **走 Claude 订阅，不买 Anthropic API key。**
-> VPS 上装 `claude` CLI，用你现有的 Claude 账号登录一次，`server/proxy.mjs` 遇到 `model: "claude-opus-5"` 就 shell 出去调 `claude -p`，把回复送回呼噜频道。
+> **只加一路，不动 Opus 4.7。**
+> Purr Channel 现在跑的是 **CC · Opus 4.7**，走 `claude -p`（CC-p 头less 模式）。这份档只讲怎么把 **Opus 5** 作为**新的**下拉选项加进去，让老婆想切就切，不影响现在稳定跑的 4.7。
 
-## 0. 前置事实（照 neko-usage-bridge-spec.md 对齐）
+## 0. 现状（截图确认过的事实）
 
-- VPS：`178.128.127.91`，域名 `nekopurrs.uk`
-- API 域名：`api.nekopurrs.uk` → `VPS:8787`（Nginx + certbot 反代到本地 Node）
-- 现有聊天后端：`server/proxy.mjs`（零依赖 Node http，已经在处理 `/api/chat`；DeepSeek / Gemini 走它的分路）
-- 现有前端调用点：猫爪足迹的"足迹点评猫"就是 POST `/api/chat` 拿一句短评
-- 前端本仓库已经加好：`src/data/models.ts` 里 `claude-opus-5` 默认，SwitchCore 房间预览能看到
+- 生产地址：`nekopurrs.uk/purr-c`
+- 标题："CC 04.7 Purr Channel"
+- 模型选择器："CC · Opus 4.7 ▼"
+- 后端走 `claude -p`（Claude Code headless），不是 Anthropic API
+- 已经稳定在用：Mind Theater 思考显示、耳边话（语音回复）、猫爪足迹点评都跑得起来
+- 07-25 21:47 那条 `('-')ノ)`-')` 没收到回复 = **另一个 bug**，跟这份档无关
 
-**这一份要做的事**：让 `server/proxy.mjs` 多认一路 `model === "claude-opus-5"`，走 `claude` CLI 而不是 API。
+## 1. 这份档要做的事（只两条）
 
-## 1. 为什么不走 Anthropic API
+1. 模型下拉里**多一个** `CC · Opus 5` 选项，4.7 保留不动
+2. 后端 `server/proxy.mjs` 分路里**加一个** `case "claude-opus-5"`，走同一套 `claude -p` 调用，只是 `--model` 换字符串
 
-- API key 要单独充值，Claude 订阅（Pro / Max / Team）本身**不给** API key
-- 你已经在用 Claude Code，那个 OAuth 登录直接把订阅额度接进 CLI，不用再花钱
-- 缺点：CLI 会话有速率上限（按订阅档），并发大要注意；后面真高频再考虑升级或加缓存
+**不要做的事**：
 
-## 2. VPS 一次性安装 & 登录
+- ❌ 不要删 `claude-opus-4-7`
+- ❌ 不要把默认改成 Opus 5（默认还是 4.7，让老婆自己切）
+- ❌ 不要改现有 4.7 分路的任何一行
 
-一次性做完，以后不用碰：
+## 2. 前端（本 repo 已经改好）
 
-```bash
-ssh root@178.128.127.91
+`src/data/models.ts` 现在有四条：
 
-# 装 Node ≥ 18（Claude Code 要）
-node -v   # 要 >= 18，不够就升级
+| id | 显示名 | 备注 |
+|---|---|---|
+| `deepseek-v4` | DeepSeek V4 | 占位（build-plan 里的计划模型） |
+| `gemini-2.5-flash` | Gemini 2.5 Flash | 占位 |
+| `claude-opus-4-7` | **CC · Opus 4.7** | 当前正在跑的，**default** |
+| `claude-opus-5` | **CC · Opus 5** | 新增，需要后端加分路才真能用 |
 
-# 装 Claude Code CLI（官方）
-npm i -g @anthropic-ai/claude-code
+`defaultModelId = 'claude-opus-4-7'` — 保持默认是 4.7，老婆想试 Opus 5 就点下拉切。
 
-# 确认装上了
-which claude
-claude --version
+> 注意：这个 repo 的 `src/` 只是最初版首页 + 房间入口，**Purr Channel 页面真代码不在这个 branch**（我确认过 main / origin 都没）。真正生产用的模型下拉在哪个 repo / VPS 目录里，你更清楚。改法都一样：在**那个** `models.ts`（或等价数据源）里加一条 `claude-opus-5` 就行。
 
-# 用你自己的 Claude 账号登录（浏览器 OAuth 一次）
-claude login
-# 会打印一个 URL，本地浏览器打开 → 授权 → 复制回来的 code 粘回终端
-# 完事后 token 存在 ~/.config/claude/ (或类似路径)，pm2 起的进程能读到
-```
+## 3. 后端 `server/proxy.mjs` 加分路
 
-**验证**（不进 REPL，直接 headless 问一句）：
-
-```bash
-claude -p "呼噜一下，一句话回我"
-```
-
-看到 Claude 打字 = OK。这条命令就是后端要 subprocess 的东西。
-
-## 3. `server/proxy.mjs` 加一路 Claude
-
-`server/proxy.mjs` 的现有骨架应该是按 `req.body.model` 分路（DeepSeek / Gemini）。加一路 `claude-opus-5`，用 `child_process.spawn` 调 `claude -p`。
-
-### 3.1 核心思路
-
-- `spawn("claude", ["-p", promptString, "--model", "claude-opus-5", "--output-format", "text"])`
-- `stdin` 不用（用 `-p` 一次把 prompt 传完；或者 messages 长的话 `spawn` 后写 stdin 更稳）
-- 读 `stdout` 一路拼字符串
-- 进程 exit 后把整段 text 一起返回前端
-
-### 3.2 一段可参考的分路（放进 `server/proxy.mjs`）
+假设现在 4.7 那一路长这样（示意，你 VPS 上真代码可能略不同）：
 
 ```js
-import { spawn } from "node:child_process";
-
-// 已有：DeepSeek / Gemini 的 handler
-// 新增：Claude Code CLI handler
-function chatWithClaudeCLI({ messages }) {
-  return new Promise((resolve, reject) => {
-    // 把 messages 转成一段单轮 prompt。
-    // v1 简化：只取最后一条 user 内容。多轮上下文之后再加 --continue / 会话文件。
-    const lastUser = [...messages].reverse().find((m) => m.role === "user");
-    if (!lastUser) return reject(new Error("no user message"));
-    const prompt =
-      typeof lastUser.content === "string"
-        ? lastUser.content
-        : lastUser.content.map((c) => c.text ?? "").join("");
-
-    const child = spawn(
-      "claude",
-      ["-p", prompt, "--model", "claude-opus-5", "--output-format", "text"],
-      { env: process.env, timeout: 120_000 },
-    );
-
-    let out = "";
-    let err = "";
-    child.stdout.on("data", (c) => (out += c.toString("utf8")));
-    child.stderr.on("data", (c) => (err += c.toString("utf8")));
-    child.on("error", reject);
-    child.on("close", (code) => {
-      if (code === 0) resolve({ text: out.trim() });
-      else reject(new Error(`claude exit ${code}: ${err.trim() || out.trim()}`));
-    });
-  });
-}
-
-// 在现有的 /api/chat 分路里加：
-// switch (model) {
-//   case "deepseek-v4":     return await chatWithDeepSeek(body);
-//   case "gemini-2.5-flash": return await chatWithGemini(body);
-//   case "claude-opus-5":    return await chatWithClaudeCLI(body);
-//   default: throw 400 "unsupported model";
-// }
+case "claude-opus-4-7":
+  return await chatWithClaudeCLI(body, "claude-opus-4-7");
 ```
 
-前端已经在 `src/data/models.ts` 里传 `model: "claude-opus-5"`，后端 case 就是那个字符串。
+**加一行就行**：
 
-### 3.3 `--output-format` 选择
+```js
+case "claude-opus-4-7":
+  return await chatWithClaudeCLI(body, "claude-opus-4-7");
+case "claude-opus-5":                                  // ← 加这两行
+  return await chatWithClaudeCLI(body, "claude-opus-5");
+```
 
-`claude -p` 的输出格式选项（写这份档时的版本）：
+如果 `chatWithClaudeCLI` 是复用的（推荐做法），改动就这两行；如果每个模型各写一份 handler，那就复制一份 4.7 的，把 `--model` 换成 `claude-opus-5`。
 
-| 选项 | 用途 |
-|---|---|
-| `text`（默认） | 纯文本回复，最简单，v1 就用这个 |
-| `json` | 结构化 JSON，带 metadata / stop reason，之后要展示 usage 时切这个 |
-| `stream-json` | 流式 SSE，之后想让前端"打字机效果"时切这个 |
-
-v1 先 `text`，别一次上流式。
-
-### 3.4 关掉工具（防止 CLI 乱跑 bash）
-
-CodeAndPurrs 用 CC 只是当聊天引擎，**不要**给它工具权限。加 `--allowed-tools ""` 明确清空（或用 permission mode）：
+### 3.1 spawn 参数（如果你已有这段可以对照）
 
 ```js
 spawn("claude", [
   "-p", prompt,
-  "--model", "claude-opus-5",
-  "--output-format", "text",
-  "--allowed-tools", "",           // 关掉所有工具
-  "--permission-mode", "read-only", // 双保险
+  "--model", "claude-opus-5",             // ← 唯一实质区别
+  "--output-format", "text",              // 或 stream-json，看现有 4.7 是啥
+  "--allowed-tools", "",                  // 保持和 4.7 一致，别给工具权限
+  "--permission-mode", "read-only",
 ]);
 ```
 
-不然 Claude 拿到"帮我做 xxx"这种 prompt，可能自己去读文件、跑命令。聊天场景纯浪费 token + 有安全风险。
+**保持和 4.7 完全一样的其它参数** — timeout、env、cwd、stderr 处理，全复制。别趁机改 4.7 的行为。
 
-## 4. 关键坑 & 注意
+## 4. VPS 验证
 
-### 4.1 pm2 进程要能读到 `claude login` 的 token
-
-`claude login` 存的 token 在 **登录时那个用户的 home 目录**下（一般 `~/.config/claude/` 或 `~/.claude/`）。pm2 起 `server/proxy.mjs` 时如果用同一个用户就没事；如果 pm2 跑在别的 user（比如 `www-data`），要么用同一账号 login，要么把 token 目录 chown 过去。
-
-排查：
-```bash
-pm2 exec codeandpurrs -- claude -p "test"
-```
-（看是不是 401 / no credentials）
-
-### 4.2 速率限制
-
-Claude 订阅按档给消息数上限。频繁请求会被 429，`claude -p` 会打印错误并 exit 非 0。后端应该：
-- catch 到 exit code ≠ 0 时给前端一个可读错误（"呼噜歇一会儿，稍后再试"）
-- 想真扛并发：加个 in-memory queue，一次最多 N 个 concurrent claude 进程
-
-### 4.3 subprocess 冷启延迟
-
-`claude -p` 每次都启动一次 Node 进程 + 建立会话，冷启 1-3 秒。用户敲完回车到看到第一个字会有明显停顿。
-
-优化选项（v2 再说）：
-- 换 `--output-format stream-json`，让前端边收边显示 → 感知延迟降低
-- 或用 Claude Agent SDK（`@anthropic-ai/claude-agent-sdk`）常驻进程，省掉每次冷启
-
-### 4.4 多轮上下文
-
-`claude -p prompt` 是**单轮**（每次新会话）。要多轮：
-
-- **简化派**：`server/proxy.mjs` 里把整段 `messages` 拼成一段带角色前缀的 prompt 传进去（v1 够用）
-- **CLI 派**：`claude -p --resume <session-id>` 或 `--continue`，在 proxy 里维护 sessionId 表
-- **SDK 派**：换 Agent SDK，会话状态自己管
-
-v1 用**简化派**（因为反正 CodeAndPurrs 前端还没做 Purr Channel 的完整多轮 UI，聊天记录也计划放小暗格 IndexedDB，后端可以拿到完整 history）。
-
-### 4.5 timeout
-
-Claude 复杂 prompt 可能生成很久（尤其思考模型）。上面示例给了 `timeout: 120_000`（2 分钟）。Nginx 的 `proxy_read_timeout` 也要够长，否则前端先超时。
-
-## 5. VPS 部署指令
-
-代码写好推 main：
+登录 VPS 直接测新模型能不能跑（不用先改代码）：
 
 ```bash
 ssh root@178.128.127.91
-cd ~/CodeAndPurrs
-git pull origin main
-npm install    # 如果没加新依赖其实不用，纯 stdlib
-pm2 restart codeandpurrs    # 或对应进程名
-pm2 logs codeandpurrs --lines 50
+claude -p "呼噜一下，一句话回我" --model claude-opus-5
 ```
 
-第一次改完，在 VPS 上直接测一发：
+- 打字出来 = OK，Opus 5 你订阅能用，可以加分路
+- 报错 "model not available" / 类似 = 你的 Claude 订阅档还没解锁 Opus 5，得先在 Anthropic 那边看订阅状态
+
+（**Opus 5 是新模型，某些订阅档要一段时间才推送**。装的 `claude` CLI 版本太老也可能不认新 model ID，可以先跑 `npm i -g @anthropic-ai/claude-code@latest` 更新一下。）
+
+## 5. 上线之后
+
+前端 `models.ts` 加进去 + 后端 `server/proxy.mjs` case 加好 → 重启后端：
 
 ```bash
-curl -X POST https://api.nekopurrs.uk/api/chat \
-  -H "content-type: application/json" \
-  -d '{"model":"claude-opus-5","messages":[{"role":"user","content":"呼噜一下"}]}'
+pm2 restart <你的后端进程名>
+pm2 logs <进程名> --lines 30
 ```
 
-回一段 JSON `{ text: "..." }` = OK。
+老婆打开 `nekopurrs.uk/purr-c`，下拉里就会多一个 **CC · Opus 5**。点它 → 发消息 → 走新分路。原来的 4.7 完全不受影响。
 
-## 6. 前端已经准备好的部分
+## 6. 07-25 那条丢回复的 bug（分开处理）
 
-- `src/data/models.ts`：`claude-opus-5` 是默认 `defaultModelId`
-- SwitchCore 房间预览：三张模型卡片，Claude Opus 5 挂"默认"标签
-- Purr Channel 聊天页：**还没写**（前端只有 HomePage + 房间入口）
+跟 Opus 5 接入无关，但顺手记一下排查方向：
 
-真要能聊，前端还得加：
-- `src/pages/PurrChannelPage.tsx`：消息列表 + 输入框
-- `src/api/chat.ts`：`fetch("/api/chat", { model: currentModelId, messages })`
-- Vite dev 加 `/api` proxy 到 `https://api.nekopurrs.uk`（或 dev 时 `localhost:8787`）
+- `pm2 logs <进程名>` 翻到 07-25 21:47 前后，看有没有 stderr
+- Claude 订阅额度：有没有 429 rate limit
+- Nginx 日志：`/var/log/nginx/error.log`，看 upstream timeout
+- `claude` 子进程有没有 hang 住（`ps aux | grep claude`）
+- 前端 fetch 有没有 catch 到错，UI 是不是 silent fail
 
-## 7. 安全 checklist
+要我一起看这个 bug 就说一声，需要你把 pm2 日志那段贴过来（或 SSH 让我进 VPS）。
 
-- [ ] `claude login` 的 OAuth token 只在 VPS 那个 user 的 home 里，`~/.config/claude/` chmod 700
-- [ ] `server/proxy.mjs` 调 `spawn` 时**永远不要**把 user 输入拼进 argv（用参数数组，不用 shell string）
-- [ ] `--allowed-tools ""` + `--permission-mode read-only`：CC 不能读 VPS 文件、不能跑命令
-- [ ] Nginx 上 `/api/chat` 加 rate limit（`limit_req_zone`），防止有人白嫖你的 Claude 订阅
-- [ ] 前端不做任何鉴权 = 谁都能调 → 至少加个 `X-Bridge-Token` 或 Cloudflare turnstile
-- [ ] 出错回给前端时**不要**把 Claude 的原始 stderr 直接吐出去（可能带路径 / 环境信息）
+## 7. 待办
 
-## 8. 下一步 todo
-
-- [ ] VPS 上装 claude CLI + `claude login`（一次性）
-- [ ] `server/proxy.mjs` 加 `chatWithClaudeCLI` 分路 + case
-- [ ] 在 VPS 上 curl 测一发确认通
-- [ ] 前端补 Purr Channel 聊天页 + `/api/chat` proxy
-- [ ] Nginx 加 rate limit
-
-要我动手写代码就说一声。目前**只是档案 + 前端占位**，`server/proxy.mjs` 我没碰过（它不在这个 branch 的 tree 里，可能在 VPS 上或别的地方）。
+- [x] 前端 `src/data/models.ts` 加 `claude-opus-4-7` + `claude-opus-5` 两条并列
+- [ ] **生产**的模型数据源（不在这个 repo 里的那份）同步加 `claude-opus-5`
+- [ ] `server/proxy.mjs` 加 `case "claude-opus-5"` 分路
+- [ ] VPS 上先 `claude -p --model claude-opus-5` 单跑一次确认订阅能用
+- [ ] 重启后端 + 老婆试切换
+- [ ] （另开）查 07-25 21:47 那条为什么没回复

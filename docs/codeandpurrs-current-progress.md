@@ -7,9 +7,9 @@
 - 首页已经可以打开。
 - 已完成 12 个房间入口卡片。
 - 已完成 Purr Channel 初版聊天页。
-- 已支持 DeepSeek V4 / Gemini 2.5 Flash / Claude Opus 5 (CC Opus 5) 的前端模型切换占位。
-- 已把模型列表统一放到 src/data/models.ts，SwitchCore 房间点开就能看到三个模型卡片，Claude Opus 5 是默认选择。
-- 已加档案 docs/cc-opus-5-integration.md，讲 CC Opus 5 = Claude Code CLI 上的 Opus 5，走 Claude 订阅 OAuth（不买 Anthropic API key），VPS 上 claude login 一次，server/proxy.mjs 遇到 model=claude-opus-5 就 spawn claude -p。前端占位已完成，server/proxy.mjs 那一路分路和 Purr Channel 聊天页还没写。
+- 生产 Purr Channel (nekopurrs.uk/purr-c) 已经在跑 CC · Opus 4.7，走 claude -p，Mind Theater / 耳边话 / 猫爪足迹点评都正常。
+- 本 repo 的 src/data/models.ts 已经列出四条：DeepSeek V4、Gemini 2.5 Flash、CC · Opus 4.7 (default)、CC · Opus 5 (新增)。SwitchCore 房间预览能看到四张模型卡片。
+- 已加档案 docs/cc-opus-5-integration.md，讲怎么把 CC Opus 5 作为**新的**下拉选项加进去 — 只加分路，不动 4.7。生产模型数据源 + server/proxy.mjs 的 case 补丁不在这个 repo 里，得在 VPS 那份代码上加。
 - 已修复 CSS build 报错。
 - VPS 已可通过 178.128.127.91:5173 访问。
 
