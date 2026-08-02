@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ExportPod } from '../components/ExportPod';
+import { ExportPod, type PodTheme } from '../components/ExportPod';
 
 export function ExportPodPage() {
   const navigate = useNavigate();
+  const [theme, setTheme] = useState<PodTheme>('auto');
+
   return (
-    <main className="export-pod-page">
+    <main className="export-pod-page" data-theme={theme}>
+      <div className="export-pod-page__scene" aria-hidden="true" />
       <header className="export-pod-page__topbar">
         <button
           type="button"
@@ -29,7 +33,7 @@ export function ExportPodPage() {
         </div>
         <span className="export-pod-page__spacer" aria-hidden="true" />
       </header>
-      <ExportPod onClose={() => navigate('/')} />
+      <ExportPod onClose={() => navigate('/')} onThemeChange={setTheme} />
     </main>
   );
 }

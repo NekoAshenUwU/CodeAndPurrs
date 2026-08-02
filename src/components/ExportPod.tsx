@@ -21,7 +21,7 @@ import {
 
 type ImportMode = 'replace' | 'merge';
 type StatusTone = 'ok' | 'error' | 'info';
-type PodTheme = 'auto' | 'day' | 'night';
+export type PodTheme = 'auto' | 'day' | 'night';
 
 const THEME_KEY = 'codeandpurrs:exportPodTheme';
 const THEME_ORDER: PodTheme[] = ['auto', 'day', 'night'];
@@ -33,6 +33,7 @@ const THEME_LABEL: Record<PodTheme, string> = {
 
 type ExportPodProps = {
   onClose: () => void;
+  onThemeChange?: (theme: PodTheme) => void;
 };
 
 function loadTheme(): PodTheme {
@@ -45,7 +46,7 @@ function loadTheme(): PodTheme {
   return 'auto';
 }
 
-export function ExportPod({ onClose }: ExportPodProps) {
+export function ExportPod({ onClose, onThemeChange }: ExportPodProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentModel, setCurrentModel] = useState<string>('deepseek-v4');
   const [selectedId, setSelectedId] = useState<string>('');
@@ -59,11 +60,13 @@ export function ExportPod({ onClose }: ExportPodProps) {
     const list = loadSessions();
     setSessions(list);
     setCurrentModel(loadCurrentModel());
-    setTheme(loadTheme());
+    const initialTheme = loadTheme();
+    setTheme(initialTheme);
+    onThemeChange?.(initialTheme);
     if (list.length > 0) {
       setSelectedId(list[0].id);
     }
-  }, []);
+  }, [onThemeChange]);
 
   const cycleTheme = useCallback(() => {
     setTheme((prev) => {
@@ -74,9 +77,10 @@ export function ExportPod({ onClose }: ExportPodProps) {
       } catch {
         /* ignore */
       }
+      onThemeChange?.(next);
       return next;
     });
-  }, []);
+  }, [onThemeChange]);
 
   const selectedSession = useMemo(
     () => sessions.find((s) => s.id === selectedId) ?? null,

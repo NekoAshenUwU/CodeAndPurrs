@@ -512,13 +512,73 @@
 .export-pod-page {
   position: relative;
   min-height: 100vh;
-  padding: 12px 14px calc(40px + env(safe-area-inset-bottom));
-  background:
-    radial-gradient(circle at 20% 12%, rgba(255, 255, 255, 0.9), transparent 24%),
-    radial-gradient(circle at 82% 18%, rgba(201, 184, 241, 0.55), transparent 30%),
-    radial-gradient(circle at 50% 92%, rgba(255, 245, 206, 0.72), transparent 38%),
-    linear-gradient(160deg, #f8dbe7 0%, #f7e8ff 48%, #fff5ce 100%);
+  padding: 12px 12px calc(40px + env(safe-area-inset-bottom));
+  background: linear-gradient(160deg, #f8dbe7 0%, #f7e8ff 48%, #fff5ce 100%);
   overflow-x: hidden;
+  color: #4d456b;
+}
+
+.export-pod-page[data-theme='night'] {
+  color: #f4ecff;
+}
+
+@media (prefers-color-scheme: dark) {
+  .export-pod-page[data-theme='auto'] {
+    color: #f4ecff;
+  }
+}
+
+.export-pod-page__scene {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-image: url('/assets/export-pod-day.png');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  transition: background-image 0.5s ease;
+}
+
+.export-pod-page__scene::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0.04) 32%,
+    rgba(255, 255, 255, 0.16) 70%,
+    rgba(255, 255, 255, 0.28) 100%);
+}
+
+.export-pod-page[data-theme='night'] .export-pod-page__scene {
+  background-image: url('/assets/export-pod-night.png');
+}
+
+.export-pod-page[data-theme='night'] .export-pod-page__scene::after {
+  background: linear-gradient(180deg,
+    rgba(20, 12, 46, 0.15) 0%,
+    rgba(20, 12, 46, 0.05) 32%,
+    rgba(20, 12, 46, 0.28) 70%,
+    rgba(20, 12, 46, 0.44) 100%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .export-pod-page[data-theme='auto'] .export-pod-page__scene {
+    background-image: url('/assets/export-pod-night.png');
+  }
+  .export-pod-page[data-theme='auto'] .export-pod-page__scene::after {
+    background: linear-gradient(180deg,
+      rgba(20, 12, 46, 0.15) 0%,
+      rgba(20, 12, 46, 0.05) 32%,
+      rgba(20, 12, 46, 0.28) 70%,
+      rgba(20, 12, 46, 0.44) 100%);
+  }
+}
+
+.export-pod-page > *:not(.export-pod-page__scene) {
+  position: relative;
+  z-index: 1;
 }
 
 .export-pod-page__topbar {
@@ -573,10 +633,10 @@
   font-family: 'HuaXianZi', 'GongZhu', 'ZCOOL KuaiLe', 'Noto Serif SC', system-ui, sans-serif;
   font-size: clamp(1.65rem, 6.6vw, 2.1rem);
   font-weight: 400;
-  color: #5f5877;
+  color: inherit;
   letter-spacing: 0.14em;
   line-height: 1.1;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.55), 0 2px 6px rgba(118, 96, 132, 0.2);
 }
 
 .export-pod-page__title-en {
@@ -584,8 +644,46 @@
   font-family: 'Marcellus', 'Crimson Text', Georgia, serif;
   font-style: italic;
   font-size: 0.95rem;
-  color: rgba(124, 120, 146, 0.85);
+  color: inherit;
+  opacity: 0.82;
   letter-spacing: 0.08em;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.export-pod-page[data-theme='night'] .export-pod-page__title-zh,
+.export-pod-page[data-theme='night'] .export-pod-page__title-en {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(215, 200, 255, 0.35);
+}
+
+@media (prefers-color-scheme: dark) {
+  .export-pod-page[data-theme='auto'] .export-pod-page__title-zh,
+  .export-pod-page[data-theme='auto'] .export-pod-page__title-en {
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(215, 200, 255, 0.35);
+  }
+}
+
+.export-pod-page[data-theme='night'] .export-pod-page__back {
+  color: #f4ecff;
+  border-color: rgba(215, 200, 255, 0.4);
+  background:
+    linear-gradient(180deg, rgba(215, 200, 255, 0.28) 0%, rgba(255, 255, 255, 0) 55%),
+    rgba(46, 32, 76, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(215, 200, 255, 0.35),
+    0 8px 20px -8px rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-color-scheme: dark) {
+  .export-pod-page[data-theme='auto'] .export-pod-page__back {
+    color: #f4ecff;
+    border-color: rgba(215, 200, 255, 0.4);
+    background:
+      linear-gradient(180deg, rgba(215, 200, 255, 0.28) 0%, rgba(255, 255, 255, 0) 55%),
+      rgba(46, 32, 76, 0.42);
+    box-shadow:
+      inset 0 1px 0 rgba(215, 200, 255, 0.35),
+      0 8px 20px -8px rgba(0, 0, 0, 0.5);
+  }
 }
 
 .export-pod-page__spacer {
@@ -594,20 +692,290 @@
   height: 44px;
 }
 
-/* When used as a page: hide the internal title/eyebrow/close since top bar carries them */
+/* ---- Page mode: strip the pod's panel wrapper, float cards over the scene ---- */
+.export-pod-page .export-pod {
+  width: min(100%, 440px);
+  margin: 0 auto;
+  padding: 0;
+  overflow: visible;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.export-pod-page .export-pod__hero,
 .export-pod-page .export-pod__eyebrow,
-.export-pod-page .export-pod > .export-pod__body > h3,
+.export-pod-page .export-pod h3,
 .export-pod-page .export-pod__close {
   display: none;
 }
 
-.export-pod-page .export-pod__lead {
-  margin-top: 12px;
+.export-pod-page .export-pod__body {
+  position: static;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border-radius: 0;
 }
 
 .export-pod-page .export-pod__toolbar {
-  right: 14px;
-  top: 14px;
+  position: static;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 2px 10px;
+}
+
+.export-pod-page .export-pod__theme {
+  padding: 6px 14px;
+  color: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0) 60%),
+    rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(18px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 8px 20px -10px rgba(0, 0, 0, 0.3);
+  font-size: 0.78rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.export-pod-page .export-pod__lead {
+  margin: 0 0 12px;
+  padding: 12px 16px;
+  color: inherit;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 50%),
+    rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(22px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 10px 24px -14px rgba(118, 96, 132, 0.5);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
+}
+
+.export-pod-page[data-theme='night'] .export-pod__lead {
+  border-color: rgba(215, 200, 255, 0.32);
+  background:
+    linear-gradient(180deg, rgba(215, 200, 255, 0.18) 0%, rgba(255, 255, 255, 0) 50%),
+    rgba(46, 32, 76, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(215, 200, 255, 0.28),
+    0 10px 24px -14px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+  .export-pod-page[data-theme='auto'] .export-pod__lead {
+    border-color: rgba(215, 200, 255, 0.32);
+    background:
+      linear-gradient(180deg, rgba(215, 200, 255, 0.18) 0%, rgba(255, 255, 255, 0) 50%),
+      rgba(46, 32, 76, 0.4);
+    box-shadow:
+      inset 0 1px 0 rgba(215, 200, 255, 0.28),
+      0 10px 24px -14px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Compact stats — 3 chips over the scene */
+.export-pod-page .export-pod__stats {
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.export-pod-page .export-pod__stats li {
+  padding: 10px 6px;
+  border-radius: 16px;
+  gap: 2px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 55%),
+    rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(22px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    0 8px 20px -12px rgba(118, 96, 132, 0.42);
+}
+
+.export-pod-page .export-pod__stats strong {
+  color: inherit;
+  font-size: 1rem;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.55);
+}
+
+.export-pod-page .export-pod__stats span {
+  color: inherit;
+  opacity: 0.72;
+  font-size: 0.66rem;
+}
+
+.export-pod-page[data-theme='night'] .export-pod__stats li {
+  background:
+    linear-gradient(180deg, rgba(215, 200, 255, 0.18) 0%, rgba(255, 255, 255, 0) 55%),
+    rgba(46, 32, 76, 0.4);
+  border-color: rgba(215, 200, 255, 0.32);
+  box-shadow:
+    inset 0 1px 0 rgba(215, 200, 255, 0.28),
+    0 8px 20px -12px rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-color-scheme: dark) {
+  .export-pod-page[data-theme='auto'] .export-pod__stats li {
+    background:
+      linear-gradient(180deg, rgba(215, 200, 255, 0.18) 0%, rgba(255, 255, 255, 0) 55%),
+      rgba(46, 32, 76, 0.4);
+    border-color: rgba(215, 200, 255, 0.32);
+    box-shadow:
+      inset 0 1px 0 rgba(215, 200, 255, 0.28),
+      0 8px 20px -12px rgba(0, 0, 0, 0.5);
+  }
+}
+
+.export-pod-page[data-theme='night'] .export-pod__stats strong,
+.export-pod-page[data-theme='night'] .export-pod__stats span {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Compact blocks — floating glass over the scene */
+.export-pod-page .export-pod__block {
+  padding: 14px 16px;
+  margin-top: 10px;
+  border-radius: 20px;
+  border-color: rgba(255, 255, 255, 0.4);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0) 50%),
+    rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(24px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 10px 30px -18px rgba(118, 96, 132, 0.48);
+}
+
+.export-pod-page[data-theme='night'] .export-pod__block {
+  border-color: rgba(215, 200, 255, 0.28);
+  background:
+    linear-gradient(180deg, rgba(215, 200, 255, 0.16) 0%, rgba(255, 255, 255, 0) 50%),
+    rgba(46, 32, 76, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(215, 200, 255, 0.28),
+    0 10px 30px -18px rgba(0, 0, 0, 0.55);
+}
+
+@media (prefers-color-scheme: dark) {
+  .export-pod-page[data-theme='auto'] .export-pod__block {
+    border-color: rgba(215, 200, 255, 0.28);
+    background:
+      linear-gradient(180deg, rgba(215, 200, 255, 0.16) 0%, rgba(255, 255, 255, 0) 50%),
+      rgba(46, 32, 76, 0.42);
+    box-shadow:
+      inset 0 1px 0 rgba(215, 200, 255, 0.28),
+      0 10px 30px -18px rgba(0, 0, 0, 0.55);
+  }
+}
+
+.export-pod-page .export-pod__block h4 {
+  color: inherit;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.export-pod-page .export-pod__block p {
+  color: inherit;
+  opacity: 0.78;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.export-pod-page[data-theme='night'] .export-pod__block h4 {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* Compact buttons */
+.export-pod-page .export-pod__row button,
+.export-pod-page .export-pod__primary,
+.export-pod-page .export-pod__danger {
+  min-height: 38px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  border-color: rgba(255, 255, 255, 0.5);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%),
+    rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(14px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 6px 16px -8px rgba(118, 96, 132, 0.4);
+}
+
+.export-pod-page .export-pod__primary {
+  color: #7a4a5e;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0%, rgba(243, 191, 208, 0.62) 100%);
+}
+
+.export-pod-page[data-theme='night'] .export-pod__primary {
+  color: #ffe4ef;
+  background:
+    linear-gradient(135deg, rgba(159, 132, 231, 0.72) 0%, rgba(215, 132, 178, 0.78) 100%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .export-pod-page[data-theme='auto'] .export-pod__primary {
+    color: #ffe4ef;
+    background:
+      linear-gradient(135deg, rgba(159, 132, 231, 0.72) 0%, rgba(215, 132, 178, 0.78) 100%);
+  }
+}
+
+.export-pod-page .export-pod__field {
+  color: inherit;
+  opacity: 0.72;
+  font-size: 0.72rem;
+  margin-bottom: 8px;
+}
+
+.export-pod-page .export-pod__field select {
+  color: inherit;
+  background: rgba(255, 255, 255, 0.35);
+  border-color: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(10px);
+}
+
+.export-pod-page[data-theme='night'] .export-pod__field select {
+  background: rgba(46, 32, 76, 0.5);
+  border-color: rgba(215, 200, 255, 0.3);
+}
+
+.export-pod-page .export-pod__modes {
+  padding: 8px 12px;
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(14px);
+}
+
+.export-pod-page .export-pod__modes label {
+  color: inherit;
+  font-size: 0.85rem;
+}
+
+.export-pod-page[data-theme='night'] .export-pod__modes {
+  background: rgba(46, 32, 76, 0.36);
+  border-color: rgba(215, 200, 255, 0.28);
+}
+
+.export-pod-page .export-pod__hint {
+  color: inherit;
+  opacity: 0.8;
 }
 
 .export-pod-page::before {
