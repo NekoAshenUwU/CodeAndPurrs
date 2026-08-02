@@ -185,22 +185,46 @@
   flex-direction: column;
   gap: 4px;
   padding: 14px 10px;
-  border-radius: 20px;
-  background: var(--pod-stat-bg);
-  border: 1px solid var(--pod-block-border);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 55%),
+    var(--pod-stat-bg);
+  border: 1px solid rgba(255, 255, 255, 0.55);
   text-align: center;
   overflow: hidden;
-  box-shadow: 0 6px 20px -12px rgba(118, 96, 132, 0.35);
+  backdrop-filter: blur(14px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.18),
+    0 8px 22px -12px rgba(118, 96, 132, 0.38);
 }
 
 .export-pod__stats li::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  top: 6px;
+  left: 18%;
+  right: 18%;
+  height: 40%;
+  background: radial-gradient(70% 100% at 50% 0%, rgba(255, 255, 255, 0.4), transparent 75%);
+  pointer-events: none;
+  border-radius: 999px;
+}
+
+.export-pod[data-theme='night'] .export-pod__stats li,
+.export-pod[data-theme='auto'] .export-pod__stats li {
+  border-color: rgba(215, 200, 255, 0.28);
+}
+
+.export-pod[data-theme='night'] .export-pod__stats li {
+  box-shadow:
+    inset 0 1px 0 rgba(215, 200, 255, 0.2),
+    inset 0 -1px 0 rgba(159, 132, 231, 0.08),
+    0 8px 22px -12px rgba(0, 0, 0, 0.5);
+}
+
+.export-pod[data-theme='night'] .export-pod__stats li::before {
+  background: radial-gradient(70% 100% at 50% 0%, rgba(215, 200, 255, 0.22), transparent 75%);
 }
 
 .export-pod__stats strong {
@@ -220,18 +244,80 @@
 
 .export-pod__block {
   position: relative;
+  overflow: hidden;
   margin-top: 14px;
-  padding: 18px;
-  border: 1px solid var(--pod-block-border);
-  border-radius: 24px;
-  background: var(--pod-block-bg);
-  box-shadow: 0 10px 30px -20px rgba(118, 96, 132, 0.4);
+  padding: 20px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0) 45%),
+    var(--pod-block-bg);
+  backdrop-filter: blur(20px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.18),
+    0 12px 30px -18px rgba(118, 96, 132, 0.42);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.export-pod__block::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 42%;
+  background: radial-gradient(60% 100% at 50% 0%, rgba(255, 255, 255, 0.4), transparent 72%);
+  pointer-events: none;
+  border-radius: inherit;
 }
 
 .export-pod__block:hover {
   transform: translateY(-2px);
-  box-shadow: 0 16px 40px -18px rgba(118, 96, 132, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.18),
+    0 20px 40px -18px rgba(118, 96, 132, 0.55);
+}
+
+.export-pod[data-theme='night'] .export-pod__block,
+.export-pod[data-theme='auto'] .export-pod__block {
+  border-color: rgba(215, 200, 255, 0.26);
+}
+
+.export-pod[data-theme='night'] .export-pod__block {
+  background:
+    linear-gradient(180deg, rgba(215, 200, 255, 0.14) 0%, rgba(255, 255, 255, 0) 45%),
+    var(--pod-block-bg);
+  box-shadow:
+    inset 0 1px 0 rgba(215, 200, 255, 0.22),
+    inset 0 -1px 0 rgba(159, 132, 231, 0.1),
+    0 12px 30px -18px rgba(0, 0, 0, 0.55);
+}
+
+.export-pod[data-theme='night'] .export-pod__block::before {
+  background: radial-gradient(60% 100% at 50% 0%, rgba(215, 200, 255, 0.24), transparent 72%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .export-pod[data-theme='auto'] .export-pod__block {
+    background:
+      linear-gradient(180deg, rgba(215, 200, 255, 0.14) 0%, rgba(255, 255, 255, 0) 45%),
+      var(--pod-block-bg);
+    box-shadow:
+      inset 0 1px 0 rgba(215, 200, 255, 0.22),
+      inset 0 -1px 0 rgba(159, 132, 231, 0.1),
+      0 12px 30px -18px rgba(0, 0, 0, 0.55);
+  }
+
+  .export-pod[data-theme='auto'] .export-pod__block::before {
+    background: radial-gradient(60% 100% at 50% 0%, rgba(215, 200, 255, 0.24), transparent 72%);
+  }
+}
+
+.export-pod__block > * {
+  position: relative;
+  z-index: 1;
 }
 
 .export-pod__block h4 {
@@ -426,13 +512,102 @@
 .export-pod-page {
   position: relative;
   min-height: 100vh;
-  padding: 20px 14px calc(40px + env(safe-area-inset-bottom));
+  padding: 12px 14px calc(40px + env(safe-area-inset-bottom));
   background:
     radial-gradient(circle at 20% 12%, rgba(255, 255, 255, 0.9), transparent 24%),
     radial-gradient(circle at 82% 18%, rgba(201, 184, 241, 0.55), transparent 30%),
     radial-gradient(circle at 50% 92%, rgba(255, 245, 206, 0.72), transparent 38%),
     linear-gradient(160deg, #f8dbe7 0%, #f7e8ff 48%, #fff5ce 100%);
   overflow-x: hidden;
+}
+
+.export-pod-page__topbar {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  width: min(100%, 760px);
+  padding: 10px 4px 16px;
+  margin: 0 auto;
+}
+
+.export-pod-page__back {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: #6b527a;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 55%),
+    rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(14px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 8px 20px -8px rgba(118, 96, 132, 0.35);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.export-pod-page__back:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 12px 24px -10px rgba(118, 96, 132, 0.45);
+}
+
+.export-pod-page__back:active {
+  transform: translateY(0) scale(0.96);
+}
+
+.export-pod-page__title {
+  text-align: center;
+}
+
+.export-pod-page__title-zh {
+  margin: 0;
+  font-family: 'HuaXianZi', 'GongZhu', 'ZCOOL KuaiLe', 'Noto Serif SC', system-ui, sans-serif;
+  font-size: clamp(1.65rem, 6.6vw, 2.1rem);
+  font-weight: 400;
+  color: #5f5877;
+  letter-spacing: 0.14em;
+  line-height: 1.1;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.export-pod-page__title-en {
+  margin: 3px 0 0;
+  font-family: 'Marcellus', 'Crimson Text', Georgia, serif;
+  font-style: italic;
+  font-size: 0.95rem;
+  color: rgba(124, 120, 146, 0.85);
+  letter-spacing: 0.08em;
+}
+
+.export-pod-page__spacer {
+  display: block;
+  width: 44px;
+  height: 44px;
+}
+
+/* When used as a page: hide the internal title/eyebrow/close since top bar carries them */
+.export-pod-page .export-pod__eyebrow,
+.export-pod-page .export-pod > .export-pod__body > h3,
+.export-pod-page .export-pod__close {
+  display: none;
+}
+
+.export-pod-page .export-pod__lead {
+  margin-top: 12px;
+}
+
+.export-pod-page .export-pod__toolbar {
+  right: 14px;
+  top: 14px;
 }
 
 .export-pod-page::before {
