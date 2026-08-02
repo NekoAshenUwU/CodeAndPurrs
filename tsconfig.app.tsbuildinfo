@@ -1,1 +1,0 @@
-{"root":["./src/App.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/ExportPod.tsx","./src/components/RoomCard.tsx","./src/components/RoomPreview.tsx","./src/data/rooms.ts","./src/lib/chatStorage.ts","./src/lib/exporters.ts","./src/pages/ExportPodPage.tsx","./src/pages/HomePage.tsx"],"version":"6.0.3"}
