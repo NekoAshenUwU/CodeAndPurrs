@@ -20,10 +20,29 @@ import {
 
 type ImportMode = 'replace' | 'merge';
 type StatusTone = 'ok' | 'error' | 'info';
+type PodTheme = 'auto' | 'day' | 'night';
+
+const THEME_KEY = 'codeandpurrs:exportPodTheme';
+const THEME_ORDER: PodTheme[] = ['auto', 'day', 'night'];
+const THEME_LABEL: Record<PodTheme, string> = {
+  auto: '🪄 跟系统',
+  day: '☀️ 白天',
+  night: '🌙 夜晚',
+};
 
 type ExportPodProps = {
   onClose: () => void;
 };
+
+function loadTheme(): PodTheme {
+  try {
+    const raw = window.localStorage.getItem(THEME_KEY);
+    if (raw === 'day' || raw === 'night' || raw === 'auto') return raw;
+  } catch {
+    /* ignore */
+  }
+  return 'auto';
+}
 
 export function ExportPod({ onClose }: ExportPodProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -32,15 +51,30 @@ export function ExportPod({ onClose }: ExportPodProps) {
   const [importMode, setImportMode] = useState<ImportMode>('merge');
   const [status, setStatus] = useState<string>('');
   const [statusTone, setStatusTone] = useState<StatusTone>('info');
+  const [theme, setTheme] = useState<PodTheme>('auto');
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const list = loadSessions();
     setSessions(list);
     setCurrentModel(loadCurrentModel());
+    setTheme(loadTheme());
     if (list.length > 0) {
       setSelectedId(list[0].id);
     }
+  }, []);
+
+  const cycleTheme = useCallback(() => {
+    setTheme((prev) => {
+      const idx = THEME_ORDER.indexOf(prev);
+      const next = THEME_ORDER[(idx + 1) % THEME_ORDER.length];
+      try {
+        window.localStorage.setItem(THEME_KEY, next);
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
   }, []);
 
   const selectedSession = useMemo(
@@ -148,18 +182,31 @@ export function ExportPod({ onClose }: ExportPodProps) {
   }, [flash]);
 
   return (
-    <section className="export-pod" aria-labelledby="export-pod-title">
-      <button
-        type="button"
-        className="export-pod__close"
-        onClick={onClose}
-        aria-label="关闭导出舱"
-      >
-        ×
-      </button>
-      <div className="export-pod__icon" aria-hidden="true">
-        🚀
+    <section
+      className="export-pod"
+      data-theme={theme}
+      aria-labelledby="export-pod-title"
+    >
+      <div className="export-pod__hero" aria-hidden="true" />
+      <div className="export-pod__toolbar">
+        <button
+          type="button"
+          className="export-pod__theme"
+          onClick={cycleTheme}
+          aria-label={`切换背景：当前 ${THEME_LABEL[theme]}`}
+        >
+          {THEME_LABEL[theme]}
+        </button>
+        <button
+          type="button"
+          className="export-pod__close"
+          onClick={onClose}
+          aria-label="关闭导出舱"
+        >
+          ×
+        </button>
       </div>
+      <div className="export-pod__body">
       <p className="export-pod__eyebrow">Export Pod</p>
       <h3 id="export-pod-title">导出舱</h3>
       <p className="export-pod__lead">
@@ -291,6 +338,7 @@ export function ExportPod({ onClose }: ExportPodProps) {
           {status}
         </div>
       ) : null}
+      </div>
     </section>
   );
 }
