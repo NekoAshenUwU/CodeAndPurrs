@@ -69,11 +69,24 @@
 .export-pod__hero {
   position: relative;
   width: 100%;
-  height: clamp(200px, 42vw, 340px);
+  aspect-ratio: 941 / 1672;
   background-image: var(--pod-hero-overlay), var(--pod-hero);
-  background-position: center top;
+  background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
+}
+
+.export-pod__hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(120% 60% at 50% 100%, rgba(255, 255, 255, 0.32), transparent 60%);
+  pointer-events: none;
+}
+
+.export-pod[data-theme='night'] .export-pod__hero::after {
+  background: radial-gradient(120% 60% at 50% 100%, rgba(120, 80, 200, 0.3), transparent 60%);
 }
 
 .export-pod__toolbar {
@@ -114,7 +127,12 @@
 }
 
 .export-pod__body {
-  padding: 4px 20px 0;
+  position: relative;
+  margin-top: -28px;
+  padding: 22px 20px 4px;
+  border-radius: 28px 28px 0 0;
+  background: linear-gradient(180deg, var(--pod-panel-bg) 0%, transparent 32px), var(--pod-panel-bg);
+  z-index: 1;
 }
 
 .export-pod__eyebrow {
@@ -122,20 +140,34 @@
   color: var(--pod-eyebrow);
   font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 
+.export-pod__eyebrow::before {
+  content: '';
+  display: inline-block;
+  width: 22px;
+  height: 1px;
+  margin-right: 8px;
+  vertical-align: middle;
+  background: currentColor;
+  opacity: 0.55;
+}
+
 .export-pod h3 {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
   color: var(--pod-ink);
-  font-size: 1.6rem;
+  font-size: clamp(1.55rem, 6vw, 2rem);
+  letter-spacing: 0.02em;
+  line-height: 1.1;
 }
 
 .export-pod__lead {
-  margin: 8px 0 16px;
+  margin: 10px 0 18px;
   color: var(--pod-muted);
-  line-height: 1.6;
+  font-size: 0.95rem;
+  line-height: 1.7;
 }
 
 .export-pod__stats {
@@ -143,47 +175,71 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   padding: 0;
-  margin: 0 0 18px;
+  margin: 0 0 20px;
   list-style: none;
 }
 
 .export-pod__stats li {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 12px;
-  border-radius: 18px;
+  gap: 4px;
+  padding: 14px 10px;
+  border-radius: 20px;
   background: var(--pod-stat-bg);
   border: 1px solid var(--pod-block-border);
   text-align: center;
+  overflow: hidden;
+  box-shadow: 0 6px 20px -12px rgba(118, 96, 132, 0.35);
+}
+
+.export-pod__stats li::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
 }
 
 .export-pod__stats strong {
   color: var(--pod-ink);
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   font-weight: 800;
   word-break: break-word;
+  letter-spacing: -0.01em;
 }
 
 .export-pod__stats span {
   color: var(--pod-eyebrow);
-  font-size: 0.76rem;
-  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .export-pod__block {
+  position: relative;
   margin-top: 14px;
-  padding: 16px;
+  padding: 18px;
   border: 1px solid var(--pod-block-border);
-  border-radius: 22px;
+  border-radius: 24px;
   background: var(--pod-block-bg);
+  box-shadow: 0 10px 30px -20px rgba(118, 96, 132, 0.4);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.export-pod__block:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px -18px rgba(118, 96, 132, 0.5);
 }
 
 .export-pod__block h4 {
-  margin: 0 0 4px;
+  margin: 0 0 6px;
   color: var(--pod-ink);
-  font-size: 1rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
 }
 
 .export-pod__block p {
@@ -230,20 +286,47 @@
 .export-pod__row button,
 .export-pod__primary,
 .export-pod__danger {
-  min-height: 42px;
-  padding: 10px 16px;
+  min-height: 44px;
+  padding: 11px 20px;
   color: var(--pod-ink);
-  border: 1px solid rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 999px;
   background: var(--pod-toolbar-bg);
-  box-shadow: 0 12px 28px rgba(118, 96, 132, 0.12);
+  box-shadow: 0 10px 24px -8px rgba(118, 96, 132, 0.28);
   cursor: pointer;
   font-weight: 700;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.export-pod__row button:hover:not(:disabled),
+.export-pod__primary:hover:not(:disabled),
+.export-pod__danger:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px -10px rgba(118, 96, 132, 0.4);
+}
+
+.export-pod__row button:active:not(:disabled),
+.export-pod__primary:active:not(:disabled),
+.export-pod__danger:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .export-pod__primary {
   color: #8e6472;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(243, 191, 208, 0.62));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(243, 191, 208, 0.72));
+  font-size: 0.95rem;
+}
+
+.export-pod[data-theme='night'] .export-pod__primary {
+  color: #ffe4ef;
+  background: linear-gradient(135deg, rgba(159, 132, 231, 0.62), rgba(215, 132, 178, 0.72));
+}
+
+@media (prefers-color-scheme: dark) {
+  .export-pod[data-theme='auto'] .export-pod__primary {
+    color: #ffe4ef;
+    background: linear-gradient(135deg, rgba(159, 132, 231, 0.62), rgba(215, 132, 178, 0.72));
+  }
 }
 
 .export-pod__primary:disabled,
@@ -341,15 +424,39 @@
 }
 
 .export-pod-page {
+  position: relative;
   min-height: 100vh;
-  padding: 24px 16px calc(32px + env(safe-area-inset-bottom));
+  padding: 20px 14px calc(40px + env(safe-area-inset-bottom));
   background:
-    radial-gradient(circle at 20% 12%, rgba(255, 255, 255, 0.95), transparent 24%),
-    radial-gradient(circle at 82% 18%, rgba(201, 184, 241, 0.52), transparent 28%),
-    radial-gradient(circle at 50% 92%, rgba(255, 245, 206, 0.72), transparent 36%),
+    radial-gradient(circle at 20% 12%, rgba(255, 255, 255, 0.9), transparent 24%),
+    radial-gradient(circle at 82% 18%, rgba(201, 184, 241, 0.55), transparent 30%),
+    radial-gradient(circle at 50% 92%, rgba(255, 245, 206, 0.72), transparent 38%),
     linear-gradient(160deg, #f8dbe7 0%, #f7e8ff 48%, #fff5ce 100%);
+  overflow-x: hidden;
+}
+
+.export-pod-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, rgba(95, 88, 119, 0.1) 1px, transparent 1px),
+    radial-gradient(circle, rgba(255, 255, 255, 0.8) 1px, transparent 1px);
+  background-position: 0 0, 14px 18px;
+  background-size: 34px 34px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), transparent 60%);
+  z-index: 0;
 }
 
 .export-pod-page .export-pod {
+  position: relative;
   margin-top: 0;
+  z-index: 1;
+}
+
+@media (max-width: 480px) {
+  .export-pod-page {
+    padding: 12px 10px calc(40px + env(safe-area-inset-bottom));
+  }
 }
