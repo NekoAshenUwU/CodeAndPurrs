@@ -115,8 +115,8 @@ export const rooms: Room[] = [
     name: '导出舱',
     englishName: 'Export Pod',
     emoji: '🚀',
-    status: 'soon',
+    status: 'ready',
     summary: '把小暗格打包，换手机时带去下一台设备。',
-    actionLabel: '准备导出',
+    actionLabel: '打开导出舱',
   },
 ];

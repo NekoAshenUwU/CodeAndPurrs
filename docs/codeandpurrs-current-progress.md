@@ -10,6 +10,7 @@
 - 已支持 DeepSeek V4 / Gemini 2.5 Flash 的前端模型切换占位。
 - 已修复 CSS build 报错。
 - VPS 已可通过 178.128.127.91:5173 访问。
+- 已完成导出舱｜Export Pod 房间：全量 JSON 备份/恢复、单会话 Markdown / TXT 导出、清空本地。
 
 ## 目前状态
 
@@ -22,7 +23,7 @@
 3. 前端改成真实使用这些图片。
 4. 接 VPS 后端 /api/chat。
 5. 让 Purr Channel 真正调用 DeepSeek V4 和 Gemini 2.5 Flash。
-6. 后面再做 Whisperline、红包金库、导出舱等房间。
+6. 后面再做 Whisperline、红包金库等房间。
 
 ## 注意
 

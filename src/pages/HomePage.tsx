@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { ExportPod } from '../components/ExportPod';
 import { RoomCard } from '../components/RoomCard';
 import { RoomPreview } from '../components/RoomPreview';
 import { rooms, type Room } from '../data/rooms';
@@ -39,7 +40,13 @@ export function HomePage() {
         </div>
       </section>
 
-      {selectedRoom ? <RoomPreview room={selectedRoom} onClose={() => setSelectedRoom(null)} /> : null}
+      {selectedRoom ? (
+        selectedRoom.id === 'export-pod' ? (
+          <ExportPod onClose={() => setSelectedRoom(null)} />
+        ) : (
+          <RoomPreview room={selectedRoom} onClose={() => setSelectedRoom(null)} />
+        )
+      ) : null}
     </main>
   );
 }
