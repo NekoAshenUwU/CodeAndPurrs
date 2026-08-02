@@ -339,3 +339,17 @@
     padding: 18px 16px 20px;
   }
 }
+
+.export-pod-page {
+  min-height: 100vh;
+  padding: 24px 16px calc(32px + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 20% 12%, rgba(255, 255, 255, 0.95), transparent 24%),
+    radial-gradient(circle at 82% 18%, rgba(201, 184, 241, 0.52), transparent 28%),
+    radial-gradient(circle at 50% 92%, rgba(255, 245, 206, 0.72), transparent 36%),
+    linear-gradient(160deg, #f8dbe7 0%, #f7e8ff 48%, #fff5ce 100%);
+}
+
+.export-pod-page .export-pod {
+  margin-top: 0;
+}
