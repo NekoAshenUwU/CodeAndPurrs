@@ -584,70 +584,79 @@
 .export-pod-page__topbar {
   position: relative;
   z-index: 2;
-  display: grid;
-  grid-template-columns: 44px 1fr 44px;
-  align-items: center;
-  gap: 8px;
-  width: min(100%, 760px);
-  padding: 10px 4px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: min(100%, 440px);
+  padding: 4px 2px 12px;
   margin: 0 auto;
 }
 
 .export-pod-page__back {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
+  margin-top: 4px;
   padding: 0;
-  color: #6b527a;
-  border: 1px solid rgba(255, 255, 255, 0.62);
+  color: inherit;
+  border: none;
   border-radius: 999px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 55%),
-    rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(14px) saturate(180%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.85),
-    0 8px 20px -8px rgba(118, 96, 132, 0.35);
+  background: transparent;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  transition: transform 0.15s ease;
+  flex: 0 0 auto;
+}
+
+.export-pod-page__back svg {
+  width: 20px;
+  height: 20px;
+  filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.55));
+}
+
+.export-pod-page[data-theme='night'] .export-pod-page__back svg {
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+}
+
+@media (prefers-color-scheme: dark) {
+  .export-pod-page[data-theme='auto'] .export-pod-page__back svg {
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+  }
 }
 
 .export-pod-page__back:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 12px 24px -10px rgba(118, 96, 132, 0.45);
+  transform: translateX(-1px);
 }
 
 .export-pod-page__back:active {
-  transform: translateY(0) scale(0.96);
+  transform: translateX(0) scale(0.94);
 }
 
 .export-pod-page__title {
-  text-align: center;
+  text-align: left;
+  flex: 1 1 auto;
 }
 
 .export-pod-page__title-zh {
   margin: 0;
   font-family: 'HuaXianZi', 'GongZhu', 'ZCOOL KuaiLe', 'Noto Serif SC', system-ui, sans-serif;
-  font-size: clamp(1.65rem, 6.6vw, 2.1rem);
+  font-size: 1.4rem;
   font-weight: 400;
   color: inherit;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   line-height: 1.1;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.55), 0 2px 6px rgba(118, 96, 132, 0.2);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5), 0 2px 6px rgba(118, 96, 132, 0.18);
 }
 
 .export-pod-page__title-en {
-  margin: 3px 0 0;
+  margin: 2px 0 0;
   font-family: 'Marcellus', 'Crimson Text', Georgia, serif;
   font-style: italic;
-  font-size: 0.95rem;
+  font-size: 0.78rem;
   color: inherit;
-  opacity: 0.82;
+  opacity: 0.78;
   letter-spacing: 0.08em;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.45);
 }
 
 .export-pod-page[data-theme='night'] .export-pod-page__title-zh,
@@ -662,28 +671,8 @@
   }
 }
 
-.export-pod-page[data-theme='night'] .export-pod-page__back {
-  color: #f4ecff;
-  border-color: rgba(215, 200, 255, 0.4);
-  background:
-    linear-gradient(180deg, rgba(215, 200, 255, 0.28) 0%, rgba(255, 255, 255, 0) 55%),
-    rgba(46, 32, 76, 0.42);
-  box-shadow:
-    inset 0 1px 0 rgba(215, 200, 255, 0.35),
-    0 8px 20px -8px rgba(0, 0, 0, 0.5);
-}
-
-@media (prefers-color-scheme: dark) {
-  .export-pod-page[data-theme='auto'] .export-pod-page__back {
-    color: #f4ecff;
-    border-color: rgba(215, 200, 255, 0.4);
-    background:
-      linear-gradient(180deg, rgba(215, 200, 255, 0.28) 0%, rgba(255, 255, 255, 0) 55%),
-      rgba(46, 32, 76, 0.42);
-    box-shadow:
-      inset 0 1px 0 rgba(215, 200, 255, 0.35),
-      0 8px 20px -8px rgba(0, 0, 0, 0.5);
-  }
+.export-pod-page__spacer {
+  display: none;
 }
 
 .export-pod-page__spacer {
@@ -728,60 +717,88 @@
 }
 
 .export-pod-page .export-pod__theme {
-  padding: 6px 14px;
-  color: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.42);
+  padding: 5px 12px;
+  color: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.28);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0) 60%),
-    rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(18px) saturate(180%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 60%),
+    rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px) saturate(180%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 8px 20px -10px rgba(0, 0, 0, 0.3);
-  font-size: 0.78rem;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    0 4px 12px -6px rgba(118, 96, 132, 0.35);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.35);
+}
+
+.export-pod-page[data-theme='night'] .export-pod__theme {
+  border-color: rgba(215, 200, 255, 0.24);
+  background:
+    linear-gradient(180deg, rgba(215, 200, 255, 0.16) 0%, rgba(255, 255, 255, 0) 60%),
+    rgba(46, 32, 76, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(215, 200, 255, 0.24),
+    0 4px 12px -6px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+  .export-pod-page[data-theme='auto'] .export-pod__theme {
+    border-color: rgba(215, 200, 255, 0.24);
+    background:
+      linear-gradient(180deg, rgba(215, 200, 255, 0.16) 0%, rgba(255, 255, 255, 0) 60%),
+      rgba(46, 32, 76, 0.22);
+    box-shadow:
+      inset 0 1px 0 rgba(215, 200, 255, 0.24),
+      0 4px 12px -6px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
 }
 
 .export-pod-page .export-pod__lead {
-  margin: 0 0 12px;
-  padding: 12px 16px;
+  margin: 0 0 10px;
+  padding: 11px 16px;
   color: inherit;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   line-height: 1.55;
   text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 20px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 50%),
-    rgba(255, 255, 255, 0.22);
-  backdrop-filter: blur(22px) saturate(180%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 55%),
+    rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(30px) saturate(180%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    0 10px 24px -14px rgba(118, 96, 132, 0.5);
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.06),
+    0 8px 20px -14px rgba(118, 96, 132, 0.4);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.35);
 }
 
 .export-pod-page[data-theme='night'] .export-pod__lead {
-  border-color: rgba(215, 200, 255, 0.32);
+  border-color: rgba(215, 200, 255, 0.22);
   background:
-    linear-gradient(180deg, rgba(215, 200, 255, 0.18) 0%, rgba(255, 255, 255, 0) 50%),
-    rgba(46, 32, 76, 0.4);
+    linear-gradient(180deg, rgba(215, 200, 255, 0.14) 0%, rgba(255, 255, 255, 0) 55%),
+    rgba(46, 32, 76, 0.2);
   box-shadow:
-    inset 0 1px 0 rgba(215, 200, 255, 0.28),
-    0 10px 24px -14px rgba(0, 0, 0, 0.5);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    inset 0 1px 0 rgba(215, 200, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+    0 8px 20px -14px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 @media (prefers-color-scheme: dark) {
   .export-pod-page[data-theme='auto'] .export-pod__lead {
-    border-color: rgba(215, 200, 255, 0.32);
+    border-color: rgba(215, 200, 255, 0.22);
     background:
-      linear-gradient(180deg, rgba(215, 200, 255, 0.18) 0%, rgba(255, 255, 255, 0) 50%),
-      rgba(46, 32, 76, 0.4);
+      linear-gradient(180deg, rgba(215, 200, 255, 0.14) 0%, rgba(255, 255, 255, 0) 55%),
+      rgba(46, 32, 76, 0.2);
     box-shadow:
-      inset 0 1px 0 rgba(215, 200, 255, 0.28),
-      0 10px 24px -14px rgba(0, 0, 0, 0.5);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+      inset 0 1px 0 rgba(215, 200, 255, 0.22),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+      0 8px 20px -14px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -796,13 +813,14 @@
   border-radius: 16px;
   gap: 2px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 55%),
-    rgba(255, 255, 255, 0.22);
-  border-color: rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(22px) saturate(180%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0) 55%),
+    rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(30px) saturate(180%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.75),
-    0 8px 20px -12px rgba(118, 96, 132, 0.42);
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.06),
+    0 6px 18px -12px rgba(118, 96, 132, 0.4);
 }
 
 .export-pod-page .export-pod__stats strong {
@@ -819,23 +837,25 @@
 
 .export-pod-page[data-theme='night'] .export-pod__stats li {
   background:
-    linear-gradient(180deg, rgba(215, 200, 255, 0.18) 0%, rgba(255, 255, 255, 0) 55%),
-    rgba(46, 32, 76, 0.4);
-  border-color: rgba(215, 200, 255, 0.32);
+    linear-gradient(180deg, rgba(215, 200, 255, 0.14) 0%, rgba(255, 255, 255, 0) 55%),
+    rgba(46, 32, 76, 0.2);
+  border-color: rgba(215, 200, 255, 0.22);
   box-shadow:
-    inset 0 1px 0 rgba(215, 200, 255, 0.28),
-    0 8px 20px -12px rgba(0, 0, 0, 0.5);
+    inset 0 1px 0 rgba(215, 200, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+    0 6px 18px -12px rgba(0, 0, 0, 0.5);
 }
 
 @media (prefers-color-scheme: dark) {
   .export-pod-page[data-theme='auto'] .export-pod__stats li {
     background:
-      linear-gradient(180deg, rgba(215, 200, 255, 0.18) 0%, rgba(255, 255, 255, 0) 55%),
-      rgba(46, 32, 76, 0.4);
-    border-color: rgba(215, 200, 255, 0.32);
+      linear-gradient(180deg, rgba(215, 200, 255, 0.14) 0%, rgba(255, 255, 255, 0) 55%),
+      rgba(46, 32, 76, 0.2);
+    border-color: rgba(215, 200, 255, 0.22);
     box-shadow:
-      inset 0 1px 0 rgba(215, 200, 255, 0.28),
-      0 8px 20px -12px rgba(0, 0, 0, 0.5);
+      inset 0 1px 0 rgba(215, 200, 255, 0.22),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+      0 6px 18px -12px rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -849,35 +869,38 @@
   padding: 14px 16px;
   margin-top: 10px;
   border-radius: 20px;
-  border-color: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.26);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0) 50%),
-    rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(24px) saturate(180%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 55%),
+    rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(32px) saturate(180%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    0 10px 30px -18px rgba(118, 96, 132, 0.48);
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.06),
+    0 8px 24px -16px rgba(118, 96, 132, 0.42);
 }
 
 .export-pod-page[data-theme='night'] .export-pod__block {
-  border-color: rgba(215, 200, 255, 0.28);
+  border-color: rgba(215, 200, 255, 0.2);
   background:
-    linear-gradient(180deg, rgba(215, 200, 255, 0.16) 0%, rgba(255, 255, 255, 0) 50%),
-    rgba(46, 32, 76, 0.42);
+    linear-gradient(180deg, rgba(215, 200, 255, 0.12) 0%, rgba(255, 255, 255, 0) 55%),
+    rgba(46, 32, 76, 0.2);
   box-shadow:
-    inset 0 1px 0 rgba(215, 200, 255, 0.28),
-    0 10px 30px -18px rgba(0, 0, 0, 0.55);
+    inset 0 1px 0 rgba(215, 200, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+    0 8px 24px -16px rgba(0, 0, 0, 0.55);
 }
 
 @media (prefers-color-scheme: dark) {
   .export-pod-page[data-theme='auto'] .export-pod__block {
-    border-color: rgba(215, 200, 255, 0.28);
+    border-color: rgba(215, 200, 255, 0.2);
     background:
-      linear-gradient(180deg, rgba(215, 200, 255, 0.16) 0%, rgba(255, 255, 255, 0) 50%),
-      rgba(46, 32, 76, 0.42);
+      linear-gradient(180deg, rgba(215, 200, 255, 0.12) 0%, rgba(255, 255, 255, 0) 55%),
+      rgba(46, 32, 76, 0.2);
     box-shadow:
-      inset 0 1px 0 rgba(215, 200, 255, 0.28),
-      0 10px 30px -18px rgba(0, 0, 0, 0.55);
+      inset 0 1px 0 rgba(215, 200, 255, 0.22),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+      0 8px 24px -16px rgba(0, 0, 0, 0.55);
   }
 }
 
