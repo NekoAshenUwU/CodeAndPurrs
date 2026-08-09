@@ -13,6 +13,8 @@ import {
 const MASCOT = `${import.meta.env.BASE_URL}assets/mascot/neko.png`;
 const PAW_HERO = `${import.meta.env.BASE_URL}assets/mascot/paw-hero.webp`;
 const DAILY_GOAL_MS = 12 * 3600000; // 每日目标：满圈 = 12h（可配置）
+const STALE_AFTER_MS = 90 * 60 * 1000;
+const LIVE_REFRESH_MS = 60 * 1000;
 
 // ---------- 小工具 ----------
 function fmtDuration(ms: number): string {
@@ -175,16 +177,34 @@ export function PawTrailPage() {
 
   useEffect(() => {
     let alive = true;
-    setLoading(true);
-    Promise.all([fetchLatestUsage(owner), fetchTrend(owner, 7)])
-      .then(([latest, t]) => {
+    let inFlight = false;
+
+    const refresh = async (showLoading = false) => {
+      if (inFlight) return;
+      inFlight = true;
+      if (showLoading) setLoading(true);
+      try {
+        const [latest, t] = await Promise.all([fetchLatestUsage(owner), fetchTrend(owner, 7)]);
         if (!alive) return;
         setEnv(latest);
         setTrend(t);
-      })
-      .finally(() => alive && setLoading(false));
+      } finally {
+        inFlight = false;
+        if (alive && showLoading) setLoading(false);
+      }
+    };
+
+    void refresh(true);
+    const timer = window.setInterval(() => void refresh(), LIVE_REFRESH_MS);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void refresh();
+    };
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+
     return () => {
       alive = false;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
     };
   }, [owner]);
 
@@ -309,6 +329,9 @@ function PawTrailView({
   const ringOff = RING_C * (1 - ringPct);
   const ringFull = ringPct >= 1;
   const ringVars = { ['--ring-c' as string]: RING_C, ['--ring-off' as string]: ringOff };
+  const lastIngestMs = meta.lastIngestAt ? Date.parse(meta.lastIngestAt) : Number.NaN;
+  const clientStale = Number.isNaN(lastIngestMs) || Date.now() - lastIngestMs > STALE_AFTER_MS;
+  const stale = source === 'live' && (meta.stale || clientStale);
 
   return (
     <main className={`paw-page is-${tod}`}>
@@ -316,8 +339,8 @@ function PawTrailView({
       <TopBar onBack={onBack} />
 
       {source === 'demo' ? <div className="paw-note paw-note--demo">示例数据 · 桥接上线后自动替换</div> : null}
-      {source === 'live' && meta.stale ? (
-        <div className="paw-note paw-note--stale">数据更新于 {relativeFromNow(meta.lastIngestAt)}</div>
+      {stale ? (
+        <div className="paw-note paw-note--stale">非实时数据 · 最后更新于 {relativeFromNow(meta.lastIngestAt)}</div>
       ) : null}
 
       {/* ① 活动环 · 真·进度环(目标12h,果冻管状) */}
