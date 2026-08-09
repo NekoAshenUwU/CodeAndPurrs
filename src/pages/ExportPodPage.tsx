@@ -142,15 +142,6 @@ export function ExportPodPage() {
     () => Math.max(0, ...snapshot.windows.map((item) => item.tokenEstimate)),
     [snapshot.windows],
   );
-  const visibleModelVisuals = useMemo(() => {
-    const unique = new Map<string, ModelVisual>();
-    snapshot.windows.forEach((item) => {
-      const visual = modelVisual(item.meta.provider);
-      unique.set(visual.key, visual);
-    });
-    return [...unique.values()];
-  }, [snapshot.windows]);
-
   const cycleTheme = () => {
     const next = THEME_ORDER[(THEME_ORDER.indexOf(theme) + 1) % THEME_ORDER.length];
     setTheme(next);
@@ -235,40 +226,27 @@ export function ExportPodPage() {
       </header>
 
       <div className="pod-shell">
-        <section className="pod-core" aria-labelledby="pod-core-title">
-          <div className="pod-core__glow" aria-hidden="true" />
-          <div className="pod-core__content">
-            <p className="pod-eyebrow">MEMORY CARGO · LOCAL ONLY</p>
-            <h1 id="pod-core-title">把聊天装进星球</h1>
-            <p className="pod-core__copy">留在这台设备，封装后由你亲手带走。</p>
+        <section className="pod-orbit" aria-labelledby="pod-orbit-title">
+          <div className="pod-orbit__halo pod-orbit__halo--one" aria-hidden="true" />
+          <div className="pod-orbit__halo pod-orbit__halo--two" aria-hidden="true" />
 
-            <div className="pod-core__meter" aria-label={`全部窗口估算约 ${snapshot.tokenEstimate} token`}>
-              <span>全部窗口估算</span>
-              <strong><i>≈</i>{formatTokens(snapshot.tokenEstimate)}</strong>
-              <em>tokens</em>
-            </div>
+          <button
+            type="button"
+            className="pod-memory-core"
+            onClick={exportAll}
+            disabled={!snapshot.windows.length}
+            aria-label={`全部窗口估算约 ${snapshot.tokenEstimate} token，封装全部 JSON`}
+          >
+            <span className="pod-memory-core__shine" aria-hidden="true" />
+            <small id="pod-orbit-title">记忆核心</small>
+            <strong><i>≈</i>{formatTokens(snapshot.tokenEstimate)}</strong>
+            <em>TOKENS</em>
+            <span className="pod-memory-core__action">✦ 封装全部</span>
+          </button>
 
-            <div className="pod-core__stats">
-              <span><strong>{snapshot.windows.length}</strong> 个窗口</span>
-              <span><strong>{snapshot.messageCount}</strong> 条消息</span>
-            </div>
-
-            <button type="button" className="pod-primary" onClick={exportAll} disabled={!snapshot.windows.length}>
-              <span className="pod-primary__spark" aria-hidden="true">✦</span>
-              封装全部 JSON
-              <span className="pod-primary__arrow" aria-hidden="true">↗</span>
-            </button>
-            <p className="pod-core__fineprint">文字、模型与调频设定会装入；照片、语音和贴纸原图暂不嵌入。</p>
-          </div>
-        </section>
-
-        <section className="pod-bubbles" aria-labelledby="pod-bubbles-title">
-          <div className="pod-section-heading">
-            <div>
-              <p className="pod-eyebrow">TOKEN CONSTELLATION</p>
-              <h2 id="pod-bubbles-title">窗口星泡带</h2>
-            </div>
-            <span>气泡越大，文字越多</span>
+          <div className="pod-orbit__stats" aria-label="聊天备份统计">
+            <span><strong>{snapshot.windows.length}</strong> 个窗口</span>
+            <span><strong>{snapshot.messageCount}</strong> 条消息</span>
           </div>
 
           {snapshot.windows.length ? (
@@ -304,69 +282,36 @@ export function ExportPodPage() {
               })}
             </div>
           ) : (
-            <div className="pod-bubbles__empty">
-              <span aria-hidden="true">✧</span>
-              第一颗聊天星泡会在这里亮起来。
-            </div>
+            <div className="pod-bubbles__empty">第一颗聊天星泡会在这里亮起来。</div>
           )}
-          <div className="pod-bubbles__meta">
-            <div className="pod-model-legend" aria-label="窗口模型色彩图例">
-              {visibleModelVisuals.map((visual) => (
-                <span key={visual.key}>
-                  <i
-                    aria-hidden="true"
-                    style={{ '--legend-a': visual.colors[0], '--legend-b': visual.colors[1] } as CSSProperties}
-                  />
-                  {visual.label}
-                </span>
-              ))}
-            </div>
-            <p className="pod-bubbles__note">≈ 本地启发式估算；不同模型的 tokenizer 会产生少量差异。</p>
-          </div>
+          <p className="pod-token-note">气泡越大，文字越多 · 数量为本地估算</p>
         </section>
 
-        <section className="pod-actions" aria-label="导出与恢复工具">
-          <article className="pod-card pod-card--take">
-            <div className="pod-card__icon" aria-hidden="true">⌁</div>
-            <div className="pod-card__body">
-              <p className="pod-eyebrow">ONE WINDOW</p>
-              <h2>单独带走一段</h2>
+        <section className="pod-dock" aria-label="记忆导出控制台">
+          <div className="pod-dock__head">
+            <span className="pod-dock__glyph" aria-hidden="true">⌁</span>
+            <div>
+              <small>现在选中</small>
+              <strong>{selected?.meta.name || '还没有聊天窗口'}</strong>
               {selected ? (
-                <>
-                  <div className="pod-selection">
-                    <span>
-                      <strong>{selected.meta.name || '未命名窗口'}</strong>
-                      <small>{modelVisual(selected.meta.provider).label} · {selected.turns.length} 条消息 · ≈{formatTokens(selected.tokenEstimate)} tokens</small>
-                    </span>
-                    <em>已选择</em>
-                  </div>
-                  <div className="pod-card__buttons">
-                    <button type="button" onClick={() => exportSelected('md')}>Markdown</button>
-                    <button type="button" onClick={() => exportSelected('txt')}>纯文字 TXT</button>
-                  </div>
-                </>
-              ) : (
-                <p className="pod-card__empty">聊过以后，就能把某一段单独带去日记或笔记。</p>
-              )}
+                <em>{modelVisual(selected.meta.provider).label} · {selected.turns.length} 条 · ≈{formatTokens(selected.tokenEstimate)} tokens</em>
+              ) : null}
             </div>
-          </article>
+          </div>
 
-          <article className="pod-card pod-card--restore">
-            <div className="pod-card__icon" aria-hidden="true">↺</div>
-            <div className="pod-card__body">
-              <p className="pod-eyebrow">RETURN HOME</p>
-              <h2>把旧备份装回来</h2>
+          <div className="pod-dock__actions">
+            <button type="button" onClick={() => exportSelected('md')} disabled={!selected}>Markdown</button>
+            <button type="button" onClick={() => exportSelected('txt')} disabled={!selected}>纯文字 TXT</button>
+          </div>
+
+          <details className="pod-restore">
+            <summary><span aria-hidden="true">↺</span> 把旧备份装回来</summary>
+            <div className="pod-restore__body">
               <div className="pod-segment" aria-label="恢复方式">
-                <button type="button" className={restoreMode === 'merge' ? 'is-active' : ''} onClick={() => setRestoreMode('merge')}>
-                  合并
-                </button>
-                <button type="button" className={restoreMode === 'replace' ? 'is-active' : ''} onClick={() => setRestoreMode('replace')}>
-                  替换
-                </button>
+                <button type="button" className={restoreMode === 'merge' ? 'is-active' : ''} onClick={() => setRestoreMode('merge')}>合并</button>
+                <button type="button" className={restoreMode === 'replace' ? 'is-active' : ''} onClick={() => setRestoreMode('replace')}>替换</button>
               </div>
-              <p className="pod-card__hint">
-                {restoreMode === 'merge' ? '保留本机窗口，只补进备份里缺少的消息。' : '用备份覆盖本机聊天；调频设定随备份恢复。'}
-              </p>
+              <p>{restoreMode === 'merge' ? '保留本机窗口，补进缺少的消息。' : '用备份覆盖本机聊天与调频设定。'}</p>
               <input
                 ref={fileRef}
                 type="file"
@@ -378,15 +323,13 @@ export function ExportPodPage() {
                   event.target.value = '';
                 }}
               />
-              <button type="button" className="pod-upload" onClick={() => fileRef.current?.click()}>
-                <span aria-hidden="true">＋</span> 选择 JSON 备份
-              </button>
+              <button type="button" className="pod-upload" onClick={() => fileRef.current?.click()}>＋ 选择 JSON 备份</button>
             </div>
-          </article>
+          </details>
         </section>
 
         <footer className="pod-footer">
-          <span>备份文件请收好，它包含私密聊天内容。</span>
+          <span>私密聊天只装进你下载的文件里。</span>
           <button type="button" onClick={clearChats} disabled={!snapshot.windows.length}>清空本机聊天</button>
         </footer>
       </div>
