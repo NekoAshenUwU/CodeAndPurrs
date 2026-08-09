@@ -5,7 +5,6 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTimeOfDay } from '../components/ambient/timeOfDay';
@@ -35,6 +34,7 @@ type ModelVisual = {
 };
 
 const THEME_KEY = 'codeandpurrs:export-pod:theme';
+const CARGO_PAGE_SIZE = 6;
 const THEME_ORDER: ThemeChoice[] = ['auto', 'day', 'night'];
 const THEME_META: Record<ThemeChoice, { icon: string; label: string }> = {
   auto: { icon: '✦', label: '跟随时间' },
@@ -120,10 +120,10 @@ export function ExportPodPage() {
   const resolvedTheme = theme === 'auto' ? (timeOfDay === 'night' ? 'night' : 'day') : theme;
   const [snapshot, setSnapshot] = useState<ExportPodSnapshot>(() => readExportPodSnapshot());
   const [selectedId, setSelectedId] = useState('');
+  const [cargoPage, setCargoPage] = useState(0);
   const [restoreMode, setRestoreMode] = useState<RestoreMode>('merge');
   const [notice, setNotice] = useState<Notice>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const cargoDragRef = useRef({ pointerId: -1, startX: 0, scrollLeft: 0, moved: false });
 
   const refresh = useCallback(() => {
     const next = readExportPodSnapshot();
@@ -146,6 +146,16 @@ export function ExportPodPage() {
     () => Math.max(0, ...snapshot.windows.map((item) => item.tokenEstimate)),
     [snapshot.windows],
   );
+  const cargoPageCount = Math.max(1, Math.ceil(snapshot.windows.length / CARGO_PAGE_SIZE));
+  const visibleCargo = useMemo(
+    () => snapshot.windows.slice(cargoPage * CARGO_PAGE_SIZE, (cargoPage + 1) * CARGO_PAGE_SIZE),
+    [cargoPage, snapshot.windows],
+  );
+
+  useEffect(() => {
+    setCargoPage((current) => Math.min(current, cargoPageCount - 1));
+  }, [cargoPageCount]);
+
   const cycleTheme = () => {
     const next = THEME_ORDER[(THEME_ORDER.indexOf(theme) + 1) % THEME_ORDER.length];
     setTheme(next);
@@ -156,37 +166,11 @@ export function ExportPodPage() {
     }
   };
 
-  const startCargoDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
-    cargoDragRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      scrollLeft: event.currentTarget.scrollLeft,
-      moved: false,
-    };
-    event.currentTarget.setPointerCapture(event.pointerId);
-    event.currentTarget.classList.add('is-dragging');
-  };
-
-  const moveCargoDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const drag = cargoDragRef.current;
-    if (drag.pointerId !== event.pointerId) return;
-    const delta = event.clientX - drag.startX;
-    if (Math.abs(delta) > 4) drag.moved = true;
-    if (!drag.moved) return;
-    event.preventDefault();
-    event.currentTarget.scrollLeft = drag.scrollLeft - delta;
-  };
-
-  const endCargoDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (cargoDragRef.current.pointerId !== event.pointerId) return;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    event.currentTarget.classList.remove('is-dragging');
-    cargoDragRef.current.pointerId = -1;
-    window.setTimeout(() => {
-      cargoDragRef.current.moved = false;
-    }, 0);
+  const goToCargoPage = (nextPage: number) => {
+    const bounded = Math.max(0, Math.min(nextPage, cargoPageCount - 1));
+    setCargoPage(bounded);
+    const nextSelected = snapshot.windows[bounded * CARGO_PAGE_SIZE];
+    if (nextSelected) setSelectedId(nextSelected.meta.id);
   };
 
   const exportAll = () => {
@@ -318,16 +302,9 @@ export function ExportPodPage() {
           </div>
 
           {snapshot.windows.length ? (
-            <div
-              className="pod-cargo-rail"
-              role="list"
-              aria-label="等待装载的聊天记忆匣"
-              onPointerDown={startCargoDrag}
-              onPointerMove={moveCargoDrag}
-              onPointerUp={endCargoDrag}
-              onPointerCancel={endCargoDrag}
-            >
-              {snapshot.windows.map((item, index) => {
+            <div className="pod-cargo-rack" role="list" aria-label="等待装载的聊天记忆匣">
+              {visibleCargo.map((item, index) => {
+                const cargoIndex = cargoPage * CARGO_PAGE_SIZE + index;
                 const active = selected?.meta.id === item.meta.id;
                 const visual = modelVisual(item.meta.provider);
                 const fill = maxWindowTokens > 0 ? Math.max(7, Math.round((item.tokenEstimate / maxWindowTokens) * 100)) : 7;
@@ -338,27 +315,19 @@ export function ExportPodPage() {
                     key={item.meta.id}
                     className={`pod-cargo${active ? ' is-active' : ''}`}
                     style={{
-                      '--cargo-index': index,
+                      '--cargo-index': cargoIndex,
                       '--cargo-fill': `${fill}%`,
                       '--cargo-a': visual.colors[0],
                       '--cargo-b': visual.colors[1],
                       '--cargo-c': visual.colors[2],
                       '--cargo-ring': visual.ring,
                     } as CSSProperties}
-                    onClick={(event) => {
-                      if (cargoDragRef.current.moved) {
-                        cargoDragRef.current.moved = false;
-                        event.preventDefault();
-                        return;
-                      }
-                      setSelectedId(item.meta.id);
-                      event.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                    }}
+                    onClick={() => setSelectedId(item.meta.id)}
                     aria-pressed={active}
                     aria-label={`${item.meta.name}，${visual.label}，估算约 ${item.tokenEstimate} token，${item.turns.length} 条消息`}
                   >
                     <span className="pod-cargo__latch" aria-hidden="true" />
-                    <span className="pod-cargo__serial">CARGO {String(index + 1).padStart(2, '0')}</span>
+                    <span className="pod-cargo__serial">CARGO {String(cargoIndex + 1).padStart(2, '0')}</span>
                     <span className="pod-cargo__body">
                       <small>{visual.label}</small>
                       <strong>{item.meta.name || '未命名窗口'}</strong>
@@ -376,8 +345,16 @@ export function ExportPodPage() {
               })}
             </div>
           ) : (
-            <div className="pod-cargo-empty">舱轨空着，第一段聊天会成为第一枚记忆匣。</div>
+            <div className="pod-cargo-empty">货架空着，第一段聊天会成为第一枚记忆匣。</div>
           )}
+
+          {snapshot.windows.length > CARGO_PAGE_SIZE ? (
+            <nav className="pod-cargo-pages" aria-label="记忆匣货架分页">
+              <button type="button" onClick={() => goToCargoPage(cargoPage - 1)} disabled={cargoPage === 0} aria-label="上一页记忆匣">‹</button>
+              <span><strong>{String(cargoPage + 1).padStart(2, '0')}</strong> / {String(cargoPageCount).padStart(2, '0')}</span>
+              <button type="button" onClick={() => goToCargoPage(cargoPage + 1)} disabled={cargoPage === cargoPageCount - 1} aria-label="下一页记忆匣">›</button>
+            </nav>
+          ) : null}
           <p className="pod-token-note">卡匣内的光量代表文字重量 · Token 为本地估算</p>
         </section>
 
@@ -394,13 +371,13 @@ export function ExportPodPage() {
           </div>
 
           <div className="pod-dock__actions">
-            <button type="button" onClick={() => exportSelected('md')} disabled={!selected}>Markdown</button>
-            <button type="button" onClick={() => exportSelected('txt')} disabled={!selected}>纯文字 TXT</button>
-            <button type="button" onClick={exportSelectedJson} disabled={!selected}>独立 JSON</button>
+            <button type="button" onClick={() => exportSelected('md')} disabled={!selected} aria-label="导出 Markdown">MD</button>
+            <button type="button" onClick={() => exportSelected('txt')} disabled={!selected} aria-label="导出纯文字 TXT">TXT</button>
+            <button type="button" onClick={exportSelectedJson} disabled={!selected} aria-label="导出独立 JSON">JSON</button>
           </div>
 
           <details className="pod-restore">
-            <summary><span aria-hidden="true">↺</span> 打开返航舱 · 装回旧备份</summary>
+            <summary><span aria-hidden="true">↺</span> 返航舱</summary>
             <div className="pod-restore__body">
               <div className="pod-segment" aria-label="恢复方式">
                 <button type="button" className={restoreMode === 'merge' ? 'is-active' : ''} onClick={() => setRestoreMode('merge')}>合并</button>
