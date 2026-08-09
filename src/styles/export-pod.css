@@ -266,9 +266,24 @@
 
 .pod-gate__readout strong {
   margin-top: 5px;
-  font: 400 49px/0.92 "Quimil", "Marcellus", serif;
-  letter-spacing: -0.025em;
-  -webkit-text-stroke: 0.25px currentColor;
+  color: #7f609e;
+  background: linear-gradient(135deg, #66547f 4%, #9b6da8 52%, #c982a8 96%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  font: 400 52px/0.9 "RoughOwl", "TianTianQuanAmount", "Marcellus", serif;
+  letter-spacing: 0.01em;
+  -webkit-text-fill-color: transparent;
+  filter:
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.92))
+    drop-shadow(0 3px 7px rgba(110, 71, 135, 0.22));
+}
+
+.pod-page[data-theme='night'] .pod-gate__readout strong {
+  color: #f0dcff;
+  background-image: linear-gradient(135deg, #fff8ff 2%, #dfc5ff 48%, #ffbfe2 96%);
+  filter:
+    drop-shadow(0 0 5px rgba(240, 214, 255, 0.72))
+    drop-shadow(0 3px 12px rgba(191, 113, 231, 0.48));
 }
 
 .pod-gate__readout strong i {
@@ -1035,7 +1050,7 @@
     height: 148px;
   }
 
-  .pod-gate__readout strong { font-size: 46px; }
+  .pod-gate__readout strong { font-size: 49px; }
   .pod-launch { top: 100px; }
   .pod-cargo-summary { top: 164px; }
   .pod-conveyor { top: 216px; }
