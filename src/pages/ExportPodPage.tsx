@@ -11,6 +11,7 @@ import { useTimeOfDay } from '../components/ambient/timeOfDay';
 import {
   clearLocalChats,
   downloadText,
+  findWindowCargo,
   makeBackup,
   parseBackup,
   readExportPodSnapshot,
@@ -120,6 +121,7 @@ export function ExportPodPage() {
   const resolvedTheme = theme === 'auto' ? (timeOfDay === 'night' ? 'night' : 'day') : theme;
   const [snapshot, setSnapshot] = useState<ExportPodSnapshot>(() => readExportPodSnapshot());
   const [selectedId, setSelectedId] = useState('');
+  const selectedIdRef = useRef('');
   const [cargoPage, setCargoPage] = useState(0);
   const [restoreMode, setRestoreMode] = useState<RestoreMode>('merge');
   const [notice, setNotice] = useState<Notice>(null);
@@ -129,8 +131,11 @@ export function ExportPodPage() {
     const next = readExportPodSnapshot();
     setSnapshot(next);
     setSelectedId((current) => {
-      if (next.windows.some((item) => item.meta.id === current)) return current;
-      return next.windows[0]?.meta.id ?? '';
+      const nextId = next.windows.some((item) => item.meta.id === current)
+        ? current
+        : next.windows[0]?.meta.id ?? '';
+      selectedIdRef.current = nextId;
+      return nextId;
     });
   }, []);
 
@@ -139,7 +144,11 @@ export function ExportPodPage() {
   }, [refresh]);
 
   const selected = useMemo(
-    () => snapshot.windows.find((item) => item.meta.id === selectedId) ?? snapshot.windows[0] ?? null,
+    () => findWindowCargo(snapshot, selectedId),
+    [selectedId, snapshot.windows],
+  );
+  const selectedCargoIndex = useMemo(
+    () => snapshot.windows.findIndex((item) => item.meta.id === selectedId),
     [selectedId, snapshot.windows],
   );
   const maxWindowTokens = useMemo(
@@ -166,11 +175,18 @@ export function ExportPodPage() {
     }
   };
 
+  const selectCargo = (id: string, cargoIndex: number, name: string) => {
+    if (selectedIdRef.current === id) return;
+    selectedIdRef.current = id;
+    setSelectedId(id);
+    setNotice({ tone: 'info', text: `已锁定记忆匣 ${String(cargoIndex + 1).padStart(2, '0')}「${name || '未命名窗口'}」。` });
+  };
+
   const goToCargoPage = (nextPage: number) => {
     const bounded = Math.max(0, Math.min(nextPage, cargoPageCount - 1));
     setCargoPage(bounded);
     const nextSelected = snapshot.windows[bounded * CARGO_PAGE_SIZE];
-    if (nextSelected) setSelectedId(nextSelected.meta.id);
+    if (nextSelected) selectCargo(nextSelected.meta.id, bounded * CARGO_PAGE_SIZE, nextSelected.meta.name);
   };
 
   const exportAll = () => {
@@ -185,32 +201,34 @@ export function ExportPodPage() {
   };
 
   const exportSelected = (kind: 'md' | 'txt') => {
-    if (!selected) {
+    const target = findWindowCargo(snapshot, selectedIdRef.current);
+    if (!target) {
       setNotice({ tone: 'info', text: '这里还没有可以单独带走的窗口。' });
       return;
     }
-    const stem = safeFilename(selected.meta.name, selected.meta.id);
+    const stem = safeFilename(target.meta.name, target.meta.id);
     if (kind === 'md') {
-      downloadText(`${stem}.md`, 'text/markdown', windowToMarkdown(selected));
+      downloadText(`${stem}.md`, 'text/markdown', windowToMarkdown(target));
     } else {
-      downloadText(`${stem}.txt`, 'text/plain', windowToText(selected));
+      downloadText(`${stem}.txt`, 'text/plain', windowToText(target));
     }
-    setNotice({ tone: 'ok', text: `「${selected.meta.name}」已经导出为 ${kind.toUpperCase()}。` });
+    setNotice({ tone: 'ok', text: `「${target.meta.name}」已经导出为 ${kind.toUpperCase()}。` });
   };
 
   const exportSelectedJson = () => {
-    if (!selected) {
+    const target = findWindowCargo(snapshot, selectedIdRef.current);
+    if (!target) {
       setNotice({ tone: 'info', text: '这里还没有可以单独封装的记忆匣。' });
       return;
     }
     const backup = makeBackup({
-      windows: [selected],
-      messageCount: selected.turns.length,
-      tokenEstimate: selected.tokenEstimate,
+      windows: [target],
+      messageCount: target.turns.length,
+      tokenEstimate: target.tokenEstimate,
     });
-    const stem = safeFilename(selected.meta.name, selected.meta.id);
+    const stem = safeFilename(target.meta.name, target.meta.id);
     downloadText(`${stem}-${timestampSlug()}.json`, 'application/json', JSON.stringify(backup, null, 2));
-    setNotice({ tone: 'ok', text: `「${selected.meta.name}」已装进独立 JSON 记忆匣。` });
+    setNotice({ tone: 'ok', text: `「${target.meta.name}」已装进独立 JSON 记忆匣。` });
   };
 
   const importFile = async (file: File) => {
@@ -322,12 +340,15 @@ export function ExportPodPage() {
                       '--cargo-c': visual.colors[2],
                       '--cargo-ring': visual.ring,
                     } as CSSProperties}
-                    onClick={() => setSelectedId(item.meta.id)}
+                    onPointerUp={() => selectCargo(item.meta.id, cargoIndex, item.meta.name)}
+                    onClick={() => selectCargo(item.meta.id, cargoIndex, item.meta.name)}
                     aria-pressed={active}
                     aria-label={`${item.meta.name}，${visual.label}，估算约 ${item.tokenEstimate} token，${item.turns.length} 条消息`}
                   >
                     <span className="pod-cargo__latch" aria-hidden="true" />
-                    <span className="pod-cargo__serial">记忆匣 {String(cargoIndex + 1).padStart(2, '0')}</span>
+                    <span className="pod-cargo__serial">
+                      {active ? '✓ 已选 · ' : ''}记忆匣 {String(cargoIndex + 1).padStart(2, '0')}
+                    </span>
                     <span className="pod-cargo__body">
                       <small>{visual.label}</small>
                       <strong>{item.meta.name || '未命名窗口'}</strong>
@@ -355,6 +376,7 @@ export function ExportPodPage() {
               <button type="button" onClick={() => goToCargoPage(cargoPage + 1)} disabled={cargoPage === cargoPageCount - 1} aria-label="下一页记忆匣">›</button>
             </nav>
           ) : null}
+          <p className="pod-select-hint">点按记忆匣选择 · 发光框就是当前导出目标</p>
           <p className="pod-token-note">卡匣内的光量代表文字重量 · Token 为本地估算</p>
         </section>
 
@@ -362,7 +384,11 @@ export function ExportPodPage() {
           <div className="pod-dock__head">
             <span className="pod-dock__glyph" aria-hidden="true">⌁</span>
             <div>
-              <small>出舱台 · SELECTED CARGO</small>
+              <small>
+                {selectedCargoIndex >= 0
+                  ? `当前舱单 · 记忆匣 ${String(selectedCargoIndex + 1).padStart(2, '0')}`
+                  : '当前舱单 · 尚未选择'}
+              </small>
               <strong>{selected?.meta.name || '还没有聊天窗口'}</strong>
               {selected ? (
                 <em>{modelVisual(selected.meta.provider).label} · {selected.turns.length} 条 · ≈{formatTokens(selected.tokenEstimate)} tokens</em>
