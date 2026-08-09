@@ -105,11 +105,6 @@ function formatTokens(value: number): string {
   return `${(value / 1_000_000).toFixed(1)}m`;
 }
 
-function bubbleSize(value: number, max: number): number {
-  if (max <= 0) return 68;
-  return Math.round(57 + Math.sqrt(value / max) * 54);
-}
-
 export function ExportPodPage() {
   const navigate = useNavigate();
   const timeOfDay = useTimeOfDay();
@@ -177,6 +172,21 @@ export function ExportPodPage() {
     setNotice({ tone: 'ok', text: `「${selected.meta.name}」已经导出为 ${kind.toUpperCase()}。` });
   };
 
+  const exportSelectedJson = () => {
+    if (!selected) {
+      setNotice({ tone: 'info', text: '这里还没有可以单独封装的记忆匣。' });
+      return;
+    }
+    const backup = makeBackup({
+      windows: [selected],
+      messageCount: selected.turns.length,
+      tokenEstimate: selected.tokenEstimate,
+    });
+    const stem = safeFilename(selected.meta.name, selected.meta.id);
+    downloadText(`${stem}-${timestampSlug()}.json`, 'application/json', JSON.stringify(backup, null, 2));
+    setNotice({ tone: 'ok', text: `「${selected.meta.name}」已装进独立 JSON 记忆匣。` });
+  };
+
   const importFile = async (file: File) => {
     try {
       const backup = parseBackup(await file.text());
@@ -226,72 +236,98 @@ export function ExportPodPage() {
       </header>
 
       <div className="pod-shell">
-        <section className="pod-orbit" aria-labelledby="pod-orbit-title">
-          <div className="pod-orbit__halo pod-orbit__halo--one" aria-hidden="true" />
-          <div className="pod-orbit__halo pod-orbit__halo--two" aria-hidden="true" />
+        <section className="pod-cargo-bay" aria-labelledby="pod-cargo-title">
+          <div className="pod-gate" aria-hidden="true">
+            <span className="pod-gate__corner pod-gate__corner--tl" />
+            <span className="pod-gate__corner pod-gate__corner--tr" />
+            <span className="pod-gate__corner pod-gate__corner--bl" />
+            <span className="pod-gate__corner pod-gate__corner--br" />
+            <span className="pod-gate__scan" />
+          </div>
+
+          <div className="pod-gate__readout">
+            <small id="pod-cargo-title">MEMORY CARGO</small>
+            <strong><i>≈</i>{formatTokens(snapshot.tokenEstimate)}</strong>
+            <em>TOKENS</em>
+          </div>
 
           <button
             type="button"
-            className="pod-memory-core"
+            className="pod-launch"
             onClick={exportAll}
             disabled={!snapshot.windows.length}
-            aria-label={`全部窗口估算约 ${snapshot.tokenEstimate} token，封装全部 JSON`}
+            aria-label={`封装全部，${snapshot.windows.length} 个窗口，估算约 ${snapshot.tokenEstimate} token`}
           >
-            <span className="pod-memory-core__shine" aria-hidden="true" />
-            <small id="pod-orbit-title">记忆核心</small>
-            <strong><i>≈</i>{formatTokens(snapshot.tokenEstimate)}</strong>
-            <em>TOKENS</em>
-            <span className="pod-memory-core__action">✦ 封装全部</span>
+            <span aria-hidden="true">✦</span>
+            <strong>封装全部</strong>
+            <small>EXPORT ALL</small>
           </button>
 
-          <div className="pod-orbit__stats" aria-label="聊天备份统计">
-            <span><strong>{snapshot.windows.length}</strong> 个窗口</span>
+          <div className="pod-cargo-summary" aria-label="聊天备份舱单">
+            <span><strong>{snapshot.windows.length}</strong> 个记忆匣</span>
+            <i aria-hidden="true" />
             <span><strong>{snapshot.messageCount}</strong> 条消息</span>
           </div>
 
+          <div className="pod-conveyor" aria-hidden="true">
+            <span />
+            <i />
+            <b />
+          </div>
+
           {snapshot.windows.length ? (
-            <div className="pod-bubbles__rail" role="list" aria-label="聊天窗口 token 估算">
+            <div className="pod-cargo-rail" role="list" aria-label="等待装载的聊天记忆匣">
               {snapshot.windows.map((item, index) => {
-                const size = bubbleSize(item.tokenEstimate, maxWindowTokens);
                 const active = selected?.meta.id === item.meta.id;
                 const visual = modelVisual(item.meta.provider);
+                const fill = maxWindowTokens > 0 ? Math.max(7, Math.round((item.tokenEstimate / maxWindowTokens) * 100)) : 7;
                 return (
                   <button
                     type="button"
                     role="listitem"
                     key={item.meta.id}
-                    className={`pod-bubble${active ? ' is-active' : ''}`}
+                    className={`pod-cargo${active ? ' is-active' : ''}`}
                     style={{
-                      '--bubble-size': `${size}px`,
-                      '--bubble-index': index,
-                      '--bubble-a': visual.colors[0],
-                      '--bubble-b': visual.colors[1],
-                      '--bubble-c': visual.colors[2],
-                      '--bubble-ring': visual.ring,
+                      '--cargo-index': index,
+                      '--cargo-fill': `${fill}%`,
+                      '--cargo-a': visual.colors[0],
+                      '--cargo-b': visual.colors[1],
+                      '--cargo-c': visual.colors[2],
+                      '--cargo-ring': visual.ring,
                     } as CSSProperties}
                     onClick={() => setSelectedId(item.meta.id)}
                     aria-pressed={active}
-                    aria-label={`${item.meta.name}，估算约 ${item.tokenEstimate} token，${item.turns.length} 条消息`}
+                    aria-label={`${item.meta.name}，${visual.label}，估算约 ${item.tokenEstimate} token，${item.turns.length} 条消息`}
                   >
-                    <span className="pod-bubble__shine" aria-hidden="true" />
-                    <strong>{formatTokens(item.tokenEstimate)}</strong>
-                    <small>{item.meta.name || '未命名'}</small>
-                    <i>{visual.label}</i>
+                    <span className="pod-cargo__latch" aria-hidden="true" />
+                    <span className="pod-cargo__serial">CARGO {String(index + 1).padStart(2, '0')}</span>
+                    <span className="pod-cargo__body">
+                      <small>{visual.label}</small>
+                      <strong>{item.meta.name || '未命名窗口'}</strong>
+                      <i>{item.turns.length} 条消息</i>
+                    </span>
+                    <span className="pod-cargo__weight">
+                      <small>记忆重量</small>
+                      <strong><i>≈</i>{formatTokens(item.tokenEstimate)}</strong>
+                      <em>TOKENS</em>
+                    </span>
+                    <span className="pod-cargo__meter" aria-hidden="true"><i /></span>
+                    <span className="pod-cargo__route" aria-hidden="true" />
                   </button>
                 );
               })}
             </div>
           ) : (
-            <div className="pod-bubbles__empty">第一颗聊天星泡会在这里亮起来。</div>
+            <div className="pod-cargo-empty">舱轨空着，第一段聊天会成为第一枚记忆匣。</div>
           )}
-          <p className="pod-token-note">气泡越大，文字越多 · 数量为本地估算</p>
+          <p className="pod-token-note">卡匣内的光量代表文字重量 · Token 为本地估算</p>
         </section>
 
         <section className="pod-dock" aria-label="记忆导出控制台">
           <div className="pod-dock__head">
             <span className="pod-dock__glyph" aria-hidden="true">⌁</span>
             <div>
-              <small>现在选中</small>
+              <small>当前舱单</small>
               <strong>{selected?.meta.name || '还没有聊天窗口'}</strong>
               {selected ? (
                 <em>{modelVisual(selected.meta.provider).label} · {selected.turns.length} 条 · ≈{formatTokens(selected.tokenEstimate)} tokens</em>
@@ -302,10 +338,11 @@ export function ExportPodPage() {
           <div className="pod-dock__actions">
             <button type="button" onClick={() => exportSelected('md')} disabled={!selected}>Markdown</button>
             <button type="button" onClick={() => exportSelected('txt')} disabled={!selected}>纯文字 TXT</button>
+            <button type="button" onClick={exportSelectedJson} disabled={!selected}>独立 JSON</button>
           </div>
 
           <details className="pod-restore">
-            <summary><span aria-hidden="true">↺</span> 把旧备份装回来</summary>
+            <summary><span aria-hidden="true">↺</span> 打开返航舱 · 装回旧备份</summary>
             <div className="pod-restore__body">
               <div className="pod-segment" aria-label="恢复方式">
                 <button type="button" className={restoreMode === 'merge' ? 'is-active' : ''} onClick={() => setRestoreMode('merge')}>合并</button>

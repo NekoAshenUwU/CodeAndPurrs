@@ -1,10 +1,10 @@
 .pod-page {
   --pod-ink: #4b385c;
   --pod-muted: #806e8d;
-  --pod-glass: rgba(255, 248, 255, 0.54);
+  --pod-glass: rgba(255, 248, 255, 0.5);
   --pod-glass-strong: rgba(255, 250, 255, 0.78);
-  --pod-line: rgba(255, 255, 255, 0.7);
-  --pod-shadow: 0 24px 62px rgba(77, 48, 104, 0.2);
+  --pod-line: rgba(255, 255, 255, 0.68);
+  --pod-shadow: 0 22px 58px rgba(77, 48, 104, 0.2);
   --pod-accent: #9c70cf;
   min-height: 100svh;
   padding-bottom: max(30px, env(safe-area-inset-bottom));
@@ -18,8 +18,8 @@
 .pod-page[data-theme='night'] {
   --pod-ink: #fff8ff;
   --pod-muted: rgba(242, 229, 255, 0.72);
-  --pod-glass: rgba(29, 17, 59, 0.56);
-  --pod-glass-strong: rgba(42, 24, 78, 0.82);
+  --pod-glass: rgba(29, 17, 59, 0.54);
+  --pod-glass-strong: rgba(42, 24, 78, 0.84);
   --pod-line: rgba(247, 232, 255, 0.22);
   --pod-shadow: 0 28px 74px rgba(4, 0, 24, 0.48);
   --pod-accent: #d2aeff;
@@ -46,10 +46,10 @@
   z-index: -2;
   background: linear-gradient(
     180deg,
-    rgba(255, 246, 255, 0.02) 0%,
-    rgba(255, 246, 255, 0.04) 38%,
-    rgba(236, 218, 244, 0.22) 67%,
-    rgba(230, 212, 240, 0.64) 100%
+    rgba(255, 246, 255, 0) 0%,
+    rgba(255, 246, 255, 0.02) 42%,
+    rgba(236, 218, 244, 0.16) 70%,
+    rgba(230, 212, 240, 0.54) 100%
   );
   backdrop-filter: saturate(1.05);
 }
@@ -57,10 +57,10 @@
 .pod-page[data-theme='night'] .pod-page__veil {
   background: linear-gradient(
     180deg,
-    rgba(7, 3, 22, 0.02) 0%,
-    rgba(12, 5, 31, 0.06) 36%,
-    rgba(12, 5, 31, 0.32) 68%,
-    rgba(8, 3, 25, 0.78) 100%
+    rgba(7, 3, 22, 0) 0%,
+    rgba(12, 5, 31, 0.04) 42%,
+    rgba(12, 5, 31, 0.26) 72%,
+    rgba(8, 3, 25, 0.74) 100%
   );
 }
 
@@ -155,358 +155,509 @@
 
 .pod-shell {
   width: min(820px, calc(100% - 26px));
-  margin: clamp(145px, 22vh, 245px) auto 0;
+  margin: clamp(185px, 26vh, 300px) auto 0;
   display: grid;
   gap: 14px;
   position: relative;
   z-index: 1;
 }
 
-/* The room artwork remains the hero. This stage has no panel background. */
-.pod-orbit {
-  min-height: 455px;
-  padding: 8px 0 0;
+/* The illustrated room is the stage. Only the cargo hardware floats over it. */
+.pod-cargo-bay {
+  min-height: 485px;
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
 }
 
-.pod-orbit__halo {
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 50%;
-  position: absolute;
-  top: 14px;
-  left: 50%;
-  pointer-events: none;
-  transform: translateX(-50%);
-  box-shadow: 0 0 24px rgba(205, 153, 241, 0.15);
-}
-
-.pod-orbit__halo--one {
-  width: 226px;
-  height: 226px;
-  border-style: dashed;
-  opacity: 0.42;
-  animation: pod-halo-spin 28s linear infinite;
-}
-
-.pod-orbit__halo--two {
-  width: 256px;
-  height: 190px;
-  top: 31px;
-  border-color: rgba(244, 190, 228, 0.35);
-  opacity: 0.54;
-  transform: translateX(-50%) rotate(-12deg);
-}
-
-.pod-memory-core {
-  width: 194px;
-  height: 194px;
-  padding: 22px 20px 17px;
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  border-radius: 50%;
-  color: #fffaff;
+.pod-gate {
+  width: 254px;
+  height: 154px;
+  border: 1px solid rgba(255, 255, 255, 0.46);
+  border-radius: 34px 34px 48px 48px;
   background:
-    radial-gradient(circle at 31% 22%, rgba(255, 255, 255, 0.92) 0 3%, rgba(255, 255, 255, 0.35) 9%, transparent 24%),
-    radial-gradient(circle at 70% 77%, rgba(239, 139, 204, 0.52), transparent 45%),
-    linear-gradient(145deg, rgba(164, 135, 229, 0.76), rgba(112, 78, 181, 0.62) 52%, rgba(225, 126, 189, 0.66));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(176, 122, 214, 0.07)),
+    repeating-linear-gradient(90deg, transparent 0 24px, rgba(255, 255, 255, 0.05) 25px 26px);
   box-shadow:
-    0 22px 52px rgba(83, 46, 132, 0.3),
-    0 0 0 9px rgba(255, 255, 255, 0.08),
-    inset 8px 9px 24px rgba(255, 255, 255, 0.28),
-    inset -12px -14px 30px rgba(61, 30, 111, 0.23);
-  backdrop-filter: blur(16px) saturate(1.35);
-  -webkit-backdrop-filter: blur(16px) saturate(1.35);
+    0 0 38px rgba(180, 126, 224, 0.16),
+    inset 0 0 34px rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(2px) saturate(1.15);
+  -webkit-backdrop-filter: blur(2px) saturate(1.15);
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.pod-page[data-theme='night'] .pod-gate {
+  border-color: rgba(226, 205, 255, 0.3);
+  background:
+    linear-gradient(180deg, rgba(143, 105, 207, 0.08), rgba(14, 6, 37, 0.16)),
+    repeating-linear-gradient(90deg, transparent 0 24px, rgba(211, 187, 255, 0.04) 25px 26px);
+  box-shadow: 0 0 42px rgba(151, 109, 220, 0.18), inset 0 0 38px rgba(134, 93, 198, 0.08);
+}
+
+.pod-gate::before,
+.pod-gate::after {
+  content: '';
+  height: 1px;
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+}
+
+.pod-gate::before { top: 12px; }
+.pod-gate::after { bottom: 12px; }
+
+.pod-gate__corner {
+  width: 20px;
+  height: 20px;
+  border-color: rgba(255, 255, 255, 0.9);
+  position: absolute;
+  filter: drop-shadow(0 0 5px rgba(200, 161, 244, 0.5));
+}
+
+.pod-gate__corner--tl { top: -4px; left: -4px; border-top: 2px solid; border-left: 2px solid; border-radius: 8px 0 0; }
+.pod-gate__corner--tr { top: -4px; right: -4px; border-top: 2px solid; border-right: 2px solid; border-radius: 0 8px 0 0; }
+.pod-gate__corner--bl { bottom: -4px; left: -4px; border-bottom: 2px solid; border-left: 2px solid; border-radius: 0 0 0 8px; }
+.pod-gate__corner--br { right: -4px; bottom: -4px; border-right: 2px solid; border-bottom: 2px solid; border-radius: 0 0 8px; }
+
+.pod-gate__scan {
+  width: calc(100% - 28px);
+  height: 1px;
+  position: absolute;
+  top: 20px;
+  left: 14px;
+  background: linear-gradient(90deg, transparent, #fff 24%, #efbcff 50%, #fff 76%, transparent);
+  box-shadow: 0 0 12px rgba(231, 183, 255, 0.92);
+  opacity: 0.76;
+  animation: pod-gate-scan 4.6s ease-in-out infinite;
+}
+
+.pod-gate__readout {
+  min-width: 180px;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  align-items: baseline;
   justify-content: center;
-  position: relative;
-  overflow: hidden;
+  flex-wrap: wrap;
+  position: absolute;
+  top: 27px;
+  left: 50%;
+  z-index: 1;
+  transform: translateX(-50%);
+  text-align: center;
+  text-shadow: 0 2px 14px rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+}
+
+.pod-page[data-theme='night'] .pod-gate__readout {
+  text-shadow: 0 2px 15px rgba(5, 1, 18, 0.9);
+}
+
+.pod-gate__readout small {
+  width: 100%;
+  color: var(--pod-accent);
+  font: 800 8px/1.2 "Marcellus", serif;
+  letter-spacing: 0.24em;
+}
+
+.pod-gate__readout strong {
+  margin-top: 5px;
+  font: 700 43px/0.95 "LongZhuPaw", "Nunito", sans-serif;
+  letter-spacing: -0.04em;
+}
+
+.pod-gate__readout strong i {
+  margin-right: 2px;
+  font-size: 0.38em;
+  font-style: normal;
+  vertical-align: 0.72em;
+}
+
+.pod-gate__readout em {
+  margin-left: 7px;
+  color: var(--pod-muted);
+  font: 800 7px/1 "Marcellus", serif;
+  letter-spacing: 0.18em;
+}
+
+.pod-launch {
+  min-width: 142px;
+  min-height: 36px;
+  padding: 4px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(110deg, rgba(125, 93, 202, 0.88), rgba(222, 124, 187, 0.84));
+  box-shadow: 0 10px 28px rgba(103, 65, 155, 0.25), inset 0 1px rgba(255, 255, 255, 0.5);
+  display: grid;
+  grid-template-columns: 16px auto;
+  align-items: center;
+  column-gap: 5px;
+  position: absolute;
+  top: 105px;
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
   cursor: pointer;
-  text-shadow: 0 2px 12px rgba(48, 18, 83, 0.42);
-  transition: transform 180ms ease, box-shadow 180ms ease;
-  animation: pod-core-float 5.8s ease-in-out infinite;
+  transition: transform 160ms ease, box-shadow 160ms ease;
 }
 
-.pod-memory-core:not(:disabled):active {
-  transform: scale(0.97);
+.pod-launch > span {
+  grid-row: 1 / 3;
+  font-size: 13px;
 }
 
-.pod-memory-core:disabled {
-  cursor: default;
-  filter: saturate(0.65);
+.pod-launch strong {
+  font-family: inherit;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.pod-launch small {
+  font: 700 6px/1 "Marcellus", serif;
+  letter-spacing: 0.13em;
   opacity: 0.72;
 }
 
-.pod-memory-core::before {
-  content: '';
-  width: 90px;
-  height: 58px;
-  border-radius: 60% 40% 54% 46% / 48% 58% 42% 52%;
-  position: absolute;
-  left: 5px;
-  bottom: 12px;
-  background: rgba(193, 133, 238, 0.35);
-  filter: blur(7px);
-  animation: pod-liquid-drift 6s ease-in-out infinite alternate;
+.pod-launch:not(:disabled):active {
+  transform: translateX(-50%) scale(0.97);
 }
 
-.pod-memory-core::after {
-  content: '';
-  inset: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.37);
-  border-radius: 50%;
-  position: absolute;
-  clip-path: polygon(0 0, 74% 0, 36% 100%, 0 100%);
+.pod-launch:disabled {
+  cursor: default;
+  filter: saturate(0.6);
+  opacity: 0.62;
 }
 
-.pod-memory-core__shine {
-  width: 68px;
-  height: 20px;
-  border-radius: 50%;
-  position: absolute;
-  top: 18px;
-  left: 38px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.74), transparent);
-  filter: blur(1px);
-  transform: rotate(-23deg);
-}
-
-.pod-memory-core small,
-.pod-memory-core strong,
-.pod-memory-core em,
-.pod-memory-core__action {
-  position: relative;
-  z-index: 1;
-}
-
-.pod-memory-core small {
-  font-family: "HuaXianZi", "CaoKe", cursive;
-  font-size: 15px;
-  letter-spacing: 0.13em;
-}
-
-.pod-memory-core strong {
-  margin-top: 3px;
-  font: 700 43px/0.95 "LongZhuPaw", "Nunito", sans-serif;
-  letter-spacing: -0.05em;
-}
-
-.pod-memory-core strong i {
-  margin-right: 2px;
-  font-size: 0.42em;
-  font-style: normal;
-  vertical-align: 0.65em;
-}
-
-.pod-memory-core em {
-  margin-top: 4px;
-  font: 800 7px/1 "Marcellus", serif;
-  letter-spacing: 0.22em;
-}
-
-.pod-memory-core__action {
-  margin-top: 12px;
-  padding: 6px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: 999px;
-  background: rgba(52, 24, 92, 0.18);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-
-.pod-orbit__stats {
-  margin-top: 12px;
-  display: flex;
-  gap: 7px;
-  position: relative;
-  z-index: 1;
-}
-
-.pod-orbit__stats span {
-  padding: 6px 11px;
+.pod-cargo-summary {
+  min-height: 29px;
+  padding: 0 12px;
   border: 1px solid var(--pod-line);
   border-radius: 999px;
   color: var(--pod-ink);
   background: var(--pod-glass);
-  box-shadow: inset 0 1px rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.48);
   backdrop-filter: blur(10px);
-  font-size: 9px;
-}
-
-.pod-orbit__stats strong {
-  font-family: "LongZhuPaw", "Nunito", sans-serif;
-  font-size: 11px;
-}
-
-.pod-bubbles__rail {
-  width: 100%;
-  min-height: 122px;
-  margin-top: 20px;
-  padding: 8px 11px 10px;
   display: flex;
   align-items: center;
-  gap: 13px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-  scroll-snap-type: x proximity;
-  mask-image: linear-gradient(90deg, transparent, black 4%, black 96%, transparent);
+  gap: 9px;
+  position: absolute;
+  top: 171px;
+  left: 50%;
+  z-index: 1;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 8px;
 }
 
-.pod-bubbles__rail::-webkit-scrollbar {
+.pod-cargo-summary strong {
+  font-family: "LongZhuPaw", "Nunito", sans-serif;
+  font-size: 10px;
+}
+
+.pod-cargo-summary i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--pod-accent);
+  box-shadow: 0 0 7px var(--pod-accent);
+}
+
+.pod-conveyor {
+  width: min(620px, calc(100% - 24px));
+  height: 30px;
+  position: absolute;
+  top: 223px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.pod-conveyor::before,
+.pod-conveyor::after {
+  content: '';
+  height: 1px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.76) 12%, rgba(203, 160, 237, 0.72) 50%, rgba(255, 255, 255, 0.76) 88%, transparent);
+  box-shadow: 0 0 10px rgba(194, 148, 230, 0.35);
+}
+
+.pod-conveyor::before { top: 7px; }
+.pod-conveyor::after { bottom: 7px; }
+
+.pod-conveyor span,
+.pod-conveyor i,
+.pod-conveyor b {
+  width: 6px;
+  height: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  border-radius: 50%;
+  background: rgba(186, 138, 229, 0.7);
+  box-shadow: 0 0 8px rgba(189, 140, 234, 0.7);
+  position: absolute;
+  top: 12px;
+  animation: pod-track-run 4.8s linear infinite;
+}
+
+.pod-conveyor i { animation-delay: -1.6s; }
+.pod-conveyor b { animation-delay: -3.2s; }
+
+.pod-cargo-rail {
+  width: 100%;
+  min-height: 142px;
+  margin-top: 252px;
+  padding: 15px 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+  mask-image: linear-gradient(90deg, transparent, black 3%, black 97%, transparent);
+}
+
+.pod-cargo-rail::-webkit-scrollbar {
   display: none;
 }
 
-.pod-bubble {
-  --bubble-size: 68px;
-  --bubble-a: #f2d9ff;
-  --bubble-b: #a98cda;
-  --bubble-c: #efa6c9;
-  --bubble-ring: #fff0ff;
-  width: var(--bubble-size);
-  height: var(--bubble-size);
-  flex: 0 0 var(--bubble-size);
-  padding: 9px 6px;
-  border: 1px solid rgba(255, 255, 255, 0.58);
-  border-radius: 54% 46% 52% 48% / 48% 57% 43% 52%;
+.pod-cargo {
+  --cargo-index: 0;
+  --cargo-fill: 30%;
+  --cargo-a: #f2d9ff;
+  --cargo-b: #a98cda;
+  --cargo-c: #efa6c9;
+  --cargo-ring: #fff0ff;
+  width: 264px;
+  min-height: 108px;
+  flex: 0 0 264px;
+  padding: 13px 13px 19px 38px;
+  border: 1px solid color-mix(in srgb, var(--cargo-ring) 62%, rgba(255, 255, 255, 0.42));
+  border-radius: 16px;
   color: #fffaff;
   background:
-    radial-gradient(circle at 29% 19%, rgba(255, 255, 255, 0.94) 0 3%, rgba(255, 255, 255, 0.38) 8%, transparent 23%),
-    radial-gradient(circle at 72% 79%, color-mix(in srgb, var(--bubble-c) 72%, transparent), transparent 47%),
-    linear-gradient(145deg, color-mix(in srgb, var(--bubble-a) 68%, transparent), color-mix(in srgb, var(--bubble-b) 73%, #49316b) 52%, color-mix(in srgb, var(--bubble-c) 64%, transparent));
+    linear-gradient(110deg, color-mix(in srgb, var(--cargo-a) 20%, transparent), transparent 43%),
+    linear-gradient(145deg, rgba(53, 31, 83, 0.72), color-mix(in srgb, var(--cargo-b) 35%, rgba(47, 25, 74, 0.6)) 58%, color-mix(in srgb, var(--cargo-c) 27%, rgba(43, 23, 68, 0.64)));
   box-shadow:
-    0 13px 28px color-mix(in srgb, var(--bubble-b) 28%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--bubble-ring) 38%, transparent),
-    inset 5px 6px 16px rgba(255, 255, 255, 0.28),
-    inset -8px -9px 18px rgba(48, 20, 82, 0.2);
-  backdrop-filter: blur(9px) saturate(1.4);
-  -webkit-backdrop-filter: blur(9px) saturate(1.4);
-  display: flex;
-  flex-direction: column;
+    0 13px 30px color-mix(in srgb, var(--cargo-b) 24%, transparent),
+    inset 0 1px rgba(255, 255, 255, 0.3),
+    inset 12px 0 26px color-mix(in srgb, var(--cargo-a) 10%, transparent);
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px;
   align-items: center;
-  justify-content: center;
+  gap: 10px;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   cursor: pointer;
   scroll-snap-align: center;
-  transform: translateY(calc((var(--bubble-index) % 2) * 5px));
-  transition: transform 180ms ease, box-shadow 180ms ease;
-  animation: pod-bubble-in 480ms ease both;
-  animation-delay: calc(var(--bubble-index) * 42ms);
+  text-align: left;
+  text-shadow: 0 2px 10px rgba(19, 6, 42, 0.62);
+  transform: translateY(calc((var(--cargo-index) % 2) * 5px));
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  animation: pod-cargo-in 440ms ease both;
+  animation-delay: calc(var(--cargo-index) * 45ms);
 }
 
-.pod-bubble:nth-child(2n) {
-  border-radius: 46% 54% 43% 57% / 55% 45% 55% 45%;
+.pod-page:not([data-theme='night']) .pod-cargo {
+  background:
+    linear-gradient(110deg, color-mix(in srgb, var(--cargo-a) 24%, transparent), transparent 43%),
+    linear-gradient(145deg, rgba(118, 82, 154, 0.68), color-mix(in srgb, var(--cargo-b) 40%, rgba(96, 59, 130, 0.55)) 58%, color-mix(in srgb, var(--cargo-c) 30%, rgba(83, 50, 112, 0.56)));
 }
 
-.pod-bubble:nth-child(3n) {
-  border-radius: 58% 42% 55% 45% / 42% 51% 49% 58%;
-}
-
-.pod-bubble::before {
+.pod-cargo::before {
   content: '';
-  width: 70%;
-  height: 52%;
-  border-radius: 60% 40% 62% 38%;
+  inset: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 11px;
   position: absolute;
-  left: -8%;
-  bottom: -5%;
-  background: color-mix(in srgb, var(--bubble-a) 48%, transparent);
-  filter: blur(5px);
-  animation: pod-liquid-drift 6.4s ease-in-out infinite alternate;
+  pointer-events: none;
 }
 
-.pod-bubble__shine {
-  width: 44%;
-  height: 17%;
-  border-radius: 50%;
+.pod-cargo::after {
+  content: '';
+  width: 46%;
+  height: 1px;
   position: absolute;
-  top: 9%;
-  left: 18%;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.72), transparent);
-  transform: rotate(-24deg);
+  top: 7px;
+  left: 17%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.76), transparent);
+  opacity: 0.76;
 }
 
-.pod-bubble.is-active {
-  transform: translateY(-3px) scale(1.06);
+.pod-cargo.is-active {
+  border-color: var(--cargo-ring);
+  transform: translateY(-4px) scale(1.025);
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--bubble-ring) 36%, transparent),
-    0 17px 32px color-mix(in srgb, var(--bubble-b) 34%, transparent),
-    inset 5px 6px 16px rgba(255, 255, 255, 0.3),
-    inset -8px -9px 18px rgba(48, 20, 82, 0.2);
+    0 0 0 3px color-mix(in srgb, var(--cargo-ring) 22%, transparent),
+    0 18px 34px color-mix(in srgb, var(--cargo-b) 34%, transparent),
+    inset 0 1px rgba(255, 255, 255, 0.4),
+    inset 12px 0 28px color-mix(in srgb, var(--cargo-a) 14%, transparent);
 }
 
-.pod-bubble strong,
-.pod-bubble small,
-.pod-bubble i {
-  max-width: 92%;
-  overflow: hidden;
+.pod-cargo__latch {
+  width: 25px;
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.23);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 50% 17%, var(--cargo-a) 0 2px, transparent 3px),
+    radial-gradient(circle at 50% 83%, var(--cargo-c) 0 2px, transparent 3px),
+    linear-gradient(180deg, color-mix(in srgb, var(--cargo-a) 32%, transparent), rgba(33, 15, 60, 0.3));
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.24);
+}
+
+.pod-cargo__serial {
+  color: rgba(255, 255, 255, 0.56);
+  font: 700 6px/1 "Marcellus", serif;
+  letter-spacing: 0.15em;
+  position: absolute;
+  top: 8px;
+  right: 13px;
+}
+
+.pod-cargo__body,
+.pod-cargo__weight {
+  min-width: 0;
+  display: grid;
   position: relative;
   z-index: 1;
+}
+
+.pod-cargo__body small {
+  color: color-mix(in srgb, var(--cargo-ring) 78%, white);
+  font: 700 7px/1.2 "Marcellus", serif;
+  letter-spacing: 0.09em;
+}
+
+.pod-cargo__body strong {
+  margin-top: 5px;
+  overflow: hidden;
+  font-family: "HuaXianZi", "CaoKe", cursive;
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.1;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-shadow: 0 2px 9px rgba(31, 12, 55, 0.55);
 }
 
-.pod-bubble strong {
-  font: 700 clamp(13px, calc(var(--bubble-size) * 0.24), 20px)/1 "LongZhuPaw", "Nunito", sans-serif;
-}
-
-.pod-bubble strong::before {
-  content: '≈';
-  margin-right: 1px;
-  font-size: 0.66em;
-  vertical-align: 0.25em;
-}
-
-.pod-bubble small {
-  margin-top: 4px;
-  font-size: clamp(7px, calc(var(--bubble-size) * 0.11), 9px);
-}
-
-.pod-bubble i {
-  margin-top: 3px;
-  padding: 2px 5px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 999px;
-  background: rgba(35, 15, 64, 0.18);
-  font-size: clamp(6px, calc(var(--bubble-size) * 0.075), 8px);
+.pod-cargo__body i {
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 7px;
   font-style: normal;
-  opacity: 0.88;
 }
 
-.pod-bubbles__empty {
-  min-height: 112px;
-  margin-top: 18px;
+.pod-cargo__weight {
+  padding-left: 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+  justify-items: end;
+}
+
+.pod-cargo__weight small {
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 6px;
+  letter-spacing: 0.08em;
+}
+
+.pod-cargo__weight strong {
+  margin-top: 4px;
+  font: 700 22px/1 "LongZhuPaw", "Nunito", sans-serif;
+}
+
+.pod-cargo__weight strong i {
+  margin-right: 1px;
+  font-size: 0.46em;
+  font-style: normal;
+  vertical-align: 0.56em;
+}
+
+.pod-cargo__weight em {
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.52);
+  font: 700 5px/1 "Marcellus", serif;
+  letter-spacing: 0.15em;
+}
+
+.pod-cargo__meter {
+  height: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  overflow: hidden;
+  position: absolute;
+  right: 13px;
+  bottom: 8px;
+  left: 38px;
+  background: rgba(20, 7, 44, 0.24);
+}
+
+.pod-cargo__meter i {
+  width: var(--cargo-fill);
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--cargo-a), var(--cargo-b), var(--cargo-c));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--cargo-b) 76%, transparent);
+  display: block;
+  transition: width 300ms ease;
+}
+
+.pod-cargo__route {
+  width: 2px;
+  height: 41px;
+  position: absolute;
+  top: -42px;
+  left: 50%;
+  background: linear-gradient(180deg, transparent, var(--cargo-ring));
+  box-shadow: 0 0 10px var(--cargo-ring);
+  opacity: 0;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.pod-cargo.is-active .pod-cargo__route {
+  opacity: 0.9;
+  animation: pod-route-pulse 1.8s ease-in-out infinite;
+}
+
+.pod-cargo-empty {
+  min-height: 138px;
+  margin-top: 252px;
   color: var(--pod-muted);
   display: grid;
   place-items: center;
-  font-size: 11px;
+  font-size: 10px;
+  text-align: center;
 }
 
 .pod-token-note {
-  margin: 0;
+  margin: -3px 0 0;
   color: var(--pod-muted);
   font-size: 8px;
   letter-spacing: 0.05em;
   text-align: center;
-  text-shadow: 0 1px 10px rgba(255, 255, 255, 0.5);
+  text-shadow: 0 1px 10px rgba(255, 255, 255, 0.7);
 }
 
 .pod-page[data-theme='night'] .pod-token-note {
-  text-shadow: 0 1px 10px rgba(5, 1, 18, 0.8);
+  text-shadow: 0 1px 10px rgba(5, 1, 18, 0.82);
 }
 
 .pod-dock {
-  padding: 19px;
+  padding: 18px;
   border: 1px solid var(--pod-line);
-  border-radius: 30px;
+  border-radius: 28px;
   background: var(--pod-glass);
-  box-shadow: var(--pod-shadow), inset 0 1px rgba(255, 255, 255, 0.55);
+  box-shadow: var(--pod-shadow), inset 0 1px rgba(255, 255, 255, 0.52);
   backdrop-filter: blur(22px) saturate(1.22);
   -webkit-backdrop-filter: blur(22px) saturate(1.22);
 }
@@ -522,9 +673,9 @@
   width: 42px;
   height: 42px;
   border: 1px solid rgba(255, 255, 255, 0.58);
-  border-radius: 15px;
+  border-radius: 13px;
   color: white;
-  background: linear-gradient(145deg, rgba(166, 132, 226, 0.86), rgba(235, 145, 196, 0.82));
+  background: linear-gradient(145deg, rgba(166, 132, 226, 0.88), rgba(235, 145, 196, 0.84));
   box-shadow: 0 9px 19px rgba(117, 75, 160, 0.2), inset 0 1px rgba(255, 255, 255, 0.48);
   display: grid;
   place-items: center;
@@ -563,23 +714,23 @@
 }
 
 .pod-dock__actions {
-  margin-top: 14px;
+  margin-top: 13px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
 }
 
 .pod-dock__actions button,
 .pod-upload {
-  min-height: 42px;
+  min-height: 40px;
   border: 1px solid var(--pod-line);
-  border-radius: 14px;
+  border-radius: 13px;
   color: var(--pod-ink);
   background: rgba(255, 255, 255, 0.18);
-  box-shadow: inset 0 1px rgba(255, 255, 255, 0.38);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.36);
   cursor: pointer;
   font-family: "ShunFengFull", "PingFang SC", sans-serif;
-  font-size: 10px;
+  font-size: 9px;
 }
 
 .pod-page[data-theme='night'] .pod-dock__actions button,
@@ -593,12 +744,12 @@
 }
 
 .pod-restore {
-  margin-top: 11px;
+  margin-top: 10px;
   border-top: 1px solid color-mix(in srgb, var(--pod-line) 72%, transparent);
 }
 
 .pod-restore summary {
-  min-height: 43px;
+  min-height: 42px;
   color: var(--pod-muted);
   display: flex;
   align-items: center;
@@ -606,7 +757,7 @@
   gap: 7px;
   cursor: pointer;
   list-style: none;
-  font-size: 10px;
+  font-size: 9px;
 }
 
 .pod-restore summary::-webkit-details-marker {
@@ -745,24 +896,25 @@
   outline-offset: 3px;
 }
 
-@keyframes pod-core-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
+@keyframes pod-gate-scan {
+  0%, 100% { top: 20px; opacity: 0.38; }
+  50% { top: 132px; opacity: 0.9; }
 }
 
-@keyframes pod-halo-spin {
-  to { transform: translateX(-50%) rotate(360deg); }
+@keyframes pod-track-run {
+  from { left: 1%; opacity: 0; }
+  12%, 88% { opacity: 1; }
+  to { left: 99%; opacity: 0; }
 }
 
-@keyframes pod-liquid-drift {
-  0% { transform: translate(-4%, 5%) rotate(-8deg) scale(0.92); }
-  55% { transform: translate(34%, -20%) rotate(29deg) scale(1.12); }
-  100% { transform: translate(52%, 8%) rotate(51deg) scale(0.97); }
-}
-
-@keyframes pod-bubble-in {
-  from { opacity: 0; transform: translateY(13px) scale(0.86); }
+@keyframes pod-cargo-in {
+  from { opacity: 0; transform: translateY(13px) scale(0.96); }
   to { opacity: 1; }
+}
+
+@keyframes pod-route-pulse {
+  0%, 100% { opacity: 0.25; transform: translateX(-50%) scaleY(0.72); transform-origin: bottom; }
+  50% { opacity: 1; transform: translateX(-50%) scaleY(1); transform-origin: bottom; }
 }
 
 @keyframes pod-notice-in {
@@ -799,59 +951,72 @@
 
   .pod-shell {
     width: calc(100% - 24px);
-    margin-top: clamp(128px, 20vh, 188px);
+    margin-top: clamp(185px, 25vh, 240px);
   }
 
-  .pod-orbit {
-    min-height: 435px;
+  .pod-cargo-bay {
+    min-height: 470px;
   }
 
-  .pod-memory-core {
-    width: 184px;
-    height: 184px;
-  }
-
-  .pod-orbit__halo--one {
-    width: 216px;
-    height: 216px;
-  }
-
-  .pod-orbit__halo--two {
+  .pod-gate {
     width: 238px;
-    height: 180px;
+    height: 148px;
   }
 
-  .pod-bubbles__rail {
+  .pod-gate__readout strong { font-size: 40px; }
+  .pod-launch { top: 100px; }
+  .pod-cargo-summary { top: 164px; }
+  .pod-conveyor { top: 216px; }
+
+  .pod-cargo-rail {
     width: calc(100% + 24px);
+    margin-top: 245px;
     margin-left: -12px;
-    padding-inline: 18px;
+    padding-inline: 26px;
+    scroll-padding-inline: 26px;
   }
+
+  .pod-cargo {
+    width: min(274px, calc(100vw - 80px));
+    flex-basis: min(274px, calc(100vw - 80px));
+  }
+
+  .pod-cargo-empty { margin-top: 245px; }
 
   .pod-dock {
-    padding: 17px;
-    border-radius: 27px;
+    padding: 16px;
+    border-radius: 26px;
   }
 }
 
 @media (max-width: 390px) {
   .pod-shell { width: calc(100% - 20px); }
-  .pod-memory-core { width: 176px; height: 176px; }
-  .pod-memory-core strong { font-size: 39px; }
-  .pod-orbit { min-height: 420px; }
+
+  .pod-cargo {
+    width: calc(100vw - 66px);
+    flex-basis: calc(100vw - 66px);
+    grid-template-columns: minmax(0, 1fr) 67px;
+  }
+
+  .pod-cargo__body strong { font-size: 16px; }
+  .pod-cargo__weight strong { font-size: 20px; }
+  .pod-dock__actions button { font-size: 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pod-memory-core,
-  .pod-orbit__halo,
-  .pod-bubble,
-  .pod-bubble::before,
-  .pod-memory-core::before,
+  .pod-gate__scan,
+  .pod-conveyor span,
+  .pod-conveyor i,
+  .pod-conveyor b,
+  .pod-cargo,
+  .pod-cargo__route,
   .pod-notice {
     animation: none;
   }
 
-  .pod-memory-core,
-  .pod-bubble {
+  .pod-cargo,
+  .pod-launch,
+  .pod-cargo__meter i {
     transition: none;
   }
 }
