@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTimeOfDay } from '../components/ambient/timeOfDay';
 import {
@@ -115,6 +123,7 @@ export function ExportPodPage() {
   const [restoreMode, setRestoreMode] = useState<RestoreMode>('merge');
   const [notice, setNotice] = useState<Notice>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cargoDragRef = useRef({ pointerId: -1, startX: 0, scrollLeft: 0, moved: false });
 
   const refresh = useCallback(() => {
     const next = readExportPodSnapshot();
@@ -145,6 +154,39 @@ export function ExportPodPage() {
     } catch {
       // 主题仍可在当前页面切换。
     }
+  };
+
+  const startCargoDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    cargoDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      scrollLeft: event.currentTarget.scrollLeft,
+      moved: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.currentTarget.classList.add('is-dragging');
+  };
+
+  const moveCargoDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = cargoDragRef.current;
+    if (drag.pointerId !== event.pointerId) return;
+    const delta = event.clientX - drag.startX;
+    if (Math.abs(delta) > 4) drag.moved = true;
+    if (!drag.moved) return;
+    event.preventDefault();
+    event.currentTarget.scrollLeft = drag.scrollLeft - delta;
+  };
+
+  const endCargoDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (cargoDragRef.current.pointerId !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    event.currentTarget.classList.remove('is-dragging');
+    cargoDragRef.current.pointerId = -1;
+    window.setTimeout(() => {
+      cargoDragRef.current.moved = false;
+    }, 0);
   };
 
   const exportAll = () => {
@@ -276,7 +318,15 @@ export function ExportPodPage() {
           </div>
 
           {snapshot.windows.length ? (
-            <div className="pod-cargo-rail" role="list" aria-label="等待装载的聊天记忆匣">
+            <div
+              className="pod-cargo-rail"
+              role="list"
+              aria-label="等待装载的聊天记忆匣"
+              onPointerDown={startCargoDrag}
+              onPointerMove={moveCargoDrag}
+              onPointerUp={endCargoDrag}
+              onPointerCancel={endCargoDrag}
+            >
               {snapshot.windows.map((item, index) => {
                 const active = selected?.meta.id === item.meta.id;
                 const visual = modelVisual(item.meta.provider);
@@ -296,6 +346,11 @@ export function ExportPodPage() {
                       '--cargo-ring': visual.ring,
                     } as CSSProperties}
                     onClick={(event) => {
+                      if (cargoDragRef.current.moved) {
+                        cargoDragRef.current.moved = false;
+                        event.preventDefault();
+                        return;
+                      }
                       setSelectedId(item.meta.id);
                       event.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                     }}
@@ -326,11 +381,11 @@ export function ExportPodPage() {
           <p className="pod-token-note">卡匣内的光量代表文字重量 · Token 为本地估算</p>
         </section>
 
-        <section className="pod-dock" aria-label="记忆导出控制台">
+        <section className="pod-dock" aria-label="单窗口导出与旧备份返航控制台">
           <div className="pod-dock__head">
             <span className="pod-dock__glyph" aria-hidden="true">⌁</span>
             <div>
-              <small>当前舱单</small>
+              <small>出舱台 · SELECTED CARGO</small>
               <strong>{selected?.meta.name || '还没有聊天窗口'}</strong>
               {selected ? (
                 <em>{modelVisual(selected.meta.provider).label} · {selected.turns.length} 条 · ≈{formatTokens(selected.tokenEstimate)} tokens</em>
