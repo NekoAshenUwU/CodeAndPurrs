@@ -266,31 +266,72 @@
 
 .pod-gate__readout strong {
   margin-top: 5px;
-  color: #7f609e;
-  background: linear-gradient(135deg, #66547f 4%, #9b6da8 52%, #c982a8 96%);
+  color: #8d6ad0;
+  background:
+    linear-gradient(
+      105deg,
+      #7257ad 0%,
+      #b67ac7 18%,
+      #f6b9df 31%,
+      #fff9ff 40%,
+      #8bd8ef 48%,
+      #a86fd0 62%,
+      #f4a8d2 78%,
+      #7257ad 100%
+    );
+  background-size: 240% 100%;
   background-clip: text;
   -webkit-background-clip: text;
-  font: 400 52px/0.9 "RoughOwl", "TianTianQuanAmount", "Marcellus", serif;
-  letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: baseline;
+  font: 400 52px/0.9 "HFSoda", "TianTianQuanAmount", "Marcellus", serif;
+  letter-spacing: 0.015em;
   -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 0.35px rgba(255, 255, 255, 0.46);
   filter:
-    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.92))
-    drop-shadow(0 3px 7px rgba(110, 71, 135, 0.22));
+    drop-shadow(0 0 3px rgba(255, 239, 255, 0.86))
+    drop-shadow(0 0 8px rgba(173, 116, 211, 0.54))
+    drop-shadow(0 4px 10px rgba(91, 54, 132, 0.24));
+  animation: pod-token-shimmer 3.4s ease-in-out infinite;
 }
 
 .pod-page[data-theme='night'] .pod-gate__readout strong {
-  color: #f0dcff;
-  background-image: linear-gradient(135deg, #fff8ff 2%, #dfc5ff 48%, #ffbfe2 96%);
+  color: #f1ddff;
+  background-image:
+    linear-gradient(
+      105deg,
+      #d8bcff 0%,
+      #fffaff 19%,
+      #9cecff 34%,
+      #ffffff 43%,
+      #ffc6ec 52%,
+      #c99cff 70%,
+      #fff7ff 84%,
+      #d8bcff 100%
+    );
   filter:
-    drop-shadow(0 0 5px rgba(240, 214, 255, 0.72))
-    drop-shadow(0 3px 12px rgba(191, 113, 231, 0.48));
+    drop-shadow(0 0 4px rgba(255, 255, 255, 0.92))
+    drop-shadow(0 0 10px rgba(199, 145, 255, 0.86))
+    drop-shadow(0 0 18px rgba(116, 189, 255, 0.58));
 }
 
 .pod-gate__readout strong i {
   margin-right: 2px;
+  font-family: "Marcellus", serif;
   font-size: 0.38em;
   font-style: normal;
-  vertical-align: 0.72em;
+  transform: translateY(-0.62em);
+}
+
+.pod-gate__digits {
+  font-family: "TianTianQuanAmount", "Marcellus", serif;
+}
+
+.pod-gate__suffix {
+  margin-left: 0.035em;
+  font-family: "HFSoda", "Marcellus", serif;
+  font-size: 0.78em;
+  letter-spacing: 0;
 }
 
 .pod-gate__readout em {
@@ -990,6 +1031,11 @@
   50% { top: 132px; opacity: 0.9; }
 }
 
+@keyframes pod-token-shimmer {
+  0%, 12% { background-position: 100% 50%; }
+  52%, 100% { background-position: 0% 50%; }
+}
+
 @keyframes pod-track-run {
   from { left: 1%; opacity: 0; }
   12%, 88% { opacity: 1; }
@@ -1093,6 +1139,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pod-gate__scan,
+  .pod-gate__readout strong,
   .pod-conveyor span,
   .pod-conveyor i,
   .pod-conveyor b,
