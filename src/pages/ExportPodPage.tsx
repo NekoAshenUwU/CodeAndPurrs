@@ -295,7 +295,10 @@ export function ExportPodPage() {
                       '--cargo-c': visual.colors[2],
                       '--cargo-ring': visual.ring,
                     } as CSSProperties}
-                    onClick={() => setSelectedId(item.meta.id)}
+                    onClick={(event) => {
+                      setSelectedId(item.meta.id);
+                      event.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    }}
                     aria-pressed={active}
                     aria-label={`${item.meta.name}，${visual.label}，估算约 ${item.tokenEstimate} token，${item.turns.length} 条消息`}
                   >
