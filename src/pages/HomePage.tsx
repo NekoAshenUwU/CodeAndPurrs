@@ -62,6 +62,10 @@ export function HomePage() {
       navigate('/murmurs');
       return;
     }
+    if (room.id === 'export-pod') {
+      navigate('/export-pod');
+      return;
+    }
     setSelectedRoom(room);
   };
 
