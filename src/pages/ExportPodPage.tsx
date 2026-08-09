@@ -155,6 +155,10 @@ export function ExportPodPage() {
     () => Math.max(0, ...snapshot.windows.map((item) => item.tokenEstimate)),
     [snapshot.windows],
   );
+  const totalTokenLabel = formatTokens(snapshot.tokenEstimate);
+  const totalTokenParts = totalTokenLabel.match(/^([\d.,]+)(.*)$/);
+  const totalTokenAmount = totalTokenParts?.[1] ?? totalTokenLabel;
+  const totalTokenSuffix = totalTokenParts?.[2] ?? '';
   const cargoPageCount = Math.max(1, Math.ceil(snapshot.windows.length / CARGO_PAGE_SIZE));
   const visibleCargo = useMemo(
     () => snapshot.windows.slice(cargoPage * CARGO_PAGE_SIZE, (cargoPage + 1) * CARGO_PAGE_SIZE),
@@ -291,7 +295,13 @@ export function ExportPodPage() {
 
           <div className="pod-gate__readout">
             <small id="pod-cargo-title">MEMORY CARGO</small>
-            <strong><i>≈</i>{formatTokens(snapshot.tokenEstimate)}</strong>
+            <strong aria-label={`约 ${totalTokenLabel} token`}>
+              <i aria-hidden="true">≈</i>
+              <span className="pod-gate__digits" aria-hidden="true">{totalTokenAmount}</span>
+              {totalTokenSuffix ? (
+                <span className="pod-gate__suffix" aria-hidden="true">{totalTokenSuffix}</span>
+              ) : null}
+            </strong>
             <em>TOKENS</em>
           </div>
 
