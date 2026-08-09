@@ -10,7 +10,9 @@ const MAX_BODY_BYTES = 512 * 1024;
 const DEFAULT_ALLOWED_ORIGIN = '*';
 const DEFAULT_DATA_DIR = new URL('./data/usage/', import.meta.url).pathname;
 const DEFAULT_RETENTION_DAYS = 0;
-const STALE_AFTER_MS = 6 * 60 * 60 * 1000; // 超过 6 小时没新数据就算「旧」
+// 手机端 v1.0.5 每 30 分钟上报；超过三个周期仍没新数据时明确标旧。
+// 旧值 6 小时会让早已停更的快照继续伪装成“今日实时数据”。
+const STALE_AFTER_MS = 90 * 60 * 1000;
 
 function jsonResponse(response, status, body, origin = DEFAULT_ALLOWED_ORIGIN) {
   response.writeHead(status, {
