@@ -327,7 +327,7 @@ export function ExportPodPage() {
                     aria-label={`${item.meta.name}，${visual.label}，估算约 ${item.tokenEstimate} token，${item.turns.length} 条消息`}
                   >
                     <span className="pod-cargo__latch" aria-hidden="true" />
-                    <span className="pod-cargo__serial">CARGO {String(cargoIndex + 1).padStart(2, '0')}</span>
+                    <span className="pod-cargo__serial">记忆匣 {String(cargoIndex + 1).padStart(2, '0')}</span>
                     <span className="pod-cargo__body">
                       <small>{visual.label}</small>
                       <strong>{item.meta.name || '未命名窗口'}</strong>
@@ -336,7 +336,7 @@ export function ExportPodPage() {
                     <span className="pod-cargo__weight">
                       <small>记忆重量</small>
                       <strong><i>≈</i>{formatTokens(item.tokenEstimate)}</strong>
-                      <em>TOKENS</em>
+                      <em>TOKEN</em>
                     </span>
                     <span className="pod-cargo__meter" aria-hidden="true"><i /></span>
                     <span className="pod-cargo__route" aria-hidden="true" />

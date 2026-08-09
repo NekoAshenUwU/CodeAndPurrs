@@ -266,8 +266,9 @@
 
 .pod-gate__readout strong {
   margin-top: 5px;
-  font: 700 43px/0.95 "LongZhuPaw", "Nunito", sans-serif;
-  letter-spacing: -0.04em;
+  font: 400 49px/0.92 "Quimil", "Marcellus", serif;
+  letter-spacing: -0.025em;
+  -webkit-text-stroke: 0.25px currentColor;
 }
 
 .pod-gate__readout strong i {
@@ -510,8 +511,8 @@
 
 .pod-cargo__serial {
   color: rgba(255, 255, 255, 0.56);
-  font: 400 8px/1 "Quimil", "Marcellus", serif;
-  letter-spacing: 0.1em;
+  font: 400 8px/1 "HuaXianZi", "CaoKe", cursive;
+  letter-spacing: 0.06em;
   position: absolute;
   top: 7px;
   right: 11px;
@@ -580,9 +581,8 @@
 .pod-cargo__weight em {
   margin-top: 2px;
   color: rgba(255, 255, 255, 0.52);
-  font: 400 7px/1 "Quimil", "Marcellus", serif;
-  letter-spacing: 0.12em;
-  -webkit-text-stroke: 0.12px currentColor;
+  font: 700 7px/1 "Marcellus", "Nunito", sans-serif;
+  letter-spacing: 0.14em;
 }
 
 .pod-cargo__meter {
@@ -1021,7 +1021,7 @@
     height: 148px;
   }
 
-  .pod-gate__readout strong { font-size: 40px; }
+  .pod-gate__readout strong { font-size: 46px; }
   .pod-launch { top: 100px; }
   .pod-cargo-summary { top: 164px; }
   .pod-conveyor { top: 216px; }
