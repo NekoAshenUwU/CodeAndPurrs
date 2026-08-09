@@ -1,13 +1,13 @@
 .pod-page {
-  --pod-ink: #34284f;
-  --pod-muted: #76698f;
-  --pod-glass: rgba(255, 251, 255, 0.72);
-  --pod-glass-strong: rgba(255, 253, 255, 0.88);
-  --pod-line: rgba(255, 255, 255, 0.76);
-  --pod-shadow: 0 28px 70px rgba(101, 74, 141, 0.2);
-  --pod-accent: #8d6adb;
-  --pod-accent-2: #ef8fbd;
-  --pod-core: linear-gradient(135deg, #8067dc 0%, #b777d4 46%, #ef8fb6 100%);
+  --pod-ink: #fff9ff;
+  --pod-muted: rgba(247, 237, 255, 0.72);
+  --pod-glass: rgba(48, 28, 81, 0.48);
+  --pod-glass-strong: rgba(71, 42, 106, 0.86);
+  --pod-line: rgba(255, 255, 255, 0.24);
+  --pod-shadow: 0 24px 58px rgba(32, 14, 57, 0.28);
+  --pod-accent: #edb7ff;
+  --pod-accent-2: #ff9dcf;
+  --pod-core: linear-gradient(135deg, #bd9aff 0%, #d783dc 48%, #ff8fbd 100%);
   min-height: 100svh;
   color: var(--pod-ink);
   position: relative;
@@ -20,8 +20,8 @@
 .pod-page[data-theme='night'] {
   --pod-ink: #f6edff;
   --pod-muted: #c7b9dc;
-  --pod-glass: rgba(31, 20, 63, 0.7);
-  --pod-glass-strong: rgba(39, 25, 78, 0.88);
+  --pod-glass: rgba(23, 13, 52, 0.62);
+  --pod-glass-strong: rgba(42, 24, 78, 0.9);
   --pod-line: rgba(240, 222, 255, 0.2);
   --pod-shadow: 0 32px 90px rgba(4, 0, 24, 0.55);
   --pod-accent: #c6a7ff;
@@ -50,9 +50,9 @@
 .pod-page__veil {
   z-index: -2;
   background:
-    linear-gradient(180deg, rgba(247, 240, 252, 0.04) 0%, rgba(244, 236, 250, 0.3) 32%, rgba(238, 229, 247, 0.9) 100%),
-    radial-gradient(circle at 50% 28%, rgba(255, 255, 255, 0.06) 0 18%, rgba(238, 222, 245, 0.46) 48%, rgba(231, 219, 242, 0.8) 100%);
-  backdrop-filter: saturate(0.86);
+    linear-gradient(180deg, rgba(38, 18, 65, 0.02) 0%, rgba(49, 24, 78, 0.08) 27%, rgba(35, 18, 58, 0.58) 74%, rgba(25, 13, 45, 0.82) 100%),
+    radial-gradient(circle at 50% 31%, transparent 0 20%, rgba(48, 24, 76, 0.12) 52%, rgba(26, 13, 49, 0.42) 100%);
+  backdrop-filter: saturate(1.08) contrast(1.02);
 }
 
 .pod-page[data-theme='night'] .pod-page__veil {
@@ -78,8 +78,8 @@
 .pod-theme-button {
   border: 1px solid var(--pod-line);
   color: var(--pod-ink);
-  background: var(--pod-glass);
-  box-shadow: 0 12px 35px rgba(89, 58, 123, 0.14), inset 0 1px rgba(255, 255, 255, 0.72);
+  background: rgba(49, 28, 83, 0.48);
+  box-shadow: 0 12px 35px rgba(33, 15, 61, 0.2), inset 0 1px rgba(255, 255, 255, 0.28);
   backdrop-filter: blur(18px) saturate(1.15);
   -webkit-backdrop-filter: blur(18px) saturate(1.15);
 }
@@ -108,7 +108,7 @@
   align-items: baseline;
   gap: 10px;
   min-width: 0;
-  text-shadow: 0 1px 12px rgba(255, 255, 255, 0.85);
+  text-shadow: 0 2px 14px rgba(25, 10, 49, 0.65);
 }
 
 .pod-page[data-theme='night'] .pod-topbar__title {
@@ -153,7 +153,7 @@
 
 .pod-shell {
   width: min(1060px, calc(100% - 32px));
-  margin: clamp(50px, 11vh, 130px) auto 0;
+  margin: clamp(58px, 9vh, 108px) auto 0;
   display: grid;
   gap: 18px;
   position: relative;
@@ -165,14 +165,17 @@
 .pod-card {
   border: 1px solid var(--pod-line);
   background: var(--pod-glass);
-  box-shadow: var(--pod-shadow), inset 0 1px rgba(255, 255, 255, 0.68);
-  backdrop-filter: blur(26px) saturate(1.14);
-  -webkit-backdrop-filter: blur(26px) saturate(1.14);
+  box-shadow: var(--pod-shadow), inset 0 1px rgba(255, 255, 255, 0.24);
+  backdrop-filter: blur(20px) saturate(1.28);
+  -webkit-backdrop-filter: blur(20px) saturate(1.28);
 }
 
 .pod-core {
-  min-height: 470px;
-  border-radius: 46px;
+  min-height: 324px;
+  border-radius: 36px;
+  background:
+    linear-gradient(145deg, rgba(38, 22, 69, 0.68), rgba(101, 54, 127, 0.45)),
+    var(--pod-glass);
   display: grid;
   place-items: center;
   position: relative;
@@ -205,15 +208,15 @@
 
 .pod-core__glow {
   position: absolute;
-  width: min(560px, 78vw);
+  width: min(390px, 72vw);
   aspect-ratio: 1;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 42% 36%, rgba(255, 255, 255, 0.96) 0 3%, rgba(255, 255, 255, 0.48) 12%, transparent 31%),
-    radial-gradient(circle, rgba(236, 218, 255, 0.38) 0 42%, rgba(168, 129, 225, 0.17) 58%, transparent 72%);
+    radial-gradient(circle at 42% 36%, rgba(255, 255, 255, 0.62) 0 2%, rgba(255, 255, 255, 0.16) 11%, transparent 29%),
+    radial-gradient(circle, rgba(201, 142, 255, 0.2) 0 35%, rgba(239, 130, 195, 0.12) 56%, transparent 72%);
   filter: blur(2px);
   animation: pod-breathe 7s ease-in-out infinite;
-  opacity: 0.76;
+  opacity: 0.52;
 }
 
 .pod-page[data-theme='night'] .pod-core__glow {
@@ -221,8 +224,8 @@
 }
 
 .pod-core__content {
-  width: min(520px, calc(100% - 42px));
-  padding: 48px 0;
+  width: min(620px, calc(100% - 40px));
+  padding: 27px 0 24px;
   text-align: center;
   position: relative;
   z-index: 1;
@@ -231,17 +234,17 @@
 .pod-eyebrow {
   margin: 0;
   color: var(--pod-accent);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 900;
   letter-spacing: 0.24em;
   line-height: 1.4;
 }
 
 .pod-core h1 {
-  margin: 12px 0 10px;
+  margin: 8px 0 5px;
   color: var(--pod-ink);
   font-family: ui-rounded, "PingFang SC", "Microsoft YaHei", sans-serif;
-  font-size: clamp(31px, 6vw, 50px);
+  font-size: clamp(27px, 5vw, 39px);
   font-weight: 780;
   letter-spacing: 0.06em;
   line-height: 1.24;
@@ -251,13 +254,13 @@
   max-width: 410px;
   margin: 0 auto;
   color: var(--pod-muted);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.7;
 }
 
 .pod-core__meter {
-  margin: 25px auto 8px;
+  margin: 13px auto 4px;
   display: flex;
   align-items: baseline;
   justify-content: center;
@@ -277,7 +280,7 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  font-size: clamp(54px, 10vw, 78px);
+  font-size: clamp(48px, 8vw, 66px);
   font-weight: 900;
   letter-spacing: -0.065em;
   line-height: 1;
@@ -293,7 +296,7 @@
 
 .pod-core__meter em {
   color: var(--pod-muted);
-  font-size: 11px;
+  font-size: 9px;
   font-style: normal;
   font-weight: 900;
   letter-spacing: 0.14em;
@@ -301,7 +304,7 @@
 }
 
 .pod-core__stats {
-  margin-bottom: 22px;
+  margin-bottom: 13px;
   display: flex;
   justify-content: center;
   gap: 8px;
@@ -312,7 +315,7 @@
   border: 1px solid var(--pod-line);
   border-radius: 999px;
   color: var(--pod-muted);
-  background: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.1);
   font-size: 11px;
   font-weight: 700;
 }
@@ -323,11 +326,11 @@
 }
 
 .pod-primary {
-  width: min(310px, 100%);
-  min-height: 56px;
+  width: min(286px, 100%);
+  min-height: 48px;
   padding: 0 20px;
   border: 0;
-  border-radius: 20px;
+  border-radius: 16px;
   color: white;
   background: var(--pod-core);
   box-shadow: 0 16px 30px rgba(139, 92, 203, 0.28), inset 0 1px rgba(255, 255, 255, 0.35);
@@ -362,16 +365,19 @@
 }
 
 .pod-core__fineprint {
-  margin: 12px 0 0;
+  margin: 9px 0 0;
   color: var(--pod-muted);
-  font-size: 10px;
+  font-size: 9px;
   line-height: 1.5;
 }
 
 .pod-bubbles {
-  min-height: 194px;
-  padding: 24px 28px 20px;
-  border-radius: 32px;
+  min-height: 184px;
+  padding: 20px 22px 16px;
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, rgba(31, 18, 62, 0.66), rgba(94, 50, 120, 0.38)),
+    var(--pod-glass);
   overflow: hidden;
 }
 
@@ -386,7 +392,7 @@
 .pod-card h2 {
   margin: 4px 0 0;
   color: var(--pod-ink);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 850;
   letter-spacing: 0.04em;
 }
@@ -398,11 +404,11 @@
 }
 
 .pod-bubbles__rail {
-  min-height: 116px;
-  padding: 7px 3px 0;
+  min-height: 112px;
+  padding: 5px 7px 0;
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 14px;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
@@ -419,18 +425,20 @@
   height: var(--bubble-size);
   flex: 0 0 var(--bubble-size);
   padding: 10px 7px;
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  border-radius: 50%;
-  color: var(--pod-ink);
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 54% 46% 52% 48% / 48% 57% 43% 52%;
+  color: #fffaff;
   background:
-    radial-gradient(circle at 30% 19%, rgba(255, 255, 255, 0.98) 0 4%, rgba(255, 255, 255, 0.58) 9%, transparent 25%),
-    radial-gradient(circle at 72% 78%, color-mix(in srgb, var(--bubble-c) 78%, transparent), transparent 48%),
-    linear-gradient(145deg, color-mix(in srgb, var(--bubble-a) 76%, white), color-mix(in srgb, var(--bubble-b) 70%, transparent) 54%, color-mix(in srgb, var(--bubble-c) 76%, white));
+    radial-gradient(circle at 28% 18%, rgba(255, 255, 255, 0.96) 0 3%, rgba(255, 255, 255, 0.42) 8%, transparent 23%),
+    radial-gradient(circle at 72% 78%, color-mix(in srgb, var(--bubble-c) 68%, transparent), transparent 48%),
+    linear-gradient(145deg, color-mix(in srgb, var(--bubble-a) 62%, transparent), color-mix(in srgb, var(--bubble-b) 74%, #39245e) 54%, color-mix(in srgb, var(--bubble-c) 64%, transparent));
   box-shadow:
     0 12px 29px color-mix(in srgb, var(--bubble-b) 28%, transparent),
     0 0 0 1px color-mix(in srgb, var(--bubble-ring) 70%, transparent),
     inset -8px -10px 20px color-mix(in srgb, var(--bubble-b) 23%, transparent),
-    inset 6px 7px 18px rgba(255, 255, 255, 0.64);
+    inset 6px 7px 18px rgba(255, 255, 255, 0.32);
+  backdrop-filter: blur(10px) saturate(1.4);
+  -webkit-backdrop-filter: blur(10px) saturate(1.4);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -442,6 +450,14 @@
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
   animation: bubble-arrive 520ms ease both;
   animation-delay: calc(var(--bubble-index) * 38ms);
+}
+
+.pod-bubble:nth-child(2n) {
+  border-radius: 46% 54% 43% 57% / 55% 45% 55% 45%;
+}
+
+.pod-bubble:nth-child(3n) {
+  border-radius: 58% 42% 55% 45% / 42% 51% 49% 58%;
 }
 
 .pod-page[data-theme='night'] .pod-bubble {
@@ -518,6 +534,7 @@
   line-height: 1;
   position: relative;
   z-index: 1;
+  text-shadow: 0 2px 10px rgba(26, 10, 50, 0.58);
 }
 
 .pod-bubble strong::before {
@@ -537,7 +554,7 @@
   line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
-  opacity: 0.75;
+  opacity: 0.86;
   position: relative;
   z-index: 1;
 }
@@ -550,14 +567,14 @@
   border-radius: 999px;
   overflow: hidden;
   color: currentColor;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(31, 15, 56, 0.2);
   font-size: clamp(6px, calc(var(--bubble-size) * 0.085), 8px);
   font-style: normal;
   font-weight: 900;
   line-height: 1;
   text-overflow: ellipsis;
   white-space: nowrap;
-  opacity: 0.72;
+  opacity: 0.88;
   position: relative;
   z-index: 1;
 }
@@ -597,7 +614,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 800;
 }
 
@@ -624,30 +641,33 @@
 .pod-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: 13px;
 }
 
 .pod-card {
-  min-height: 250px;
-  padding: 26px;
-  border-radius: 32px;
+  min-height: 214px;
+  padding: 20px;
+  border-radius: 28px;
+  background:
+    linear-gradient(145deg, rgba(35, 20, 65, 0.66), rgba(91, 48, 114, 0.38)),
+    var(--pod-glass);
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr);
+  grid-template-columns: 40px minmax(0, 1fr);
   align-items: start;
   gap: 16px;
 }
 
 .pod-card__icon {
-  width: 46px;
-  height: 46px;
+  width: 40px;
+  height: 40px;
   border: 1px solid var(--pod-line);
-  border-radius: 16px;
+  border-radius: 14px;
   color: white;
   background: linear-gradient(145deg, #a78ae5, #e99ac5);
   box-shadow: 0 10px 20px rgba(132, 87, 190, 0.2), inset 0 1px rgba(255, 255, 255, 0.45);
   display: grid;
   place-items: center;
-  font-size: 23px;
+  font-size: 19px;
 }
 
 .pod-card--restore .pod-card__icon {
@@ -661,12 +681,12 @@
 .pod-selection {
   width: 100%;
   min-height: 61px;
-  margin: 20px 0 11px;
+  margin: 14px 0 9px;
   padding: 11px 12px 11px 15px;
   border: 1px solid var(--pod-line);
   border-radius: 18px;
   color: var(--pod-ink);
-  background: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.09);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -700,8 +720,8 @@
   flex: 0 0 auto;
   padding: 5px 8px;
   border-radius: 999px;
-  color: var(--pod-accent);
-  background: rgba(159, 119, 217, 0.12);
+  color: #f4c7ff;
+  background: rgba(222, 165, 255, 0.13);
   font-size: 9px;
   font-style: normal;
   font-weight: 850;
@@ -719,7 +739,7 @@
   border: 1px solid var(--pod-line);
   border-radius: 14px;
   color: var(--pod-ink);
-  background: rgba(255, 255, 255, 0.31);
+  background: rgba(255, 255, 255, 0.1);
   cursor: pointer;
   font-size: 11px;
   font-weight: 800;
@@ -727,7 +747,7 @@
 
 .pod-card__buttons button:hover,
 .pod-upload:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.17);
 }
 
 .pod-card__empty,
@@ -747,7 +767,7 @@
   margin: 18px 0 10px;
   border: 1px solid var(--pod-line);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 3px;
@@ -947,32 +967,32 @@
   }
 
   .pod-shell {
-    margin-top: clamp(54px, 13vh, 110px);
+    margin-top: clamp(48px, 10vh, 82px);
     gap: 13px;
   }
 
   .pod-core {
-    min-height: 455px;
-    border-radius: 34px;
+    min-height: 315px;
+    border-radius: 29px;
   }
 
   .pod-core__content {
     width: calc(100% - 32px);
-    padding: 40px 0;
+    padding: 24px 0 20px;
   }
 
   .pod-core h1 {
-    font-size: clamp(30px, 9vw, 42px);
+    font-size: clamp(27px, 7.5vw, 34px);
   }
 
   .pod-core__copy {
     max-width: 330px;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .pod-bubbles {
-    padding: 21px 18px 17px;
-    border-radius: 27px;
+    padding: 18px 16px 14px;
+    border-radius: 25px;
   }
 
   .pod-bubbles__meta {
@@ -996,8 +1016,8 @@
 
   .pod-card {
     min-height: 0;
-    padding: 22px 18px;
-    border-radius: 27px;
+    padding: 18px 16px;
+    border-radius: 25px;
     grid-template-columns: 40px minmax(0, 1fr);
     gap: 13px;
   }

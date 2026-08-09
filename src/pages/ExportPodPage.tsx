@@ -106,8 +106,8 @@ function formatTokens(value: number): string {
 }
 
 function bubbleSize(value: number, max: number): number {
-  if (max <= 0) return 70;
-  return Math.round(64 + Math.sqrt(value / max) * 38);
+  if (max <= 0) return 68;
+  return Math.round(57 + Math.sqrt(value / max) * 54);
 }
 
 export function ExportPodPage() {
@@ -239,8 +239,8 @@ export function ExportPodPage() {
           <div className="pod-core__glow" aria-hidden="true" />
           <div className="pod-core__content">
             <p className="pod-eyebrow">MEMORY CARGO · LOCAL ONLY</p>
-            <h1 id="pod-core-title">把我们的聊天<br />装进一颗星球</h1>
-            <p className="pod-core__copy">从这台设备封装，换手机时再带回来。不会上传到导出舱服务器。</p>
+            <h1 id="pod-core-title">把聊天装进星球</h1>
+            <p className="pod-core__copy">留在这台设备，封装后由你亲手带走。</p>
 
             <div className="pod-core__meter" aria-label={`全部窗口估算约 ${snapshot.tokenEstimate} token`}>
               <span>全部窗口估算</span>
