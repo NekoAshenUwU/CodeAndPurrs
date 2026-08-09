@@ -133,6 +133,11 @@ export function readExportPodSnapshot(): ExportPodSnapshot {
   };
 }
 
+export function findWindowCargo(snapshot: ExportPodSnapshot, windowId: string): WindowCargo | null {
+  if (!windowId) return null;
+  return snapshot.windows.find((item) => item.meta.id === windowId) ?? null;
+}
+
 function collectSettings(): Record<string, string> {
   const settings: Record<string, string> = {};
   for (let index = 0; index < localStorage.length; index += 1) {
@@ -250,7 +255,10 @@ export function clearLocalChats(): void {
 }
 
 export function downloadText(filename: string, mime: string, content: string): void {
-  const blob = new Blob([content], { type: `${mime};charset=utf-8` });
+  const isPlainText = mime === 'text/plain' || mime === 'text/markdown';
+  const normalized = isPlainText ? content.replace(/\r?\n/g, '\r\n') : content;
+  const payload = isPlainText ? `\uFEFF${normalized}` : normalized;
+  const blob = new Blob([payload], { type: `${mime};charset=utf-8` });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
