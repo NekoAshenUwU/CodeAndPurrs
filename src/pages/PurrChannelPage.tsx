@@ -19,6 +19,55 @@ const WINDOWS_KEY = 'purr-channel:windows';
 const LEGACY_TURNS_KEY = 'purr-channel:turns'; // 旧版单一对话，首次进入迁移成一个窗口
 const turnsKey = (id: string) => `purr-channel:turns:${id}`;
 
+const CLOUD_KEY_STORAGE = 'codeandpurrs:purr-channel:cloud-key';
+
+type CloudSave = {
+  version: number;
+  window: WindowMeta;
+  turns: Turn[];
+  rollingSummary?: RollingSummary | null;
+  savedAt: number;
+};
+
+function getCloudKey(): string | null {
+  let key = '';
+  try {
+    key = localStorage.getItem(CLOUD_KEY_STORAGE)?.trim() ?? '';
+  } catch {
+    // 隐私模式读不到就让老婆本次输入，不让页面崩掉
+  }
+  if (!key) key = window.prompt('输入呼噜频道存档密码')?.trim() ?? '';
+  if (!key) return null;
+  try {
+    localStorage.setItem(CLOUD_KEY_STORAGE, key);
+  } catch {
+    // 存不下也没关系，本次请求仍然能用
+  }
+  return key;
+}
+
+async function cloudRequest(path: string, init: RequestInit = {}): Promise<Response> {
+  const key = getCloudKey();
+  if (!key) throw new Error('没有输入存档密码');
+  const headers = new Headers(init.headers);
+  headers.set('X-Chat-Save-Key', key);
+  if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+  const response = await fetch(path, { ...init, headers });
+  if (response.status === 401) {
+    try {
+      localStorage.removeItem(CLOUD_KEY_STORAGE);
+    } catch {
+      // 忽略
+    }
+    throw new Error('存档密码不正确');
+  }
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(String(body?.error || `存档服务返回 ${response.status}`));
+  }
+  return response;
+}
+
 // 一个聊天窗口的元信息（聊天记录另存在 turnsKey(id) 下）
 type WindowMeta = {
   id: string;
@@ -864,6 +913,7 @@ function ChatRoom({
   const setVersionFor = (id: string, idx: number) =>
     setVersionView((prev) => ({ ...prev, [id]: idx }));
   const [notice, setNotice] = useState('');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [liveCtx, setLiveCtx] = useState(''); // 猫爪足迹+浪哪了的实时背景，进窗口拉一次、之后每5分钟刷
   // liveCtx 上次真正拼进 system 前缀的时间戳。之前每条消息都附一遍 usage bridge
   // 数据(~500 tokens)烧掉不少订阅额度——老婆定的规则:同一 3 小时窗口内只附一次,
@@ -906,6 +956,23 @@ function ChatRoom({
     const t = window.setTimeout(() => setNotice(''), 2200);
     return () => window.clearTimeout(t);
   }, [notice]);
+
+  const saveProgress = async () => {
+    if (sending || saveState === 'saving') return;
+    setSaveState('saving');
+    try {
+      await cloudRequest(`/api/chat-saves/${encodeURIComponent(win.id)}`, {
+        method: 'POST',
+        body: JSON.stringify({ window: win, turns, rollingSummary }),
+      });
+      setSaveState('saved');
+      setNotice(`已存档 · ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`);
+      window.setTimeout(() => setSaveState('idle'), 2200);
+    } catch (err) {
+      setSaveState('idle');
+      window.alert(`存档没有完成：${(err as Error).message}`);
+    }
+  };
 
   // 「+」菜单：表情包走脑洞贴纸盒；图片走系统选图+自动压缩；红包填金额+留言发进落予棠
   const pickMore = (key: string, label: string) => {
@@ -1463,6 +1530,16 @@ function ChatRoom({
         </div>
         <button
           type="button"
+          className={`chat-head__save is-${saveState}`}
+          onClick={() => void saveProgress()}
+          disabled={sending || saveState === 'saving'}
+          aria-label="保存聊天进度"
+          title="保存到云端"
+        >
+          {saveState === 'saving' ? '保存中' : saveState === 'saved' ? '已存' : '存档'}
+        </button>
+        <button
+          type="button"
           className="chat-head__clear"
           onClick={clearHistory}
           disabled={sending || turns.length === 0}
@@ -1768,12 +1845,16 @@ function WindowList({
   onNew,
   onRename,
   onDelete,
+  onRestore,
+  restoring,
 }: {
   windows: WindowMeta[];
   onOpen: (id: string) => void;
   onNew: () => void;
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
+  onRestore: () => void;
+  restoring: boolean;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -1798,6 +1879,16 @@ function WindowList({
           <span className="chat-head__name">呼噜频道</span>
           <span className="chat-head__sub">Purr Channel · 聊天窗</span>
         </div>
+        <button
+          type="button"
+          className="chat-head__restore"
+          onClick={onRestore}
+          disabled={restoring}
+          aria-label="恢复云端存档"
+          title="恢复云端存档"
+        >
+          {restoring ? '恢复中' : '恢复'}
+        </button>
         <button
           type="button"
           className="chat-glass-btn cg-newwin"
@@ -1909,6 +2000,7 @@ function initWindows(): WindowMeta[] {
 export function PurrChannelPage() {
   const [windows, setWindows] = useState<WindowMeta[]>(initWindows);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState(false);
 
   useEffect(() => {
     saveLocal(WINDOWS_KEY, windows);
@@ -1944,6 +2036,39 @@ export function PurrChannelPage() {
   const setWindowProvider = (id: string, provider: string) =>
     setWindows((prev) => prev.map((w) => (w.id === id ? { ...w, provider } : w)));
 
+  const restoreCloud = async () => {
+    if (restoring) return;
+    setRestoring(true);
+    try {
+      const response = await cloudRequest('/api/chat-saves');
+      const data = (await response.json()) as { saves?: CloudSave[] };
+      const saves = Array.isArray(data.saves) ? data.saves : [];
+      if (!saves.length) {
+        window.alert('云端还没有呼噜频道存档');
+        return;
+      }
+      for (const save of saves) {
+        if (!save?.window?.id || !Array.isArray(save.turns)) continue;
+        saveLocal(turnsKey(save.window.id), save.turns);
+        if (save.rollingSummary) saveRollingSummary(save.window.id, save.rollingSummary);
+      }
+      setWindows((current) => {
+        const merged = new Map(current.map((item) => [item.id, item]));
+        for (const save of saves) {
+          if (!save?.window?.id) continue;
+          const local = merged.get(save.window.id);
+          if (!local || save.window.updatedAt >= local.updatedAt) merged.set(save.window.id, save.window);
+        }
+        return [...merged.values()].sort((a, b) => b.updatedAt - a.updatedAt);
+      });
+      window.alert(`已恢复 ${saves.length} 个聊天窗口`);
+    } catch (err) {
+      window.alert(`恢复没有完成：${(err as Error).message}`);
+    } finally {
+      setRestoring(false);
+    }
+  };
+
   const active = windows.find((w) => w.id === activeId) ?? null;
 
   if (active) {
@@ -1964,6 +2089,8 @@ export function PurrChannelPage() {
       onNew={newWindow}
       onRename={renameWindow}
       onDelete={deleteWindow}
+      onRestore={() => void restoreCloud()}
+      restoring={restoring}
     />
   );
 }
