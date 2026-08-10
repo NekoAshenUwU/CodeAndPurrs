@@ -6,7 +6,7 @@
 
 import http from 'node:http';
 import { spawn } from 'node:child_process';
-import { readFileSync, existsSync, writeFileSync, mkdirSync, statSync, renameSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync, statSync, renameSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -42,6 +42,48 @@ function diaryStat() {
 function saveDiary(text) {
   mkdirSync(dirname(DIARY_FILE), { recursive: true });
   writeFileSync(DIARY_FILE, text, 'utf8');
+}
+
+// 呼噜频道云端存档：聊天仍以浏览器本地为主，老婆按「存档」时才写进 VPS。
+// API 必须带 X-Chat-Save-Key；密钥只放 .env，绝不烧进前端包或 GitHub。
+const CHAT_SAVE_DIR = process.env.CHAT_SAVE_DIR || join(dirname(fileURLToPath(import.meta.url)), 'data', 'chat-saves');
+function validChatSaveId(id) {
+  return /^[a-zA-Z0-9_-]{1,80}$/.test(id);
+}
+function chatSaveFile(id) {
+  if (!validChatSaveId(id)) throw new Error('存档编号无效');
+  return join(CHAT_SAVE_DIR, `${id}.json`);
+}
+function hasChatSaveAccess(req) {
+  const expected = String(process.env.CHAT_SAVE_KEY || '').trim();
+  const supplied = String(req.headers['x-chat-save-key'] || '').trim();
+  return Boolean(expected && supplied && supplied === expected);
+}
+function saveChatSnapshot(id, snapshot) {
+  mkdirSync(CHAT_SAVE_DIR, { recursive: true });
+  const target = chatSaveFile(id);
+  const temp = `${target}.tmp-${process.pid}-${Date.now()}`;
+  writeFileSync(temp, JSON.stringify(snapshot), 'utf8');
+  renameSync(temp, target);
+}
+function loadChatSnapshot(id) {
+  const target = chatSaveFile(id);
+  if (!existsSync(target)) return null;
+  return JSON.parse(readFileSync(target, 'utf8'));
+}
+function listChatSnapshots() {
+  if (!existsSync(CHAT_SAVE_DIR)) return [];
+  return readdirSync(CHAT_SAVE_DIR)
+    .filter((name) => name.endsWith('.json'))
+    .map((name) => {
+      try {
+        return JSON.parse(readFileSync(join(CHAT_SAVE_DIR, name), 'utf8'));
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0));
 }
 
 // ---------- 棠予酿实时日记（从 /internal/diary/list 拉，兜底静态 diary.md）----------
@@ -1209,6 +1251,70 @@ const server = http.createServer(async (req, res) => {
   const isDiary = req.url?.startsWith('/api/diary') && !isDiaryComposed;
   const isTangyuniang = req.url?.startsWith('/api/tangyuniang/');
   const isMurmursFlowers = req.url === '/api/murmurs/flowers' || req.url?.startsWith('/api/murmurs/flowers?');
+  const requestUrl = new URL(req.url || '/', 'http://localhost');
+  const requestPath = requestUrl.pathname;
+  const isChatSaves = requestPath === '/api/chat-saves' || requestPath.startsWith('/api/chat-saves/');
+
+  // ----- 呼噜频道私密云存档：列出 / 读取 / 覆盖当前窗口 -----
+  if (isChatSaves) {
+    if (!hasChatSaveAccess(req)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: process.env.CHAT_SAVE_KEY ? '存档密码不正确' : '服务器尚未配置 CHAT_SAVE_KEY' }));
+      return;
+    }
+    const id = decodeURIComponent(requestPath.slice('/api/chat-saves/'.length));
+    if (req.method === 'GET' && requestPath === '/api/chat-saves') {
+      const saves = listChatSnapshots();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ saves, count: saves.length }));
+      return;
+    }
+    if (req.method === 'GET' && validChatSaveId(id)) {
+      const save = loadChatSnapshot(id);
+      if (!save) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: '没有找到这个存档' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(save));
+      return;
+    }
+    if (req.method === 'POST' && validChatSaveId(id)) {
+      let body;
+      try {
+        body = await readJSON(req);
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: String(err?.message || err) }));
+        return;
+      }
+      if (!body?.window || body.window.id !== id || !Array.isArray(body.turns)) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: '存档内容格式不正确' }));
+        return;
+      }
+      const snapshot = {
+        version: 1,
+        window: body.window,
+        turns: body.turns,
+        rollingSummary: body.rollingSummary || null,
+        savedAt: Date.now(),
+      };
+      try {
+        saveChatSnapshot(id, snapshot);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, savedAt: snapshot.savedAt, messageCount: snapshot.turns.length }));
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: String(err?.message || err) }));
+      }
+      return;
+    }
+    res.writeHead(405, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'method not allowed' }));
+    return;
+  }
 
   // ----- 棠予酿 internal 通道转发 -----
   // 白名单 + 强制 X-Internal-Key 头 + method 检查全在 forwardToTangyuniang 里做,
