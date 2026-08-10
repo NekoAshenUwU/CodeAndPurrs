@@ -6070,3 +6070,40 @@ a {
   letter-spacing: 0.06em;
   font-family: var(--display);
 }
+
+
+/* ---------- 呼噜频道：一键存档 / 云端恢复 ---------- */
+.chat-head__save,
+.chat-head__restore {
+  flex-shrink: 0;
+  height: 34px;
+  min-width: 48px;
+  padding: 0 11px;
+  color: #6d4b91;
+  border: 1px solid rgba(255, 255, 255, 0.86);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 25% 10%, rgba(255, 255, 255, 0.92), transparent 48%),
+    linear-gradient(135deg, rgba(229, 202, 250, 0.92), rgba(185, 213, 255, 0.9));
+  box-shadow: 0 5px 14px rgba(113, 88, 169, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  font-family: "HuaXianZi", var(--display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.16s ease, filter 0.2s ease, opacity 0.2s ease;
+}
+.chat-head__save:active,
+.chat-head__restore:active { transform: scale(0.94); }
+.chat-head__save:disabled,
+.chat-head__restore:disabled { opacity: 0.5; cursor: default; }
+.chat-head__save.is-saving { filter: saturate(0.72); }
+.chat-head__save.is-saved {
+  color: #3f7169;
+  background: linear-gradient(135deg, rgba(202, 245, 232, 0.95), rgba(201, 225, 255, 0.92));
+  box-shadow: 0 0 16px rgba(117, 226, 205, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+@media (max-width: 390px) {
+  .chat-head { gap: 6px; padding-left: 9px; padding-right: 9px; }
+  .chat-head__save { min-width: 42px; padding: 0 8px; }
+  .chat-head__restore { min-width: 44px; padding: 0 8px; }
+}
