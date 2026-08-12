@@ -10,7 +10,8 @@ type RoomCardProps = {
 export function RoomCard({ room, index, onSelect }: RoomCardProps) {
   const [iconOk, setIconOk] = useState(true);
   const [tapped, setTapped] = useState(false);
-  const iconSrc = `${import.meta.env.BASE_URL}assets/icons/${room.id}.png`;
+  const iconVersion = room.id === 'his-playlist' ? '?v=frosted-20260812' : '';
+  const iconSrc = `${import.meta.env.BASE_URL}assets/icons/${room.id}.png${iconVersion}`;
   const isReady = room.status === 'ready';
 
   const classes = ['room-tile'];
