@@ -35,7 +35,8 @@ function formatTime(ms: number) {
 
 export function HisPlaylistPage() {
   const navigate = useNavigate();
-  const askSongOrbSrc = `${import.meta.env.BASE_URL}assets/his-playlist/ask-song-orb.png?v=20260812`;
+  const askSongPillSrc = `${import.meta.env.BASE_URL}assets/his-playlist/ask-song-pill.png?v=20260813`;
+  const playOrbSrc = `${import.meta.env.BASE_URL}assets/his-playlist/play-orb.png?v=20260813`;
   const [status, setStatus] = useState<SpotifyStatus>({ configured: false, connected: false });
   const [statusReady, setStatusReady] = useState(false);
   const [player, setPlayer] = useState<SpotifyPlayer | null>(null);
@@ -205,14 +206,14 @@ export function HisPlaylistPage() {
           />
           <button
             type="button"
-            className={`hp-pick__orb${picking ? ' is-picking' : ''}`}
+            className={`hp-pick__visual${picking ? ' is-picking' : ''}`}
             aria-label={picking ? '正在替我挑歌' : '替我点歌'}
             title={picking ? '挑选中' : '替我点歌'}
             onClick={() => void askForSong()}
             disabled={picking}
           >
-            <img src={askSongOrbSrc} alt="" aria-hidden="true" />
-            <span className="hp-pick__orb-ripple" aria-hidden="true" />
+            <img src={askSongPillSrc} alt="" aria-hidden="true" />
+            <span className="hp-pick__visual-ripple" aria-hidden="true" />
           </button>
         </div>
         {pick?.reason ? <p className="hp-pick__reason">“{pick.reason}”</p> : null}
@@ -246,7 +247,8 @@ export function HisPlaylistPage() {
         <div className="hp-controls">
           <button type="button" aria-label="上一首" onClick={() => void player?.previousTrack()}>‹</button>
           <button type="button" className="hp-controls__play" aria-label={active ? '暂停' : '播放'} onClick={() => void toggle()}>
-            {active ? 'Ⅱ' : '▶'}
+            <img src={playOrbSrc} alt="" aria-hidden="true" />
+            <span aria-hidden="true">{active ? 'Ⅱ' : '▶'}</span>
           </button>
           <button type="button" aria-label="下一首" onClick={() => void player?.nextTrack()}>›</button>
         </div>
