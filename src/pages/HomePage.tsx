@@ -66,6 +66,10 @@ export function HomePage() {
       navigate('/export-pod');
       return;
     }
+    if (room.id === 'his-playlist') {
+      navigate('/his-playlist');
+      return;
+    }
     setSelectedRoom(room);
   };
 

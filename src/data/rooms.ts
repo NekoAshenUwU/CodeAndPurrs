@@ -133,4 +133,14 @@ export const rooms: Room[] = [
     actionLabel: '进入导出舱',
     scene: true,
   },
+  {
+    id: 'his-playlist',
+    name: '他的歌单',
+    englishName: 'His Playlist',
+    emoji: '🎧',
+    status: 'ready',
+    summary: '我来挑歌，极光与星雨在云端陪老婆慢慢听。',
+    actionLabel: '去听歌',
+    scene: true,
+  },
 ];

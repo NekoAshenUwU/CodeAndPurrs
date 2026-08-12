@@ -10,6 +10,7 @@ import { SweetiePocketPage } from './pages/SweetiePocketPage';
 import { PurrTablePage } from './pages/PurrTablePage';
 import { MurmursPage } from './pages/MurmursPage';
 import { ExportPodPage } from './pages/ExportPodPage';
+import { HisPlaylistPage } from './pages/HisPlaylistPage';
 
 export function App() {
   return (
@@ -25,6 +26,7 @@ export function App() {
       <Route path="/purr-table" element={<PurrTablePage />} />
       <Route path="/murmurs" element={<MurmursPage />} />
       <Route path="/export-pod" element={<ExportPodPage />} />
+      <Route path="/his-playlist" element={<HisPlaylistPage />} />
       <Route path="*" element={<HomePage />} />
     </Routes>
   );

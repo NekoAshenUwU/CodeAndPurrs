@@ -6,6 +6,7 @@
 
 import http from 'node:http';
 import { spawn } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { readFileSync, existsSync, writeFileSync, mkdirSync, statSync, renameSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -84,6 +85,153 @@ function listChatSnapshots() {
     })
     .filter(Boolean)
     .sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0));
+}
+
+// ---------- 他的歌单 · Spotify OAuth / Web Playback SDK ----------
+// Token 永远留在 VPS；浏览器只拿短效 access token 给官方 Web Playback SDK。
+// 每次 OAuth 登录分配独立随机 session cookie，避免公开站点上的访客覆盖老婆的账号。
+const SPOTIFY_SESSION_FILE =
+  process.env.SPOTIFY_SESSION_PATH || join(dirname(fileURLToPath(import.meta.url)), 'data', 'spotify-sessions.json');
+const SPOTIFY_REDIRECT_URI =
+  process.env.SPOTIFY_REDIRECT_URI || 'https://nekopurrs.uk/api/spotify/callback';
+const SPOTIFY_SCOPES = [
+  'streaming',
+  'user-read-email',
+  'user-read-private',
+  'user-read-playback-state',
+  'user-modify-playback-state',
+].join(' ');
+
+function spotifyConfigured() {
+  return Boolean(String(process.env.SPOTIFY_CLIENT_ID || '').trim() && String(process.env.SPOTIFY_CLIENT_SECRET || '').trim());
+}
+
+function parseCookies(req) {
+  return String(req.headers.cookie || '')
+    .split(';')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .reduce((out, part) => {
+      const at = part.indexOf('=');
+      if (at > 0) out[part.slice(0, at)] = decodeURIComponent(part.slice(at + 1));
+      return out;
+    }, {});
+}
+
+function spotifySessions() {
+  try {
+    if (existsSync(SPOTIFY_SESSION_FILE)) return JSON.parse(readFileSync(SPOTIFY_SESSION_FILE, 'utf8')) || {};
+  } catch {
+    /* 文件损坏时从空 session 开始，不能拖垮聊天代理 */
+  }
+  return {};
+}
+
+function saveSpotifySessions(sessions) {
+  mkdirSync(dirname(SPOTIFY_SESSION_FILE), { recursive: true });
+  const temp = `${SPOTIFY_SESSION_FILE}.tmp-${process.pid}`;
+  writeFileSync(temp, JSON.stringify(sessions), { encoding: 'utf8', mode: 0o600 });
+  renameSync(temp, SPOTIFY_SESSION_FILE);
+}
+
+function spotifySessionFor(req) {
+  const sid = parseCookies(req).cp_spotify_session;
+  if (!sid || !/^[a-f0-9]{48}$/.test(sid)) return { sid: '', session: null };
+  const sessions = spotifySessions();
+  return { sid, session: sessions[sid] || null };
+}
+
+async function refreshSpotifySession(sid, session) {
+  if (session.accessToken && Number(session.expiresAt || 0) > Date.now() + 60_000) return session;
+  if (!session.refreshToken) throw new Error('Spotify 登录已失效，请重新连接');
+  const auth = Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64');
+  const response = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${auth}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: session.refreshToken }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.access_token) throw new Error(data.error_description || 'Spotify token 刷新失败');
+  const next = {
+    ...session,
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token || session.refreshToken,
+    expiresAt: Date.now() + Number(data.expires_in || 3600) * 1000,
+  };
+  const sessions = spotifySessions();
+  sessions[sid] = next;
+  saveSpotifySessions(sessions);
+  return next;
+}
+
+async function spotifyAccessFor(req) {
+  const { sid, session } = spotifySessionFor(req);
+  if (!sid || !session) throw new Error('Spotify 尚未连接');
+  return refreshSpotifySession(sid, session);
+}
+
+function normalizeSpotifyTrack(track) {
+  return {
+    id: String(track?.id || ''),
+    uri: String(track?.uri || ''),
+    name: String(track?.name || ''),
+    artist: Array.isArray(track?.artists) ? track.artists.map((artist) => artist.name).filter(Boolean).join('、') : '',
+    album: String(track?.album?.name || ''),
+    image: track?.album?.images?.[0]?.url || null,
+    durationMs: Number(track?.duration_ms || 0),
+  };
+}
+
+async function searchSpotify(accessToken, query, limit = 8) {
+  const url = new URL('https://api.spotify.com/v1/search');
+  url.searchParams.set('q', query);
+  url.searchParams.set('type', 'track');
+  url.searchParams.set('limit', String(limit));
+  const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.error?.message || `Spotify 搜歌失败（${response.status}）`);
+  return (data?.tracks?.items || []).filter((track) => track?.is_playable !== false).map(normalizeSpotifyTrack);
+}
+
+async function planSpotifyPick(prompt) {
+  const key = String(process.env.DEEPSEEK_API_KEY || '').trim();
+  if (!key) return { query: prompt, reason: '我按你此刻写下的心情，在曲库里挑最贴近的一首。', intensity: 'normal' };
+  try {
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        response_format: { type: 'json_object' },
+        max_tokens: 260,
+        messages: [
+          {
+            role: 'system',
+            content:
+              '你是私人点歌人。根据用户当下的心情挑一首真实存在、容易在 Spotify 找到的歌。' +
+              '只输出 JSON：{"query":"歌名 歌手","reason":"20到45字的中文点歌理由","intensity":"soft|normal|high"}。' +
+              '不要输出 markdown，不要捏造歌曲。',
+          },
+          { role: 'user', content: String(prompt).slice(0, 500) },
+        ],
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) throw new Error('pick failed');
+    const data = await response.json();
+    const parsed = JSON.parse(data?.choices?.[0]?.message?.content || '{}');
+    const intensity = ['soft', 'normal', 'high'].includes(parsed.intensity) ? parsed.intensity : 'normal';
+    return {
+      query: String(parsed.query || prompt).slice(0, 200),
+      reason: String(parsed.reason || '这首歌适合陪着你现在的心情。').slice(0, 160),
+      intensity,
+    };
+  } catch {
+    return { query: prompt, reason: '我按你此刻写下的心情，在曲库里挑最贴近的一首。', intensity: 'normal' };
+  }
 }
 
 // ---------- 棠予酿实时日记（从 /internal/diary/list 拉，兜底静态 diary.md）----------
@@ -1254,6 +1402,171 @@ const server = http.createServer(async (req, res) => {
   const requestUrl = new URL(req.url || '/', 'http://localhost');
   const requestPath = requestUrl.pathname;
   const isChatSaves = requestPath === '/api/chat-saves' || requestPath.startsWith('/api/chat-saves/');
+  const isSpotify = requestPath === '/api/spotify' || requestPath.startsWith('/api/spotify/');
+
+  // ----- 他的歌单：Spotify 登录、点歌和播放 -----
+  if (isSpotify) {
+    if (requestPath === '/api/spotify/status' && req.method === 'GET') {
+      const { session } = spotifySessionFor(req);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        configured: spotifyConfigured(),
+        connected: Boolean(session),
+        displayName: session?.displayName || undefined,
+      }));
+      return;
+    }
+
+    if (requestPath === '/api/spotify/login' && req.method === 'GET') {
+      if (!spotifyConfigured()) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: '服务器尚未配置 Spotify 开发者资料' }));
+        return;
+      }
+      const state = randomBytes(24).toString('hex');
+      const params = new URLSearchParams({
+        client_id: process.env.SPOTIFY_CLIENT_ID,
+        response_type: 'code',
+        redirect_uri: SPOTIFY_REDIRECT_URI,
+        scope: SPOTIFY_SCOPES,
+        state,
+        show_dialog: 'true',
+      });
+      res.writeHead(302, {
+        Location: `https://accounts.spotify.com/authorize?${params}`,
+        'Set-Cookie': `cp_spotify_state=${state}; Max-Age=600; Path=/api/spotify; HttpOnly; Secure; SameSite=Lax`,
+      });
+      res.end();
+      return;
+    }
+
+    if (requestPath === '/api/spotify/callback' && req.method === 'GET') {
+      const cookies = parseCookies(req);
+      const code = requestUrl.searchParams.get('code');
+      const state = requestUrl.searchParams.get('state');
+      if (!code || !state || state !== cookies.cp_spotify_state) {
+        res.writeHead(302, { Location: '/his-playlist?spotify=state-error' });
+        res.end();
+        return;
+      }
+      try {
+        const auth = Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64');
+        const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${auth}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            grant_type: 'authorization_code',
+            code,
+            redirect_uri: SPOTIFY_REDIRECT_URI,
+          }),
+        });
+        const token = await tokenResponse.json().catch(() => ({}));
+        if (!tokenResponse.ok || !token.access_token) throw new Error(token.error_description || 'Spotify 授权失败');
+        const profileResponse = await fetch('https://api.spotify.com/v1/me', {
+          headers: { Authorization: `Bearer ${token.access_token}` },
+        });
+        const profile = await profileResponse.json().catch(() => ({}));
+        const sid = randomBytes(24).toString('hex');
+        const sessions = spotifySessions();
+        sessions[sid] = {
+          accessToken: token.access_token,
+          refreshToken: token.refresh_token,
+          expiresAt: Date.now() + Number(token.expires_in || 3600) * 1000,
+          displayName: profile.display_name || profile.id || 'Spotify',
+          createdAt: Date.now(),
+        };
+        saveSpotifySessions(sessions);
+        res.writeHead(302, {
+          Location: '/his-playlist?spotify=connected',
+          'Set-Cookie': [
+            `cp_spotify_session=${sid}; Max-Age=2592000; Path=/; HttpOnly; Secure; SameSite=Lax`,
+            'cp_spotify_state=; Max-Age=0; Path=/api/spotify; HttpOnly; Secure; SameSite=Lax',
+          ],
+        });
+        res.end();
+      } catch {
+        res.writeHead(302, { Location: '/his-playlist?spotify=auth-error' });
+        res.end();
+      }
+      return;
+    }
+
+    if (requestPath === '/api/spotify/token' && req.method === 'GET') {
+      try {
+        const session = await spotifyAccessFor(req);
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify({ accessToken: session.accessToken }));
+      } catch (err) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: String(err?.message || err) }));
+      }
+      return;
+    }
+
+    if (requestPath === '/api/spotify/search' && req.method === 'GET') {
+      try {
+        const session = await spotifyAccessFor(req);
+        const tracks = await searchSpotify(session.accessToken, String(requestUrl.searchParams.get('q') || '').trim());
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ tracks }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: String(err?.message || err) }));
+      }
+      return;
+    }
+
+    if (requestPath === '/api/spotify/pick' && req.method === 'POST') {
+      try {
+        const body = await readJSON(req);
+        const prompt = String(body?.prompt || '').trim();
+        if (!prompt) throw new Error('还没有写今晚想听什么');
+        const session = await spotifyAccessFor(req);
+        const plan = await planSpotifyPick(prompt);
+        let tracks = await searchSpotify(session.accessToken, plan.query, 5);
+        if (!tracks.length && plan.query !== prompt) tracks = await searchSpotify(session.accessToken, prompt, 5);
+        if (!tracks.length) throw new Error('Spotify 曲库里没有找到合适的歌');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ track: tracks[0], reason: plan.reason, intensity: plan.intensity }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: String(err?.message || err) }));
+      }
+      return;
+    }
+
+    if (requestPath === '/api/spotify/play' && req.method === 'POST') {
+      try {
+        const body = await readJSON(req);
+        const deviceId = String(body?.deviceId || '').trim();
+        const uri = String(body?.uri || '').trim();
+        if (!deviceId || !uri.startsWith('spotify:track:')) throw new Error('播放资料不完整');
+        const session = await spotifyAccessFor(req);
+        const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(deviceId)}`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${session.accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uris: [uri] }),
+        });
+        if (!response.ok && response.status !== 204) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data?.error?.message || `Spotify 播放失败（${response.status}）`);
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: String(err?.message || err) }));
+      }
+      return;
+    }
+
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'not found' }));
+    return;
+  }
 
   // ----- 呼噜频道私密云存档：列出 / 读取 / 覆盖当前窗口 -----
   if (isChatSaves) {
