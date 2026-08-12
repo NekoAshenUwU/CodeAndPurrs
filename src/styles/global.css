@@ -6321,13 +6321,35 @@ a {
 }
 
 .glass-night {
-  border: 1px solid rgba(255, 255, 255, 0.19);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(233, 237, 255, 0.28);
   background:
-    radial-gradient(circle at 20% 0%, rgba(188, 162, 255, 0.18), transparent 52%),
-    linear-gradient(145deg, rgba(19, 22, 72, 0.62), rgba(11, 15, 54, 0.47));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 18px 46px rgba(0, 2, 18, 0.33);
-  -webkit-backdrop-filter: blur(18px) saturate(1.2);
-  backdrop-filter: blur(18px) saturate(1.2);
+    radial-gradient(circle at 14% -8%, rgba(255, 255, 255, 0.18), transparent 38%),
+    radial-gradient(circle at 92% 112%, rgba(116, 176, 255, 0.12), transparent 44%),
+    linear-gradient(145deg, rgba(82, 78, 151, 0.22), rgba(7, 16, 55, 0.13));
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.24),
+    inset -1px -1px 0 rgba(126, 144, 222, 0.13),
+    0 16px 42px rgba(0, 2, 18, 0.2);
+  -webkit-backdrop-filter: blur(9px) saturate(1.32) brightness(1.06);
+  backdrop-filter: blur(9px) saturate(1.32) brightness(1.06);
+}
+.glass-night::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, 0.13), transparent 19% 72%, rgba(153, 187, 255, 0.08)),
+    radial-gradient(ellipse at 50% 0%, rgba(220, 213, 255, 0.1), transparent 54%);
+  opacity: 0.76;
+}
+.glass-night > * {
+  position: relative;
+  z-index: 1;
 }
 
 .hp-pick {
@@ -6356,7 +6378,7 @@ a {
   border-radius: 15px;
   outline: none;
   color: #fff;
-  background: rgba(4, 7, 36, 0.44);
+  background: rgba(4, 7, 36, 0.24);
   font: 0.83rem "ShunFengFull", var(--chat);
 }
 .hp-pick input::placeholder { color: rgba(216, 210, 241, 0.52); }
