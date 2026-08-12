@@ -35,6 +35,7 @@ function formatTime(ms: number) {
 
 export function HisPlaylistPage() {
   const navigate = useNavigate();
+  const askSongOrbSrc = `${import.meta.env.BASE_URL}assets/his-playlist/ask-song-orb.png?v=20260812`;
   const [status, setStatus] = useState<SpotifyStatus>({ configured: false, connected: false });
   const [statusReady, setStatusReady] = useState(false);
   const [player, setPlayer] = useState<SpotifyPlayer | null>(null);
@@ -202,8 +203,16 @@ export function HisPlaylistPage() {
             onKeyDown={(event) => event.key === 'Enter' && void askForSong()}
             placeholder="今天有点累，挑一首抱着我听的……"
           />
-          <button type="button" onClick={() => void askForSong()} disabled={picking}>
-            {picking ? '挑选中' : '替我点歌'}
+          <button
+            type="button"
+            className={`hp-pick__orb${picking ? ' is-picking' : ''}`}
+            aria-label={picking ? '正在替我挑歌' : '替我点歌'}
+            title={picking ? '挑选中' : '替我点歌'}
+            onClick={() => void askForSong()}
+            disabled={picking}
+          >
+            <img src={askSongOrbSrc} alt="" aria-hidden="true" />
+            <span className="hp-pick__orb-ripple" aria-hidden="true" />
           </button>
         </div>
         {pick?.reason ? <p className="hp-pick__reason">“{pick.reason}”</p> : null}
