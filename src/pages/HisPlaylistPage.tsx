@@ -37,6 +37,7 @@ export function HisPlaylistPage() {
   const navigate = useNavigate();
   const askSongPillSrc = `${import.meta.env.BASE_URL}assets/his-playlist/ask-song-pill.png?v=20260813`;
   const playOrbSrc = `${import.meta.env.BASE_URL}assets/his-playlist/play-orb.png?v=20260813`;
+  const standbyCoverSrc = `${import.meta.env.BASE_URL}assets/his-playlist/player-standby-cover.png?v=20260813`;
   const [status, setStatus] = useState<SpotifyStatus>({ configured: false, connected: false });
   const [statusReady, setStatusReady] = useState(false);
   const [player, setPlayer] = useState<SpotifyPlayer | null>(null);
@@ -221,7 +222,7 @@ export function HisPlaylistPage() {
 
       <section className="hp-player glass-night" aria-label="呼噜留声机">
         <div className="hp-player__cover">
-          {nowPlaying.image ? <img src={nowPlaying.image} alt="" /> : <span>✦</span>}
+          <img src={nowPlaying.image || standbyCoverSrc} alt="" />
         </div>
         <div className="hp-player__track">
           <small>呼噜留声机</small>
