@@ -1523,7 +1523,7 @@ const server = http.createServer(async (req, res) => {
       try {
         const body = await readJSON(req);
         const prompt = String(body?.prompt || '').trim();
-        if (!prompt) throw new Error('还没有写今晚想听什么');
+        if (!prompt) throw new Error('还没有写想听什么');
         const session = await spotifyAccessFor(req);
         const plan = await planSpotifyPick(prompt);
         let tracks = await searchSpotify(session.accessToken, plan.query, 5);

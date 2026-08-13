@@ -99,8 +99,8 @@ export function HisPlaylistPage() {
   const progress = duration ? Math.min(100, (position / duration) * 100) : previewPlaying ? 34 : 0;
   const nowPlaying = useMemo(
     () => ({
-      name: pick?.track.name || '今晚，听我挑给你的',
-      artist: pick?.track.artist || 'His Playlist · visual preview',
+      name: pick?.track.name || '听我挑给你的',
+      artist: pick?.track.artist || 'His Playlist · Waiting for you',
       image: pick?.track.image || null,
     }),
     [pick],
@@ -127,7 +127,7 @@ export function HisPlaylistPage() {
   const askForSong = async () => {
     const text = prompt.trim();
     if (!text) {
-      setNotice('告诉我今晚是什么心情，我才好挑歌。');
+      setNotice('告诉我现在是什么心情，我才好挑歌。');
       return;
     }
     if (!status.connected) {
@@ -191,7 +191,7 @@ export function HisPlaylistPage() {
       </header>
 
       <section className="hp-intro" aria-label="房间介绍">
-        <p>今晚，听我挑给你的。</p>
+        <p>听我挑给你的。</p>
         <span>{INTENSITY_LABEL[intensity]}</span>
       </section>
 
