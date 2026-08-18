@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { streamChat, type ChatMessage } from '../services/chat';
 import { getModel, MODEL_GROUPS } from '../data/models';
@@ -110,13 +110,35 @@ const fmtStamp = (at?: number): string => {
 
 // 思考链折叠卡片：流式思考时自动展开，思考结束自动收起。
 function ThinkingCard({ text, streaming, ms }: { text: string; streaming: boolean; ms?: number }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(streaming);
   const wasStreaming = useRef(streaming);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const followReasoningRef = useRef(true);
 
   useEffect(() => {
-    if (wasStreaming.current && !streaming) setOpen(false);
+    if (!wasStreaming.current && streaming) {
+      followReasoningRef.current = true;
+      setOpen(true);
+    } else if (wasStreaming.current && !streaming) {
+      followReasoningRef.current = true;
+      setOpen(false);
+    }
     wasStreaming.current = streaming;
   }, [streaming]);
+
+  // 流式思考限制在卡片内部滚动，避免卡片越长、整页越被顶着往上跑。
+  // 用户在卡片内部往回看时停止跟随；重新滚到底部后自动恢复。
+  useLayoutEffect(() => {
+    const body = bodyRef.current;
+    if (!body || !streaming || !open || !followReasoningRef.current) return;
+    body.scrollTop = body.scrollHeight;
+  }, [text, streaming, open]);
+
+  const onReasoningScroll = () => {
+    const body = bodyRef.current;
+    if (!body) return;
+    followReasoningRef.current = body.scrollHeight - body.scrollTop - body.clientHeight < 24;
+  };
 
   if (!text) return null;
 
@@ -124,14 +146,30 @@ function ThinkingCard({ text, streaming, ms }: { text: string; streaming: boolea
 
   return (
     <div className={`think-card${open ? ' is-open' : ''}`}>
-      <button type="button" className="think-card__toggle" onClick={() => setOpen((v) => !v)}>
+      <button
+        type="button"
+        className="think-card__toggle"
+        aria-expanded={open}
+        onClick={() => {
+          followReasoningRef.current = true;
+          setOpen((v) => !v);
+        }}
+      >
         <span className="think-card__brand">Mind Theater</span>
         <span className="think-card__label">{label}</span>
         <span className="think-card__chevron" aria-hidden="true">
           {open ? '▾' : '▸'}
         </span>
       </button>
-      {open ? <div className="think-card__body">{text}</div> : null}
+      {open ? (
+        <div
+          ref={bodyRef}
+          className={`think-card__body${streaming ? ' is-streaming' : ''}`}
+          onScroll={onReasoningScroll}
+        >
+          {text}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -923,11 +961,50 @@ function ChatRoom({
   const abortRef = useRef<AbortController | null>(null);
   const recorderRef = useRef<VoiceRecorder | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const scrollFrameRef = useRef<number | null>(null);
+  const autoFollowRef = useRef(true);
+  const [autoFollow, setAutoFollow] = useState(true);
   const photoFileRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  // 每帧最多跟随一次，不再为每个 token 重启 smooth 动画。
+  // 点住/上滑消息区会锁住当前位置；回到底部或按「跟随最新」才重新接管。
+  useLayoutEffect(() => {
+    if (!autoFollowRef.current) return;
+    if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      const scroller = scrollRef.current;
+      if (scroller && autoFollowRef.current) {
+        scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'auto' });
+      }
+      scrollFrameRef.current = null;
+    });
   }, [turns]);
+
+  useEffect(() => () => {
+    if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
+  }, []);
+
+  const setFollowing = (next: boolean) => {
+    autoFollowRef.current = next;
+    setAutoFollow((current) => (current === next ? current : next));
+  };
+
+  const onChatScroll = () => {
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+    const nearBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 72;
+    if (nearBottom !== autoFollowRef.current) setFollowing(nearBottom);
+  };
+
+  const pauseFollowing = () => {
+    if (sending && autoFollowRef.current) setFollowing(false);
+  };
+
+  const jumpToLatest = () => {
+    setFollowing(true);
+    const scroller = scrollRef.current;
+    scroller?.scrollTo({ top: scroller.scrollHeight, behavior: 'smooth' });
+  };
 
   useEffect(() => {
     if (sending) return;
@@ -1252,6 +1329,7 @@ function ChatRoom({
   // 让猫咪基于给定历史回一条
   const runAssistant = async (history: ChatMessage[]) => {
     const botId = uid();
+    setFollowing(true);
     setTurns((prev) => [...prev, { id: botId, role: 'assistant', content: '', reasoning: '', status: 'streaming', at: Date.now() }]);
     setSending(true);
     const controller = new AbortController();
@@ -1550,7 +1628,12 @@ function ChatRoom({
         </button>
       </header>
 
-      <div className="chat-scroll" ref={scrollRef}>
+      <div
+        className="chat-scroll"
+        ref={scrollRef}
+        onScroll={onChatScroll}
+        onPointerDownCapture={pauseFollowing}
+      >
         {turns.length === 0 ? (
           <div className="chat-empty">
             <div className="chat-empty__paw">🐾</div>
@@ -1703,6 +1786,12 @@ function ChatRoom({
           );
         })}
       </div>
+
+      {!autoFollow ? (
+        <button type="button" className="chat-follow-latest" onClick={jumpToLatest}>
+          ↓ 跟随最新
+        </button>
+      ) : null}
 
       <footer className="chat-input">
         {/* 待发缩略图:贴纸/相册照片(可 1~3 张)钉在输入区上方,按发送/叉掉才走 */}

@@ -1596,7 +1596,31 @@ a {
   /* 顶栏调窄后留白同步缩 */
   padding: calc(54px + env(safe-area-inset-top)) 14px calc(80px + env(safe-area-inset-bottom));
   overflow-y: auto;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+}
+
+.chat-follow-latest {
+  position: absolute;
+  right: 18px;
+  bottom: calc(78px + env(safe-area-inset-bottom));
+  z-index: 24;
+  padding: 7px 13px;
+  color: #725aa6;
+  font-family: "GongZhuFull", "ShunFengFull", var(--round);
+  font-size: 0.82rem;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(250, 232, 255, 0.84), rgba(213, 232, 255, 0.82));
+  box-shadow: 0 7px 18px rgba(93, 75, 145, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.76);
+  -webkit-backdrop-filter: blur(13px) saturate(1.2);
+  backdrop-filter: blur(13px) saturate(1.2);
+  touch-action: manipulation;
+}
+
+.chat-follow-latest:active {
+  transform: scale(0.95);
 }
 
 .chat-empty {
@@ -1889,6 +1913,7 @@ a {
   border: 0;
   background: none;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .think-card__chevron {
@@ -1931,6 +1956,19 @@ a {
   letter-spacing: 0.02em;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.think-card__body.is-streaming {
+  max-height: min(28vh, 190px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+  scrollbar-width: none;
+  touch-action: pan-y;
+}
+
+.think-card__body.is-streaming::-webkit-scrollbar {
+  display: none;
 }
 
 /* ---------- 耳边话（AI 语音）---------- */
