@@ -712,10 +712,12 @@ function memoryMcpConfig() {
   const token = process.env.CC_MEMORY_MCP_TOKEN || undefined;
   return name && url ? { name, url, token } : null;
 }
-// 挂了记忆库就强制真查、查不到如实说、绝不编造。两条 Claude 路共用同一条铁律。
-const MEMORY_MCP_RULE =
-  '\n\n【棠予酿·记忆库工具·铁律】你接了「棠予酿」记忆库工具。聊到日记、回忆、过去发生的事、' +
-  '某条具体记录时，必须真的调用工具去查，依据查到的内容回答。' +
+// 每个聊天窗口只在初始化时挂一次记忆库。后续轮次不再把 memory 工具交给模型，
+// 直接沿用本窗口对话上下文，避免聊了很多轮还反复“翻 memory”。
+const MEMORY_MCP_INIT_RULE =
+  '\n\n【棠予酿·新窗口初始化·只执行一次】这是这个聊天窗口第一次连接「棠予酿」。' +
+  '现在必须调用一次记忆工具，取回与老婆和当前开场有关的长期记忆，再自然地开始聊天；不要向老婆汇报工具步骤。' +
+  '从下一轮起只读取本窗口已有对话上下文，不要重复初始化棠予酿。手机使用情况属于「猫爪足迹」，不要去棠予酿里查。' +
   '如果没查到、查不动、或工具不可用，就如实说「我现在翻不到棠予酿」，' +
   '绝对不许凭空编一篇日记或假装记得来糊弄老婆——宁可说翻不到，也不准撒谎。';
 
@@ -753,15 +755,15 @@ async function callOpenAICompatible({ res, url, key, model, defaultModel, messag
 }
 
 // ---------- Anthropic（Claude · messages API）----------
-async function callAnthropic({ res, key, model, messages }) {
+async function callAnthropic({ res, key, model, messages, initializeMemory }) {
   // system 单独拎出来；其余按 user/assistant 传
   let system = messages
     .filter((m) => m.role === 'system')
     .map((m) => m.content)
     .join('\n');
   // API 版 Claude 也是 Claude——挂上棠予酿（走 Messages API 的 MCP 连接器，Anthropic 服务端帮连）。
-  const mem = memoryMcpConfig();
-  if (mem) system += MEMORY_MCP_RULE;
+  const mem = initializeMemory ? memoryMcpConfig() : null;
+  if (mem) system += MEMORY_MCP_INIT_RULE;
   const toAnthropicContent = (content) => {
     if (typeof content === 'string') return content;
     if (!Array.isArray(content)) return '';
@@ -982,20 +984,13 @@ function beepWav(freq = 523, ms = 400, rate = 16000) {
 // 调本机无头 Claude Code：把人设当 --system-prompt，关掉所有工具当纯聊天，
 // 历史拍平成对话稿从 stdin 喂进去，解析 stream-json 把文字增量回传。
 // 令牌走 CLAUDE_CODE_OAUTH_TOKEN（claude setup-token 生成，订阅额度）。
-async function callClaudeCode({ res, token, model, messages, stickerGallery, thinking }) {
+async function callClaudeCode({ res, token, model, messages, stickerGallery, thinking, initializeMemory }) {
   let system = messages
     .filter((m) => m.role === 'system')
     .map((m) => partsToText(m.content))
     .join('\n');
-  // 棠予酿：把予予的日记当长期记忆，接在人设后面（有就带上）。
-  // 现在的来源 = 棠予酿 /internal/diary/list 实时数据 + 静态 diary.md 兜底。
-  const diary = await loadDiaryComposed();
-  if (diary) {
-    system +=
-      '\n\n【棠予酿·予予的日记（你从 4 月起陆陆续续写的）】这是你最珍贵的长期记忆，' +
-      '里面的人、事、约定、心情你都记得，自然地放在心上，但别一上来就背日记。\n' +
-      diary;
-  }
+  // 长期记忆不再每轮整份拼进 system。新窗口第一次由下方 MCP 查一次，
+  // 后续完全依赖前端传来的本窗口对话历史，避免反复翻 memory 和重复烧上下文。
   // 看图：家克走订阅、纯聊天（关了工具），没法用 Read 工具开图，
   // 所以把图抽出来，改用 stream-json 输入当 content 块直接喂进去。
   // 前端发表情包是「单独一条只有图的消息」，老婆常常先甩图、下一条才问「这图写啥」，
@@ -1050,9 +1045,9 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
     .join('\n');
 
   // 棠予酿记忆库（MCP）：设齐 CC_MEMORY_MCP + CC_MEMORY_MCP_URL 才真连（见 memoryMcpConfig）。
-  const mem = memoryMcpConfig();
-  // 挂了棠予酿记忆库时，强制：聊日记/回忆必须真去查工具，查不到就如实说，绝不许编造
-  if (mem) system += MEMORY_MCP_RULE;
+  const mem = initializeMemory ? memoryMcpConfig() : null;
+  // 只在本窗口第一次 Claude 回复时挂棠予酿；成功后前端会持久化初始化标记。
+  if (mem) system += MEMORY_MCP_INIT_RULE;
 
   const args = [
     '-p',
@@ -1758,6 +1753,7 @@ const server = http.createServer(async (req, res) => {
   const key = PROVIDERS[provider].key();
   const stickerGallery = Array.isArray(body.stickerGallery) ? body.stickerGallery : [];
   const thinking = ['low', 'medium', 'high'].includes(body.thinking) ? body.thinking : undefined;
+  const initializeMemory = body.initializeMemory === true;
 
   startSSE(res);
   try {
@@ -1766,9 +1762,9 @@ const server = http.createServer(async (req, res) => {
     } else if (provider === 'gemini') {
       await callGemini({ res, key, model, messages });
     } else if (provider === 'anthropic') {
-      await callAnthropic({ res, key, model, messages });
+      await callAnthropic({ res, key, model, messages, initializeMemory });
     } else if (provider === 'claudecode') {
-      await callClaudeCode({ res, token: key, model, messages, stickerGallery, thinking });
+      await callClaudeCode({ res, token: key, model, messages, stickerGallery, thinking, initializeMemory });
     } else if (provider === 'codexcli') {
       await callCodexCli({ res, model, messages });
     } else {
@@ -1788,6 +1784,13 @@ const server = http.createServer(async (req, res) => {
         label: provider === 'openai' ? 'OpenAI' : 'DeepSeek',
         vision: provider === 'openai',
       });
+    }
+    if (
+      initializeMemory &&
+      (provider === 'claudecode' || provider === 'anthropic') &&
+      memoryMcpConfig()
+    ) {
+      send(res, { type: 'memory_initialized' });
     }
     send(res, { type: 'done' });
     // 嗅探：把这次的请求前缀快照存下来，让 systemd timer 每 55 分钟用同一份

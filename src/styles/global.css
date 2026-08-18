@@ -1971,6 +1971,28 @@ a {
   display: none;
 }
 
+.think-card__latest {
+  position: relative;
+  z-index: 2;
+  display: block;
+  margin: -4px 12px 9px auto;
+  padding: 5px 10px;
+  color: #7d62b8;
+  font-family: "GongZhuFull", "ShunFengFull", var(--round);
+  font-size: 0.74rem;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  background: rgba(244, 235, 255, 0.68);
+  box-shadow: 0 4px 12px rgba(104, 82, 159, 0.14);
+  -webkit-backdrop-filter: blur(10px) saturate(1.15);
+  backdrop-filter: blur(10px) saturate(1.15);
+  touch-action: manipulation;
+}
+
+.think-card__latest:active {
+  transform: scale(0.95);
+}
+
 /* ---------- 耳边话（AI 语音）---------- */
 .speak-btn {
   align-self: flex-start;

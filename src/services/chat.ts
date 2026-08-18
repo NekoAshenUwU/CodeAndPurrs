@@ -20,6 +20,7 @@ export type StreamHandlers = {
   onReasoning?: (text: string) => void;
   onContent?: (text: string) => void;
   onError?: (message: string) => void;
+  onMemoryInitialized?: () => void;
   onDone?: () => void;
 };
 
@@ -39,11 +40,13 @@ export type StreamOptions = {
   signal?: AbortSignal;
   stickerGallery?: StickerGalleryEntry[];
   thinking?: ThinkingBudget;
+  conversationId?: string;
+  initializeMemory?: boolean;
 };
 
 // 发起一次流式对话。后端用 SSE 推回 reasoning / content / error / done 四种事件。
 export async function streamChat(
-  { provider, messages, model, signal, stickerGallery, thinking }: StreamOptions,
+  { provider, messages, model, signal, stickerGallery, thinking, conversationId, initializeMemory }: StreamOptions,
   handlers: StreamHandlers,
 ): Promise<void> {
   let response: Response;
@@ -51,7 +54,15 @@ export async function streamChat(
     response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ provider, messages, model, stickerGallery, thinking }),
+      body: JSON.stringify({
+        provider,
+        messages,
+        model,
+        stickerGallery,
+        thinking,
+        conversationId,
+        initializeMemory,
+      }),
       signal,
     });
   } catch (err) {
@@ -99,6 +110,9 @@ export async function streamChat(
             break;
           case 'error':
             handlers.onError?.(event.message ?? '未知错误');
+            break;
+          case 'memory_initialized':
+            handlers.onMemoryInitialized?.();
             break;
           case 'done':
             handlers.onDone?.();

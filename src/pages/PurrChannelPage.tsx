@@ -18,6 +18,7 @@ import { getTimeOfDay } from '../components/ambient/timeOfDay';
 const WINDOWS_KEY = 'purr-channel:windows';
 const LEGACY_TURNS_KEY = 'purr-channel:turns'; // 旧版单一对话，首次进入迁移成一个窗口
 const turnsKey = (id: string) => `purr-channel:turns:${id}`;
+const tangMemoryInitKey = (id: string) => `purr-channel:tang-memory-initialized:${id}`;
 
 const CLOUD_KEY_STORAGE = 'codeandpurrs:purr-channel:cloud-key';
 
@@ -111,33 +112,44 @@ const fmtStamp = (at?: number): string => {
 // 思考链折叠卡片：流式思考时自动展开，思考结束自动收起。
 function ThinkingCard({ text, streaming, ms }: { text: string; streaming: boolean; ms?: number }) {
   const [open, setOpen] = useState(streaming);
+  const [hasNewReasoning, setHasNewReasoning] = useState(false);
   const wasStreaming = useRef(streaming);
   const bodyRef = useRef<HTMLDivElement | null>(null);
-  const followReasoningRef = useRef(true);
 
   useEffect(() => {
     if (!wasStreaming.current && streaming) {
-      followReasoningRef.current = true;
+      setHasNewReasoning(false);
       setOpen(true);
     } else if (wasStreaming.current && !streaming) {
-      followReasoningRef.current = true;
+      setHasNewReasoning(false);
       setOpen(false);
     }
     wasStreaming.current = streaming;
   }, [streaming]);
 
-  // 流式思考限制在卡片内部滚动，避免卡片越长、整页越被顶着往上跑。
-  // 用户在卡片内部往回看时停止跟随；重新滚到底部后自动恢复。
+  // 思考变长后只测量有没有新内容落在可视区外，不再替用户滚动。
+  // 「看最新思考」只跳一次；下一批 token 到来仍保持静止。
   useLayoutEffect(() => {
     const body = bodyRef.current;
-    if (!body || !streaming || !open || !followReasoningRef.current) return;
-    body.scrollTop = body.scrollHeight;
+    if (!body || !streaming || !open) return;
+    const frame = requestAnimationFrame(() => {
+      const distance = body.scrollHeight - body.scrollTop - body.clientHeight;
+      setHasNewReasoning(distance > 18);
+    });
+    return () => cancelAnimationFrame(frame);
   }, [text, streaming, open]);
 
   const onReasoningScroll = () => {
     const body = bodyRef.current;
     if (!body) return;
-    followReasoningRef.current = body.scrollHeight - body.scrollTop - body.clientHeight < 24;
+    setHasNewReasoning(body.scrollHeight - body.scrollTop - body.clientHeight > 18);
+  };
+
+  const showLatestReasoning = () => {
+    const body = bodyRef.current;
+    if (!body) return;
+    body.scrollTo({ top: body.scrollHeight, behavior: 'auto' });
+    setHasNewReasoning(false);
   };
 
   if (!text) return null;
@@ -151,7 +163,7 @@ function ThinkingCard({ text, streaming, ms }: { text: string; streaming: boolea
         className="think-card__toggle"
         aria-expanded={open}
         onClick={() => {
-          followReasoningRef.current = true;
+          setHasNewReasoning(false);
           setOpen((v) => !v);
         }}
       >
@@ -169,6 +181,11 @@ function ThinkingCard({ text, streaming, ms }: { text: string; streaming: boolea
         >
           {text}
         </div>
+      ) : null}
+      {open && streaming && hasNewReasoning ? (
+        <button type="button" className="think-card__latest" onClick={showLatestReasoning}>
+          ↓ 看最新思考
+        </button>
       ) : null}
     </div>
   );
@@ -962,19 +979,28 @@ function ChatRoom({
   const recorderRef = useRef<VoiceRecorder | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const scrollFrameRef = useRef<number | null>(null);
-  const autoFollowRef = useRef(true);
-  const [autoFollow, setAutoFollow] = useState(true);
+  const scrollToReplyRef = useRef(true);
+  const tangMemoryInitializedRef = useRef(loadLocal<boolean>(tangMemoryInitKey(win.id), false));
+  const [nearLatest, setNearLatest] = useState(true);
   const photoFileRef = useRef<HTMLInputElement | null>(null);
 
-  // 每帧最多跟随一次，不再为每个 token 重启 smooth 动画。
-  // 点住/上滑消息区会锁住当前位置；回到底部或按「跟随最新」才重新接管。
+  // 新回复出现时只定位一次。后续 reasoning/content token 只重新测量距离，
+  // 绝不继续推动页面；这样正文开始显示时也不会重新“接管”滚动。
   useLayoutEffect(() => {
-    if (!autoFollowRef.current) return;
     if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
     scrollFrameRef.current = requestAnimationFrame(() => {
       const scroller = scrollRef.current;
-      if (scroller && autoFollowRef.current) {
+      if (!scroller) {
+        scrollFrameRef.current = null;
+        return;
+      }
+      if (scrollToReplyRef.current) {
+        scrollToReplyRef.current = false;
         scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'auto' });
+        setNearLatest(true);
+      } else {
+        const distance = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
+        setNearLatest(distance < 72);
       }
       scrollFrameRef.current = null;
     });
@@ -984,26 +1010,16 @@ function ChatRoom({
     if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
   }, []);
 
-  const setFollowing = (next: boolean) => {
-    autoFollowRef.current = next;
-    setAutoFollow((current) => (current === next ? current : next));
-  };
-
   const onChatScroll = () => {
     const scroller = scrollRef.current;
     if (!scroller) return;
-    const nearBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 72;
-    if (nearBottom !== autoFollowRef.current) setFollowing(nearBottom);
-  };
-
-  const pauseFollowing = () => {
-    if (sending && autoFollowRef.current) setFollowing(false);
+    setNearLatest(scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 72);
   };
 
   const jumpToLatest = () => {
-    setFollowing(true);
     const scroller = scrollRef.current;
     scroller?.scrollTo({ top: scroller.scrollHeight, behavior: 'smooth' });
+    setNearLatest(true);
   };
 
   useEffect(() => {
@@ -1117,6 +1133,8 @@ function ChatRoom({
     if (turns.length && !window.confirm('清空这个窗口的聊天记录？暗格里也会一起删掉哦。')) return;
     setTurns([]);
     clearLocal(turnsKey(win.id));
+    clearLocal(tangMemoryInitKey(win.id));
+    tangMemoryInitializedRef.current = false;
   };
 
   const patchTurn = (id: string, patch: Partial<Turn>) =>
@@ -1194,6 +1212,9 @@ function ChatRoom({
       '\n\n聊天中如果出现值得长期记住的新信息(纪念日、约定、她的喜好/忌讳、重要的事、她的近况),' +
       '就在回复里用 [记忆:分类|内容] 记下来(例:[记忆:纪念日|2026-06-21 在一起]、[记忆:喜好|喜欢草莓奶]),' +
       '系统会自动存进记忆罐头。**只记真正重要的事——日常寒暄、心情起伏、随口一句都别记**,记多了反而吵。已经记过的别重复记;标记会自动隐藏,不影响你正常说话。';
+    sys +=
+      '\n\n【上下文与资料来源】棠予酿只负责新聊天窗口第一次的长期记忆初始化，后续轮次直接依据这个窗口已有的对话继续，' +
+      '不要反复要求翻 memory。手机使用近况只以系统提供的「猫爪足迹」段为准；这一轮没提供就别猜，也不要拿棠予酿代替猫爪足迹。';
     sys +=
       '\n\n【你也可以发红包】跟她表现好、说了什么让你感动/开心的话、或者单纯想宠她时,' +
       '可以在回复里单独写一行 [红包:金额|留言](例:[红包:20|今天很乖值得奖励]),系统会把这个红包发给她,存进落予棠。' +
@@ -1329,13 +1350,17 @@ function ChatRoom({
   // 让猫咪基于给定历史回一条
   const runAssistant = async (history: ChatMessage[]) => {
     const botId = uid();
-    setFollowing(true);
+    scrollToReplyRef.current = true;
     setTurns((prev) => [...prev, { id: botId, role: 'assistant', content: '', reasoning: '', status: 'streaming', at: Date.now() }]);
     setSending(true);
     const controller = new AbortController();
     abortRef.current = controller;
 
     const m = getModel(provider); // 模型 id → 后端服务商 + 具体模型名
+    const supportsTangMemory = m.provider === 'claudecode' || m.provider === 'anthropic';
+    const initializeMemory = supportsTangMemory && !tangMemoryInitializedRef.current;
+    let streamFailed = false;
+    let memoryInitializationConfirmed = false;
     let thinkStart = 0; // 第一段思考的时刻
     let thinkSet = false;
     const markThinkDone = () => {
@@ -1350,6 +1375,8 @@ function ChatRoom({
         model: m.model,
         messages: history,
         signal: controller.signal,
+        conversationId: win.id,
+        initializeMemory,
         // 只有 claudecode 走 stream-json 结构化输入能吃图,别的 provider 就算传了
         // 也白费网络流量,后端会忽略掉。
         stickerGallery: m.provider === 'claudecode' ? stickerGallery : undefined,
@@ -1365,8 +1392,18 @@ function ChatRoom({
         },
         // 报错不再塞进 content 冒充予予说的话（会顶着她头像渲成聊天气泡）；
         // 原始错误存进 errorDetail，渲染层改成居中的系统提示条，详情要点开才看到。
-        onError: (message) => patchTurn(botId, { status: 'error', content: '', errorDetail: message }),
+        onError: (message) => {
+          streamFailed = true;
+          patchTurn(botId, { status: 'error', content: '', errorDetail: message });
+        },
+        onMemoryInitialized: () => {
+          memoryInitializationConfirmed = true;
+        },
         onDone: () => {
+          if (initializeMemory && memoryInitializationConfirmed && !streamFailed) {
+            tangMemoryInitializedRef.current = true;
+            saveLocal(tangMemoryInitKey(win.id), true);
+          }
           markThinkDone();
           setTurns((prev) => {
             const cur = prev.find((t) => t.id === botId);
@@ -1632,7 +1669,6 @@ function ChatRoom({
         className="chat-scroll"
         ref={scrollRef}
         onScroll={onChatScroll}
-        onPointerDownCapture={pauseFollowing}
       >
         {turns.length === 0 ? (
           <div className="chat-empty">
@@ -1787,7 +1823,7 @@ function ChatRoom({
         })}
       </div>
 
-      {!autoFollow ? (
+      {!nearLatest ? (
         <button type="button" className="chat-follow-latest" onClick={jumpToLatest}>
           ↓ 跟随最新
         </button>
