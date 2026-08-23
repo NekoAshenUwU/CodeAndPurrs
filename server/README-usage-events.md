@@ -49,8 +49,46 @@ journalctl -u codeandpurrs-usage-bridge.service -n 20 --no-pager
 默认目标是 `/opt/codeandpurrs/server/usageBridgeServer.mjs`，
 `--server` 可以改。会自动备份、跑 `node --check`、锚点对不上就整体中止。
 
-## 改了哪四处
+## nginx 那一层也要放宽（补丁管不到）
 
+请求体有【两道】关卡，只放宽一道没用：
+
+| 关卡 | 在哪 | 原值 |
+|---|---|---|
+| `MAX_BODY_BYTES` | `usageBridgeServer.mjs` | 512 KB（补丁会改成 8 MB） |
+| `client_max_body_size` | nginx | `512k` ← **要手工改** |
+
+```bash
+ls -l /etc/nginx/sites-enabled/api.nekopurrs.uk   # 先看它是不是符号链接！
+F=/etc/nginx/sites-enabled/api.nekopurrs.uk
+sed -i 's/client_max_body_size 512k;/client_max_body_size 16m;/' $F
+nginx -t && systemctl reload nginx
+```
+
+**两个坑，2026-08-23 都踩了：**
+
+1. **`sites-enabled/api.nekopurrs.uk` 不是符号链接，是独立文件。** 跟
+   `sites-available` 那份内容已经不一样了。改 `sites-available` 会「改完
+   `nginx -t` 通过、reload 成功、然后完全没反应」——因为 nginx 读的是
+   `sites-enabled`。动手前先 `ls -l`。
+
+2. **备份文件不能放在 `sites-enabled/` 里面。** nginx 是
+   `include sites-enabled/*`，`api.nekopurrs.uk.bak-20260823` 会被当成配置
+   一起加载，同一个域名两份 server 块，`nginx -t` 报
+   `conflicting server name ... ignored`。现在靠字母序侥幸没坏，但 `.bak`
+   里是旧的 `512k`。备份往 `/root/nginx-backups/` 放。
+
+判断有没有中招：`nginx -t` 输出里有没有 `conflicting server name`。
+
+## 为什么会超 512 KB
+
+v2 首次上传要回溯 3 天，会话下限又从 30 秒降到 1 秒（为了抓夜醒）。
+实测一次 **3339 段会话 + 262 个屏幕事件 ≈ 610 KB**。旧的快照格式日文件
+才 39–70 KB，512 KB 这个数是照那个定的。
+
+## 改了哪五处
+
+0. **`MAX_BODY_BYTES` 512 KB → 8 MB。** 见上。
 1. **`schemaVersion !== 1` → 认 1 和 2。** 不改，新 APK 装上去所有上报 400。
 2. **事件落库独立于 `app_usage` 那条链路。** 现有 dream_events 同步里有一句
    `apps is empty, skip`，8/23 日志里 00:33 和 02:34 各命中一次。夜里没开

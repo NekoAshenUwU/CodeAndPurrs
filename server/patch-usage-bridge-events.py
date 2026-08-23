@@ -40,6 +40,14 @@ from datetime import datetime
 SERVER_PATH = "/opt/codeandpurrs/server/usageBridgeServer.mjs"
 SERVICE_NAME = "codeandpurrs-usage-bridge.service"
 
+# ── 第 0 处：请求体上限 ─────────────────────────────────────────────────
+# 512KB 是按旧的快照格式定的（旧日文件才 39-70KB）。v2 首次上传要回溯 3 天、
+# 会话下限又从 30s 降到 1s，实测一次 3339 段会话 ≈ 610KB，直接被挡。
+# 注意 nginx 那层还有一个 client_max_body_size，两个都得放宽，见 README。
+OLD_BODY_LIMIT = "const MAX_BODY_BYTES = 512 * 1024;"
+NEW_BODY_LIMIT = "const MAX_BODY_BYTES = 8 * 1024 * 1024;"
+
+
 # ── 第 1 处：schemaVersion ──────────────────────────────────────────────
 OLD_SCHEMA = """  if (payload.schemaVersion !== 1) {
     return 'schemaVersion must be 1';
@@ -258,26 +266,34 @@ def apply_steps(text: str) -> tuple[str, list[str]]:
         text = "".join(lines)
         log.append("补上 spawnSync 的 import")
 
-    # 2. schemaVersion 放宽
+    # 2. 请求体上限
+    if NEW_BODY_LIMIT in text:
+        log.append("请求体上限已放宽，跳过")
+    elif OLD_BODY_LIMIT in text:
+        text = once(text, OLD_BODY_LIMIT, NEW_BODY_LIMIT, "请求体上限 512KB → 8MB")
+    else:
+        log.append("请求体上限不是预期的 512KB，没动它（自己确认够不够）")
+
+    # 3. schemaVersion 放宽
     if NEW_SCHEMA in text:
         log.append("schemaVersion 已放宽，跳过")
     else:
         text = once(text, OLD_SCHEMA, NEW_SCHEMA, "schemaVersion 放宽成认 1 和 2")
 
-    # 3. 事件落库那一坨
+    # 4. 事件落库那一坨
     if "function syncUsageEventsToDb" in text:
         log.append("事件落库函数已在，跳过")
     else:
         text = once(text, ANCHOR_HELPERS, EVENTS_JS + "\n" + ANCHOR_HELPERS,
                     "插入事件落库 + 日文件合并的辅助函数")
 
-    # 4. 日文件按会话合并
+    # 5. 日文件按会话合并
     if "evMergeDayLists(" in text and "previousDay" in text:
         log.append("日文件合并已在，跳过")
     else:
         text = once(text, OLD_WRITE, NEW_WRITE, "日文件改成按会话合并，不再整份覆盖")
 
-    # 5. handler 里调用
+    # 6. handler 里调用
     # 不能用 "syncUsageEventsToDb(payload)" 当哨兵——函数定义那行也含这串，
     # 第 3 步插完就会误判成已生效，然后 handler 里其实一直没调。
     if "const evResult = syncUsageEventsToDb(payload)" in text:
