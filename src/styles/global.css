@@ -1,3 +1,122 @@
+/* ===== 自托管字体（子集化，仅保留站内用到的字形）===== */
+@font-face {
+  font-family: "ManHuai"; /* 想和你装个满怀 · 中文标语（旧） */
+  src: url("/fonts/manhuai.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "GongZhu"; /* 创小公主体 · 中文标语 */
+  src: url("/fonts/gongzhu.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Tangerine"; /* 大标题 CodeAndPurrs · 花体签名 */
+  src: url("/fonts/tangerine.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Marcellus"; /* 副标题 Born from code · 优雅衬线 */
+  src: url("/fonts/marcellus.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "CaoKe"; /* Aa草棵松绵包圆 · 房间名 */
+  src: url("/fonts/caoke.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "LongZhuFull"; /* 完整龙珠体 · 聊天动态文字(1.5MB，开聊天页才懒加载) */
+  src: url("/fonts/longzhu-full.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "LongZhuPaw"; /* 龙珠体子集 · 仅猫爪足迹统计 chip 用到的字(3.9KB) */
+  src: url("/fonts/longzhu-paw.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "ShunFeng"; /* Aa顺风顺水顺财神 子集 · 呼噜频道 +菜单/聊天窗操作 */
+  src: url("/fonts/shunfeng-menu.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "TianTianQuan"; /* 字魂甜甜圈 子集 · 备选 */
+  src: url("/fonts/tiantianquan-vow.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "HuaXianZi"; /* 汉仪花仙子 子集(约 1200 个 app 用字, 538KB) · 各房间顶栏 */
+  src: url("/fonts/huaxianzi.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Quimil"; /* Quimil Demo · Allouse.Studio · 咕噜圆桌药丸英文字 */
+  src: url("/fonts/quimil.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "RoughOwl"; /* Rough Owl · Shaped Fonts · 咕噜圆桌"Join"标签 */
+  src: url("/fonts/rough-owl.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "GongZhuFull"; /* 创小公主体 全字库(1.85MB) · 思考链；只在用到时浏览器才会拉 */
+  src: url("/fonts/gongzhu-full.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ShunFengFull"; /* Aa顺风顺水顺财神 子集(GB2312) · 记忆罐头正文 */
+  src: url("/fonts/shunfeng-full.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "ShanHai"; /* 山海潮玩星球 子集 · 首页中文标语 */
+  src: url("/fonts/shanhai-vow.woff2") format("woff2");
+  font-weight: 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "HFSoda"; /* HFSoda · 首页主 Logo CodeAndPurrs */
+  src: url("/fonts/hfsoda-logo.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "RiFuYiRi"; /* Aa日富一日可爱圆 全字库 · 落予棠详情弹窗正文(留言是自由输入，留全字库) */
+  src: url("/fonts/rifuyiri-full.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "TianTianQuanAmount"; /* 字魂甜甜圈 子集(仅 $0-9.) · 落予棠余额数额专用 */
+  src: url("/fonts/tiantianquan-amount.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "GaiShiKeAiTianTianQuan"; /* Aa盖世可爱甜甜圈(非商业使用) 全字库(22051字) ·
+    倾棠予梦弹窗正文——日记标题是自由输入，留全字库，跟 RiFuYiRi 落予棠正文同一个道理。
+    (上一轮错拿了"字魂甜甜圈"那份同名不同款的字体，这份是老婆重新发的正确文件) */
+  src: url("/fonts/gaishi-tiantianquan-diary.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
   color: #5f5877;
   background: #f9e7ef;
@@ -15,6 +134,26 @@
   --lavender: #c9b8f1;
   --cream: #fff5ce;
   --shadow: rgba(118, 96, 132, 0.18);
+  --display: "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --round: "Fredoka", ui-rounded, "Segoe UI", sans-serif;
+
+  /* ===== 首页改版 v2：仙气浪漫风 token ===== */
+  --mist-white: #fbf4fa; /* 背景起点 */
+  --mist-violet: #ede3f7; /* 背景中段 */
+  --mist-rose: #fceef2; /* 背景终点 */
+  --iris: #9b7bc8; /* 主紫 */
+  --iris-deep: #5d4a7e; /* 深紫正文 */
+  --sakura: #f2a9c4; /* 樱粉 */
+  --blueviolet: #7b8fe8; /* 紫蓝 */
+  --glow: rgba(216, 180, 254, 0.55); /* 发光 */
+  /* 字体角色 */
+  --script: "Tangerine", cursive; /* 花体大标题 CodeAndPurrs · für immer */
+  --serif-en: "Crimson Text", Georgia, serif; /* 英文小字 / 房间英文名 */
+  --serif-tagline: "Marcellus", Georgia, serif; /* 副标题 Born from code */
+  --hand: "GongZhu", "ManHuai", cursive; /* 中文标语 · 创小公主体 */
+  --cute: "CaoKe", "ZCOOL KuaiLe", sans-serif; /* 房间名 / 可爱小标题 · 草棵松绵包圆 */
+  --chat: "LongZhuFull", "PingFang SC", "Microsoft YaHei", sans-serif; /* 聊天 · 完整龙珠体 */
+  --serif-cn: "Noto Serif SC", "Songti SC", serif; /* 中文正文 */
 }
 
 * {
@@ -44,75 +183,409 @@ a {
 
 .home-page {
   position: relative;
+  isolation: isolate;
   min-height: 100vh;
-  padding: 28px 18px calc(32px + env(safe-area-inset-bottom));
-  background:
-    radial-gradient(circle at 20% 12%, rgba(255, 255, 255, 0.95), transparent 24%),
-    radial-gradient(circle at 82% 18%, rgba(201, 184, 241, 0.52), transparent 28%),
-    radial-gradient(circle at 50% 92%, rgba(255, 245, 206, 0.72), transparent 36%),
-    linear-gradient(160deg, #f8dbe7 0%, #f7e8ff 48%, #fff5ce 100%);
+  padding: 28px 18px calc(48px + env(safe-area-inset-bottom));
+  overflow: hidden;
+  background: linear-gradient(160deg, var(--mist-white), var(--mist-violet) 45%, var(--mist-rose));
 }
 
-.home-page::before {
+/* 底图已移到 Atmosphere 的 .timesky__photo（带时段色纱），这里不再重复铺壁纸 */
+
+/* ---------- 背景氛围层（时段天空 + 光尘 + 星点 + 爪印宿主，由 Atmosphere 组件渲染） ---------- */
+.atmosphere {
   position: fixed;
   inset: 0;
   z-index: 0;
+  overflow: hidden;
   pointer-events: none;
-  background-image:
-    radial-gradient(circle, rgba(95, 88, 119, 0.13) 1px, transparent 1px),
-    radial-gradient(circle, rgba(255, 255, 255, 0.85) 1px, transparent 1px);
-  background-position:
-    0 0,
-    14px 18px;
-  background-size: 34px 34px;
-  content: "";
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent 70%);
 }
 
-.hero-card,
+/* 会呼吸的时间背景：GPT 梦境底图常驻，上叠随时段 crossfade 的薄色纱 */
+.timesky,
+.timesky__photo,
+.timesky__layer {
+  position: absolute;
+  inset: 0;
+}
+
+/* 背景天空层贯穿整页（相对 .home-page），随滚动露出长图下半段 */
+.timesky {
+  z-index: 0;
+  overflow: hidden;
+}
+
+.timesky__photo {
+  background: url("/rooms/home-dream.webp") top center / cover no-repeat;
+}
+
+.timesky__layer {
+  opacity: 0;
+  transition: opacity 1.8s ease;
+}
+
+/* 白天：几乎透明，让原图发光（用户最爱的就是这张白天图） */
+.timesky__layer--day {
+  background: linear-gradient(165deg, rgba(210, 230, 255, 0.14), rgba(225, 215, 245, 0.1));
+}
+
+/* 清晨：奶橘柔雾 */
+.timesky__layer--dawn {
+  background: linear-gradient(165deg, rgba(255, 214, 180, 0.38), rgba(250, 200, 220, 0.26));
+}
+
+/* 傍晚：粉紫晚霞 */
+.timesky__layer--dusk {
+  background: linear-gradient(165deg, rgba(245, 180, 210, 0.4), rgba(150, 120, 200, 0.4));
+}
+
+/* 深夜：用 home-dream-night.webp 夜图（已就位）；只叠极薄深色纱保文字可读，不盖掉画面 */
+.timesky__layer--night {
+  background:
+    linear-gradient(165deg, rgba(26, 22, 50, 0.22), rgba(40, 32, 66, 0.16)),
+    url("/rooms/home-dream-night.webp") top center / cover no-repeat;
+}
+
+.timesky.is-dawn .timesky__layer--dawn,
+.timesky.is-day .timesky__layer--day,
+.timesky.is-dusk .timesky__layer--dusk,
+.timesky.is-night .timesky__layer--night {
+  opacity: 1;
+}
+
+/* 光尘 / 星点统一放进这层，滚动时做 0.2 倍速视差 */
+.atmosphere__drift {
+  position: absolute;
+  inset: -5% 0 0;
+  will-change: transform;
+}
+
+/* 深夜星点：仅 night 档渲染，缓慢闪烁 */
+.star {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff, rgba(216, 180, 254, 0.6) 60%, transparent);
+  box-shadow: 0 0 6px 1px rgba(216, 180, 254, 0.7);
+  opacity: 0;
+  animation: twinkle ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.7);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+}
+
+.blob--a {
+  top: -8vh;
+  left: -12vw;
+  width: 54vw;
+  height: 54vw;
+  background: var(--sakura);
+  opacity: 0.42;
+  animation: drift-a 32s ease-in-out infinite;
+}
+
+.blob--b {
+  top: 6vh;
+  right: -14vw;
+  width: 50vw;
+  height: 50vw;
+  background: var(--iris);
+  opacity: 0.38;
+  animation: drift-b 28s ease-in-out infinite;
+}
+
+.blob--c {
+  bottom: -16vh;
+  left: 22vw;
+  width: 48vw;
+  height: 48vw;
+  background: var(--cream);
+  opacity: 0.5;
+  animation: drift-c 37s ease-in-out infinite;
+}
+
+@keyframes drift-a {
+  50% {
+    transform: translate(8vw, 6vh) scale(1.12);
+  }
+}
+@keyframes drift-b {
+  50% {
+    transform: translate(-7vw, 5vh) scale(1.08);
+  }
+}
+@keyframes drift-c {
+  50% {
+    transform: translate(5vw, -7vh) scale(1.15);
+  }
+}
+
+/* 萤火虫光斑：从底部缓缓上浮，大小不一 + 柔焦 + 微微明灭 */
+.dust {
+  position: absolute;
+  bottom: -6vh;
+  width: var(--size, 6px);
+  height: var(--size, 6px);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 38% 34%,
+    rgba(255, 255, 255, 0.96),
+    rgba(var(--c, 216, 180, 254), 0.85) 42%,
+    transparent 72%
+  );
+  box-shadow: 0 0 calc(var(--size, 6px) * 1.7) calc(var(--size, 6px) * 0.35) rgba(var(--c, 216, 180, 254), 0.5);
+  filter: blur(var(--blur, 0px));
+  opacity: 0;
+  animation: dustrise linear infinite;
+}
+
+@keyframes dustrise {
+  0% {
+    transform: translateY(0) scale(0.55);
+    opacity: 0;
+  }
+  10% {
+    opacity: var(--peak, 0.85);
+  }
+  28% {
+    opacity: calc(var(--peak, 0.85) * 0.4);
+  }
+  46% {
+    opacity: var(--peak, 0.85);
+  }
+  68% {
+    opacity: calc(var(--peak, 0.85) * 0.5);
+  }
+  86% {
+    opacity: calc(var(--peak, 0.85) * 0.72);
+  }
+  100% {
+    transform: translate(var(--drift, 0), -112vh) scale(1.05);
+    opacity: 0;
+  }
+}
+
+/* 看不见的猫：爪印路过 */
+.paw {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  color: var(--sakura);
+  opacity: 0;
+  transform: var(--t);
+  animation: pawfade 2.6s ease forwards;
+}
+
+.paw svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes pawfade {
+  0% {
+    opacity: 0;
+    transform: var(--t) scale(0.7);
+  }
+  10% {
+    opacity: 0.22;
+  }
+  14% {
+    transform: var(--t) scale(1);
+  }
+  69% {
+    opacity: 0.22;
+  }
+  100% {
+    opacity: 0;
+    transform: var(--t) scale(1);
+  }
+}
+
+/* ---------- 指尖留爪印（PawCursor 组件） ---------- */
+.paw-cursor {
+  position: fixed;
+  z-index: 4;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* 跟手的小爪印：position 用 fixed，左上角偏移半个身位居中到指尖 */
+.paw--trail {
+  position: fixed;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  color: var(--sakura);
+  opacity: 0;
+  transform: rotate(var(--rot, 0deg)) scale(0.5);
+  animation: paw-trail 0.95s ease forwards;
+}
+
+@keyframes paw-trail {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--rot, 0deg)) scale(0.5);
+  }
+  18% {
+    opacity: 0.3;
+  }
+  32% {
+    transform: rotate(var(--rot, 0deg)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--rot, 0deg)) scale(1.05);
+  }
+}
+
+.hero,
 .rooms-section,
 .room-preview {
   position: relative;
   z-index: 1;
 }
 
-.hero-card {
-  overflow: hidden;
-  width: min(100%, 720px);
-  margin: 0 auto;
-  padding: 42px 24px 30px;
-  text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.62);
-  border-radius: 34px;
-  background: var(--card);
-  box-shadow: 0 24px 80px var(--shadow);
-  backdrop-filter: blur(18px);
+/* ---------- hero 包裹层：装 mascot + 卡后极光，制造「窗」的层次 ---------- */
+.hero {
+  position: relative;
+  width: min(100%, 560px);
+  margin: calc(4vh + 40px) auto 0;
 }
 
-.hero-card::before,
-.hero-card::after {
+/* 卡片后方缓慢流动的极光（透过玻璃隐约可见，周期 24s 极慢） */
+.hero::before {
   position: absolute;
   z-index: 0;
-  display: block;
-  border-radius: 999px;
+  inset: -14% -8%;
   content: "";
-  filter: blur(1px);
+  background:
+    radial-gradient(42% 52% at 28% 30%, rgba(123, 143, 232, 0.5), transparent 70%),
+    radial-gradient(46% 56% at 76% 38%, rgba(242, 169, 196, 0.5), transparent 70%),
+    radial-gradient(52% 50% at 52% 82%, rgba(201, 184, 241, 0.46), transparent 72%);
+  filter: blur(38px);
+  opacity: 0.85;
+  pointer-events: none;
+  animation: aurora 24s ease-in-out infinite alternate;
 }
 
-.hero-card::before {
-  top: -46px;
-  right: -34px;
-  width: 120px;
-  height: 120px;
-  background: rgba(243, 191, 208, 0.44);
+@keyframes aurora {
+  0% {
+    transform: translate3d(-3%, -2%, 0) scale(1.04);
+  }
+  100% {
+    transform: translate3d(4%, 3%, 0) scale(1.12);
+  }
 }
 
-.hero-card::after {
-  bottom: -52px;
-  left: -26px;
-  width: 140px;
-  height: 140px;
-  background: rgba(255, 245, 206, 0.68);
+/* 呼噜本噜：趴在 hero 卡片右上沿，轻轻呼吸摆尾 */
+.hero-mascot {
+  position: absolute;
+  z-index: 2;
+  top: -58px;
+  right: 4px;
+  width: clamp(106px, 29vw, 140px);
+  height: auto;
+  transform-origin: 70% 100%;
+  filter: drop-shadow(0 8px 14px rgba(118, 96, 132, 0.28));
+  pointer-events: none;
+  animation: hero-breathe 3.6s ease-in-out infinite;
+}
+
+@keyframes hero-breathe {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(-1.6deg);
+  }
+}
+
+/* ---------- liquid glass hero ---------- */
+.hero-card {
+  position: relative;
+  z-index: 1;
+  container-type: inline-size;
+  overflow: hidden;
+  width: 100%;
+  margin: 0;
+  padding: 46px 12px 36px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 34px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.2),
+    0 24px 60px -20px rgba(155, 123, 200, 0.35);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  /* 边缘呼吸光晕 */
+  animation: hero-halo 5.5s ease-in-out infinite;
+}
+
+@keyframes hero-halo {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.75),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.2),
+      0 24px 60px -20px rgba(155, 123, 200, 0.35),
+      0 0 22px rgba(216, 180, 254, 0.15);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.75),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.2),
+      0 24px 60px -20px rgba(155, 123, 200, 0.42),
+      0 0 42px rgba(216, 180, 254, 0.36);
+  }
+}
+
+/* 卡内星屑：16 颗，透明度呼吸 + 轻飘，藏在文字之后 */
+.hero-sparks {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hero-spark {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #fff, rgba(var(--c, 242, 169, 196), 0.8) 48%, transparent 74%);
+  box-shadow: 0 0 8px 1px rgba(var(--c, 242, 169, 196), 0.6);
+  opacity: 0;
+  animation: spark-breathe ease-in-out infinite;
+}
+
+@keyframes spark-breathe {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate(0, 0) scale(calc(var(--spark-scale, 1) * 0.55));
+  }
+  50% {
+    opacity: 0.9;
+    transform: translate(var(--dx, 0), -7px) scale(var(--spark-scale, 1));
+  }
 }
 
 .hero-card > * {
@@ -125,26 +598,140 @@ a {
 .room-preview__eyebrow {
   margin: 0;
   color: rgba(124, 120, 146, 0.76);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  font-family: var(--round);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .hero-card h1 {
-  margin: 6px 0 16px;
-  color: var(--ink);
-  font-size: clamp(2.45rem, 10.8vw, 4.75rem);
-  line-height: 0.98;
-  letter-spacing: -0.045em;
+  position: relative;
+  margin: 8px 0 18px;
+  font-family: "HFSoda", "Tangerine", cursive;
+  /* HFSoda 偏宽，按卡片宽度缩放，留边不溢出 */
+  font-size: min(12.8cqi, 4.4rem);
+  white-space: nowrap;
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: 0;
+  /* stronger dreamy：浅底要够显色，整体加深一档——蓝紫→紫→藕紫→蓝→青薄荷，柔和不断层 */
+  background-image: linear-gradient(
+    100deg,
+    #5d68d6 0%,
+    #8466cb 24%,
+    #a66ec0 44%,
+    #7d79cc 58%,
+    #4f9ed4 78%,
+    #3ec6c2 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  /* 不要白柔光(会把深色洗淡)；只留一层很淡的深色投影做立体 */
+  text-shadow: 0 2px 4px rgba(78, 70, 150, 0.2);
+  text-rendering: geometricPrecision;
+  background-size: 200% 100%;
+  animation: gradSweep 4.6s ease-in-out infinite alternate, textBreathe 2.6s ease-in-out infinite;
 }
 
-.hero-card__poem {
+@keyframes gradSweep {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+@keyframes textBreathe {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.025);
+    filter: brightness(1.06);
+  }
+}
+
+@keyframes heroGlowPulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.12);
+  }
+}
+
+/* 中文标语：逐行铺渐变（每行按自身宽度，蓝色才不会落在居中留白里）
+   白天=玻璃海蓝→蓝紫；夜晚=月光蓝白。干净、无大发光、无描边。 */
+.vow {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 18px;
+  font-family: "ShanHai", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-weight: 900;
+  font-size: clamp(1.42rem, 6.6vw, 2.1rem);
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  text-rendering: geometricPrecision;
+}
+.vow span {
+  display: block;
+  width: fit-content;
+  /* 白天版：雾感蓝→紫→粉→紫→蓝 六段对称渐变（蓝紫粉都看得见，老婆指定不要发灰发蓝单调）*/
+  background-image: linear-gradient(
+    95deg,
+    #6fb0ef 0%,
+    #8f9fe8 22%,
+    #bb9fe6 42%,
+    #e6a3c9 58%,
+    #a7a6ea 80%,
+    #74c0f0 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  opacity: 0.98;
+  background-size: 200% 100%;
+  animation: gradSweep 4.6s ease-in-out infinite alternate, textBreathe 2.6s ease-in-out infinite;
+}
+
+@keyframes sloganTwinkle {
+  0%,
+  100% {
+    filter: brightness(1);
+    transform: translateY(0);
+  }
+  50% {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+}
+
+.vow-en {
   margin: 0;
-  color: rgba(111, 106, 130, 0.9);
-  font-size: clamp(1.04rem, 4.45vw, 1.58rem);
-  line-height: 1.62;
-  letter-spacing: 0.035em;
+  color: #3c2b60; /* 墨紫色 Born from code */
+  font-family: var(--serif-tagline);
+  font-style: normal;
+  font-size: clamp(0.98rem, 3.9vw, 1.22rem);
+  letter-spacing: 0.02em;
+  line-height: 1.7;
+  opacity: 0.88;
+}
+
+.vow-en .forever {
+  font-family: var(--script);
+  font-style: normal;
+  font-size: 1.55em;
+  color: #c46e9c; /* 加深的玫瑰粉，浅底上看得清，不再发飘 */
 }
 
 .hero-card__actions {
@@ -152,49 +739,157 @@ a {
   flex-wrap: wrap;
   justify-content: center;
   gap: 10px;
-  margin-top: 26px;
+  margin-top: 28px;
 }
 
 .hero-card__actions button,
 .hero-card__actions a {
-  min-height: 42px;
-  padding: 11px 16px;
-  color: var(--ink);
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  position: relative;
+  min-height: 46px;
+  padding: 13px 24px;
+  color: #5a4a7e;
+  font-family: var(--cute);
+  font-size: 1.1rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(255, 255, 255, 0.9);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.58);
-  box-shadow: 0 12px 28px rgba(118, 96, 132, 0.12);
+  /* 液态玻璃药丸：磨砂底 + 左上高光 + 内倒角 */
+  background:
+    radial-gradient(75% 60% at 28% 12%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 62%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.2));
+  box-shadow:
+    0 8px 20px rgba(140, 128, 182, 0.22),
+    inset 0 1.6px 1.5px rgba(255, 255, 255, 1),
+    inset 0 -3px 6px rgba(150, 150, 205, 0.18),
+    inset 0 0 0 1.4px rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  backdrop-filter: blur(12px) saturate(1.5);
   cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+/* 顶部湿润高光 */
+.hero-card__actions button::before,
+.hero-card__actions a::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 46%);
+}
+/* 虹彩折射描边 */
+.hero-card__actions button::after,
+.hero-card__actions a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  pointer-events: none;
+  background: linear-gradient(
+    150deg,
+    rgba(214, 184, 255, 0.85),
+    rgba(172, 202, 255, 0.7) 40%,
+    rgba(184, 242, 255, 0.85) 66%,
+    rgba(214, 184, 255, 0.8)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.7;
 }
 
+.hero-card__actions button:hover,
+.hero-card__actions a:hover {
+  transform: translateY(-2px);
+}
+
+/* 主按钮「进入呼噜频道」：鲜明液态玻璃球——深玫红→粉→青蓝 + 强左上主反光 + 右下次反光 */
 .hero-card__actions button:first-child {
-  color: #8e6472;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(243, 191, 208, 0.62));
+  color: #43306a;
+  background:
+    radial-gradient(40% 32% at 28% 15%, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0) 72%),
+    radial-gradient(22% 28% at 78% 85%, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 74%),
+    linear-gradient(
+      164deg,
+      #c79bdf 0%,
+      #e6a8d6 22%,
+      #f0b8d6 40%,
+      #cebceb 56%,
+      #a6dae6 76%,
+      #88d2dc 100%
+    );
+  box-shadow:
+    0 10px 26px rgba(168, 146, 222, 0.5),
+    0 0 18px rgba(196, 182, 248, 0.5),
+    inset 0 1.6px 2px rgba(255, 255, 255, 1),
+    inset 0 8px 12px rgba(255, 255, 255, 0.5),
+    inset 0 -6px 11px rgba(150, 162, 218, 0.34),
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.6);
+}
+.hero-card__actions button:first-child::after {
+  opacity: 1;
 }
 
-.hero-card__promise {
-  margin: 28px auto 0;
-  color: rgba(124, 120, 146, 0.65);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 0.92rem;
+/* 首页 eyebrow 改用花体衬线 */
+.hero-card__eyebrow {
+  color: var(--iris);
+  font-family: var(--serif-en);
+  font-size: 0.95rem;
   font-style: italic;
-  letter-spacing: 0.03em;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: none;
 }
 
+/* 呼噜涟漪：在主按钮上荡开声波圆环 */
+.purr-btn {
+  position: relative;
+}
+
+.purr-ripple {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  border: 1px solid rgba(155, 123, 200, 0.5);
+  border-radius: 999px;
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 0.5;
+  pointer-events: none;
+  animation: purr-ripple 1.2s ease-out forwards;
+}
+
+@keyframes purr-ripple {
+  to {
+    transform: translate(-50%, -50%) scale(1.8);
+    opacity: 0;
+  }
+}
+
+/* ---------- rooms ---------- */
 .rooms-section {
   width: min(100%, 980px);
-  margin: 26px auto 0;
+  margin: 30px auto 0;
 }
 
 .rooms-section__header {
-  margin: 0 4px 14px;
+  margin: 0 4px 18px;
+  text-align: center;
 }
 
 .rooms-section__header h2 {
   margin: 4px 0 0;
-  color: var(--ink);
-  font-size: clamp(1.35rem, 5.35vw, 2.08rem);
-  line-height: 1.12;
+  color: var(--iris-deep);
+  font-family: var(--cute);
+  font-size: clamp(1.5rem, 6vw, 2.3rem);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
 }
 
 .rooms-section__header span {
@@ -206,101 +901,284 @@ a {
 
 .rooms-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 12px;
 }
 
-.room-card {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 10px;
-  min-height: 148px;
-  padding: 14px;
-  text-align: left;
+/* ---------- room tile：小玻璃框装图标 + 名字在下 ---------- */
+.room-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 6px 14px;
+  text-align: center;
   color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  background: var(--card-strong);
-  box-shadow: 0 14px 38px rgba(118, 96, 132, 0.12);
-  backdrop-filter: blur(16px);
+  border: 0;
+  background: none;
   cursor: pointer;
+  transition: transform 0.2s ease;
 }
 
-.room-card__icon {
+/* 门牌底下的极淡云影，做出「飘在云上」的悬浮感 */
+.room-tile::after {
+  position: absolute;
+  z-index: 0;
+  top: calc(12px + clamp(56px, 17vw, 72px) - 4px);
+  left: 50%;
+  width: clamp(42px, 12vw, 56px);
+  height: 11px;
+  content: "";
+  border-radius: 50%;
+  background: rgba(93, 74, 126, 0.5);
+  filter: blur(7px);
+  opacity: 0.15;
+  transform: translateX(-50%);
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.room-tile:hover {
+  transform: translateY(-4px);
+}
+
+.room-tile:hover::after {
+  opacity: 0.22;
+}
+
+/* 奇偶错落：偶数门牌下移，形成自然高低节奏 */
+.rooms-grid .room-tile:nth-child(2n) {
+  margin-top: 14px;
+}
+
+.room-tile:active {
+  transform: translateY(-1px) scale(0.97);
+}
+
+/* 液态玻璃图标小框 */
+.room-tile__icon {
+  position: relative;
+  z-index: 1;
   display: grid;
-  width: 42px;
-  height: 42px;
+  width: clamp(56px, 17vw, 72px);
+  aspect-ratio: 1;
   place-items: center;
-  border-radius: 16px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(243, 191, 208, 0.42));
-  font-size: 1.45rem;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  /* 通透的玻璃底：白底很淡，让背后壁纸透过来 */
+  background: linear-gradient(
+    150deg,
+    rgba(255, 255, 255, 0.3),
+    rgba(255, 255, 255, 0.08) 58%,
+    rgba(201, 184, 241, 0.12)
+  );
+  box-shadow:
+    0 14px 28px -10px rgba(118, 96, 132, 0.28),
+    inset 0 1px 1px rgba(255, 255, 255, 0.9),
+    inset 0 -10px 18px -6px rgba(201, 184, 241, 0.22),
+    inset 2px -3px 7px -2px rgba(242, 169, 196, 0.4),
+    inset -3px 2px 7px -2px rgba(123, 143, 232, 0.36);
+  backdrop-filter: blur(9px) saturate(1.9) brightness(1.05);
+  -webkit-backdrop-filter: blur(9px) saturate(1.9) brightness(1.05);
+  overflow: visible;
+  transition: box-shadow 0.2s ease;
+  /* 缓慢上下浮动，相位由 RoomCard 错开 */
+  animation: tile-float 4s ease-in-out infinite;
+  animation-delay: var(--float-delay, 0s);
 }
 
-.room-card__copy {
-  min-width: 0;
+@keyframes tile-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
 }
 
-.room-card__name,
-.room-card__english,
-.room-card__summary,
-.room-card__status {
-  display: block;
+/* 斜向高光扫光（玻璃反光） */
+.room-tile__icon::before {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  content: "";
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.08) 30%,
+    rgba(255, 255, 255, 0) 50%
+  );
+  pointer-events: none;
 }
 
-.room-card__name {
-  font-size: 1rem;
-  font-weight: 800;
+/* 点击光环（默认隐藏，点一下扩散一圈） */
+.room-tile__icon::after {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  content: "";
+  border: 2px solid rgba(242, 169, 196, 0.75);
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.room-card__english,
-.room-preview__english {
-  margin-top: 3px;
-  color: var(--muted);
-  font-family: Georgia, "Times New Roman", serif;
-  font-style: italic;
+.room-tile:hover .room-tile__icon {
+  box-shadow:
+    0 22px 40px -10px rgba(118, 96, 132, 0.36),
+    inset 0 1px 1px rgba(255, 255, 255, 1),
+    inset 0 -10px 18px -6px rgba(201, 184, 241, 0.3),
+    inset 2px -3px 8px -2px rgba(242, 169, 196, 0.5),
+    inset -3px 2px 8px -2px rgba(123, 143, 232, 0.46);
 }
 
-.room-card__english {
-  font-size: 0.85rem;
+/* 点击：果冻弹 + 光环扩散 */
+.room-tile.is-tapped .room-tile__icon {
+  animation: tap-pop 0.42s ease;
 }
 
-.room-card__summary {
-  grid-column: 1 / -1;
-  color: rgba(95, 88, 119, 0.76);
-  font-size: 0.82rem;
-  line-height: 1.5;
+.room-tile.is-tapped .room-tile__icon::after {
+  animation: tap-ripple 0.52s ease-out;
 }
 
-.room-card__status {
-  grid-column: 1 / -1;
-  justify-self: start;
-  margin-top: auto;
-  padding: 4px 9px;
-  color: rgba(124, 120, 146, 0.8);
+/* 液态按压：非等比挤压 + 圆角形变，回弹时像果冻/水珠晃一下 */
+@keyframes tap-pop {
+  0% {
+    transform: scale(1, 1);
+    border-radius: 22px;
+  }
+  28% {
+    transform: scale(0.9, 0.84);
+    border-radius: 30px 24px 26px 22px;
+  }
+  58% {
+    transform: scale(1.07, 1.11);
+    border-radius: 16px 22px 18px 26px;
+  }
+  80% {
+    transform: scale(0.98, 0.99);
+    border-radius: 24px 20px 24px 20px;
+  }
+  100% {
+    transform: scale(1, 1);
+    border-radius: 22px;
+  }
+}
+
+@keyframes tap-ripple {
+  0% {
+    opacity: 0.85;
+    transform: scale(0.82);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.75);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-tile.is-tapped .room-tile__icon,
+  .room-tile.is-tapped .room-tile__icon::after {
+    animation: none;
+  }
+}
+
+.room-tile__img {
+  position: relative;
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(118, 96, 132, 0.18));
+}
+
+.room-tile__emoji {
+  position: relative;
+  font-size: 1.9rem;
+}
+
+.room-tile__dot {
+  position: absolute;
+  z-index: 3;
+  top: 8px;
+  right: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.56);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  background: rgba(124, 120, 146, 0.32);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
 }
 
-.room-card__status.ready {
-  color: #8e6472;
-  background: rgba(243, 191, 208, 0.5);
+.room-tile__dot.is-ready {
+  background: #5fd0a6;
+  box-shadow:
+    0 0 0 3px rgba(95, 208, 166, 0.22),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.7);
 }
 
+.room-tile__name {
+  position: relative;
+  z-index: 1;
+  font-family: var(--cute);
+  font-size: 1.02rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  color: var(--iris-deep); /* 白天浅背景：墨紫 */
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.4); /* 浅背景上更清楚 */
+}
+
+/* 傍晚/夜里背景变深，墨紫会糊进去 —— 自动转浅色 + 深色描边，保证看得见 */
+.home-page.is-dusk .room-tile__name,
+.home-page.is-night .room-tile__name {
+  color: #f4ecff;
+  text-shadow: 0 1px 4px rgba(55, 38, 88, 0.6);
+}
+
+.room-tile__english {
+  position: relative;
+  z-index: 1;
+  color: var(--iris);
+  font-family: var(--serif-en);
+  font-size: 0.76rem;
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- preview sheet ---------- */
 .room-preview {
   position: sticky;
   bottom: calc(16px + env(safe-area-inset-bottom));
   width: min(100%, 720px);
-  margin: 22px auto 0;
-  padding: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.66);
+  margin: 24px auto 0;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
   border-radius: 28px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 24px 80px rgba(118, 96, 132, 0.22);
-  backdrop-filter: blur(18px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.6));
+  box-shadow:
+    0 24px 80px rgba(118, 96, 132, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(22px) saturate(1.4);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+}
+
+/* 带场景头图的房间预览 */
+.room-preview--scene {
+  overflow: hidden;
+  padding-top: 0;
+}
+
+.room-preview__hero {
+  height: clamp(260px, 56vw, 360px);
+  margin: 0 -20px 16px;
+  background-size: cover;
+  background-position: center 48%;
+  /* 底部柔化，让场景图与玻璃卡片自然过渡 */
+  -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent);
+  mask-image: linear-gradient(180deg, #000 72%, transparent);
 }
 
 .room-preview__close {
@@ -322,23 +1200,41 @@ a {
 
 .room-preview__icon {
   display: grid;
-  width: 54px;
-  height: 54px;
+  width: 56px;
+  height: 56px;
   margin-bottom: 12px;
   place-items: center;
   border-radius: 20px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(201, 184, 241, 0.42));
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(201, 184, 241, 0.42));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
   font-size: 1.7rem;
+}
+
+.room-preview__icon img {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+}
+
+.room-preview__eyebrow {
+  margin-bottom: 2px;
 }
 
 .room-preview h3 {
   margin: 4px 0 0;
   color: var(--ink);
-  font-size: 1.45rem;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.55rem;
 }
 
 .room-preview__english {
-  margin-bottom: 12px;
+  margin: 3px 0 12px;
+  color: var(--muted);
+  font-family: var(--round);
+  font-style: italic;
 }
 
 .room-preview__summary {
@@ -357,44 +1253,4820 @@ a {
   line-height: 1.6;
 }
 
-@media (min-width: 700px) {
+/* 深夜档：背景转深空，直接坐在背景上的文字/卡片要提亮，保证可读 */
+.home-page.is-night .rooms-section__header h2 {
+  color: #efe7ff;
+}
+
+.home-page.is-night .rooms-section__header p,
+.home-page.is-night .rooms-section__header span {
+  color: rgba(228, 222, 250, 0.82);
+}
+
+.home-page.is-night .room-tile {
+  color: #f0e9ff;
+}
+
+.home-page.is-night .room-tile__english {
+  color: #cdbdf2;
+}
+
+/* 深夜：卡片改深色烟熏玻璃，浅色字才跳得出来（白卡配浅字会糊） */
+.home-page.is-night .hero-card {
+  /* 调实一档，让磨砂玻璃是一块均匀烟熏底，而不是把背后冷暖光斑透成两半 */
+  background: rgba(44, 35, 68, 0.66);
+  border-color: rgba(214, 200, 245, 0.34);
+}
+
+/* 夜间把卡后极光调淡调柔，避免透过玻璃显成冷暖两色块 */
+.home-page.is-night .hero::before {
+  opacity: 0.4;
+  filter: blur(52px);
+}
+
+/* 深夜档：英文标题换亮色，暗底才清楚 */
+/* 深夜/傍晚：英文冷紫粉玻璃发光（指定渐变 + 白描边 + 多层柔光，配深烟熏卡清晰不糊） */
+.home-page.is-night .hero-card h1 {
+  /* 仅深夜：夜色玻璃感提亮版。傍晚dusk用白天深色版(背景浅) */
+  background-image: linear-gradient(
+    100deg,
+    #8f9cee 0%,
+    #ab8fe0 24%,
+    #c599d8 44%,
+    #a7a2e4 58%,
+    #84cae8 78%,
+    #74e0d8 100%
+  );
+  text-shadow:
+    0 1px 1px rgba(255, 255, 255, 0.22),
+    0 0 6px rgba(150, 175, 245, 0.2);
+}
+
+/* 仅深夜(深色背景)：蓝→紫→粉→紫→蓝亮版（保留中间那点粉，跟白天对应；夜里饱和度更高一档）*/
+.home-page.is-night .vow span {
+  background-image: linear-gradient(
+    95deg,
+    #88c4f5 0%,
+    #a6b2f1 22%,
+    #cdb0f0 42%,
+    #f0b6d6 58%,
+    #bcb8f2 80%,
+    #8cccf5 100%
+  );
+  opacity: 1;
+  text-shadow:
+    0 0 1px rgba(255, 255, 255, 0.25),
+    0 2px 6px rgba(30, 36, 90, 0.35);
+}
+
+/* 同样坐在暗玻璃上的英文副标语 / eyebrow 一起提亮 */
+.home-page.is-night .vow-en {
+  color: #e9e2fb;
+  opacity: 0.94;
+}
+.home-page.is-night .vow-en .forever {
+  color: #ef9ec8; /* 深色背景上用更亮的玫瑰粉 */
+}
+
+.home-page.is-night .hero-card__eyebrow {
+  color: #d3c4f3;
+}
+
+/* 深夜：玻璃药丸自带亮色，这里只保证文字可读 + 副按钮玻璃稍提白 */
+.home-page.is-night .hero-card__actions a,
+.home-page.is-night .hero-card__actions button {
+  color: #4a3b6e;
+  background:
+    radial-gradient(75% 60% at 28% 12%, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0) 62%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0.34));
+}
+
+.home-page.is-night .hero-card__actions button:first-child {
+  color: #43306a;
+  background:
+    radial-gradient(40% 32% at 28% 15%, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0) 72%),
+    radial-gradient(22% 28% at 78% 85%, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 74%),
+    linear-gradient(
+      164deg,
+      #c79bdf 0%,
+      #e6a8d6 22%,
+      #f0b8d6 40%,
+      #cebceb 56%,
+      #a6dae6 76%,
+      #88d2dc 100%
+    );
+}
+
+/* 深夜/傍晚的脉冲·微闪·扫光沿用基础 .hero-card h1 / .vow 的 heroGlowPulse / sloganTwinkle / heroSweepLight，
+   这里只覆盖颜色与描边/柔光，不再单独定义动画。 */
+
+@media (min-width: 560px) {
+  .rooms-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 760px) {
   .home-page {
     padding-top: 44px;
   }
 
   .rooms-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 420px) {
-  .home-page {
-    padding-inline: 12px;
+/* ---------- 偷偷写情书的光标 ---------- */
+.love-cursor {
+  position: fixed;
+  z-index: 3;
+  max-width: 78vw;
+  font-family: var(--serif-cn);
+  font-size: 13px;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+}
+
+.love-cursor.is-hiding {
+  opacity: 0;
+}
+
+.love-cursor__text {
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.love-cursor__caret {
+  display: inline-block;
+  width: 1px;
+  height: 1.05em;
+  margin-left: 1px;
+  vertical-align: -0.12em;
+  animation: caret-blink 0.5s steps(1) infinite;
+}
+
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-tile,
+  .hero-card__actions button,
+  .hero-card__actions a {
+    transition: none;
   }
 
-  .hero-card h1 {
-    font-size: clamp(2.28rem, 10.4vw, 3.05rem);
+  /* 关掉爪印、光标、涟漪、光斑漂移、斜高光、标语流动，以及新增的氛围动效 */
+  .blob,
+  .dust,
+  .paw,
+  .star,
+  .hero-card,
+  .hero-card h1,
+  .hero-card::before,
+  .hero::before,
+  .hero-mascot,
+  .hero-spark,
+  .hero-card h1,
+  .room-tile__icon,
+  .timesky__layer,
+  .vow,
+  .vow span,
+  .purr-ripple,
+  .love-cursor__caret {
+    animation: none !important;
   }
 
-  .hero-card__poem {
-    font-size: clamp(1rem, 4.15vw, 1.38rem);
+  /* 减动时关掉扫光；发光改静态（text-shadow 已在各自规则里静态保留，不明灭） */
+  .hero-card h1::after {
+    animation: none !important;
+    opacity: 0;
   }
 
-  .rooms-section__header h2 {
-    font-size: clamp(1.28rem, 5vw, 1.82rem);
+  .dust,
+  .paw,
+  .star,
+  .hero-spark,
+  .paw-cursor,
+  .love-cursor {
+    display: none !important;
   }
 
-  .rooms-grid {
-    gap: 10px;
+  /* 静止时把浮动的图标归位 */
+  .room-tile__icon {
+    transform: none !important;
   }
 
-  .room-card {
-    min-height: 160px;
-    padding: 12px;
+  .vow {
+    background-position: 0 center;
   }
+}
 
-  .room-card__icon {
-    width: 38px;
-    height: 38px;
+/* ====================== 呼噜频道 · 聊天页 ====================== */
+.chat-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  /* 露原图,不再叠雾感(老婆说这个上次反了——雾感是给气泡的,不是给页面) */
+  background: var(--chat-bg-image, url("/rooms/purr-channel.webp")) center / cover no-repeat;
+}
+
+/* ---------- 顶栏：钉死在视口顶部，调窄一点(老婆要求) ---------- */
+.chat-head {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(6px + env(safe-area-inset-top)) 14px 6px;
+  /* 原来只有 18% 白 + 没有 backdrop-filter，滚动到顶的消息文字会从头顶清清楚楚透出来，
+     跟标题糊成一片。加够透明度 + 模糊，压住底下滚动内容，标题才能一直看得清。 */
+  background: rgba(255, 255, 255, 0.55);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  backdrop-filter: blur(14px) saturate(1.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.chat-head__back {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  color: #8e6472;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.chat-head__title {
+  display: flex;
+  flex-direction: column;
+  margin-right: auto;
+  line-height: 1.1;
+}
+
+.chat-head__name {
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 1rem;
+}
+
+.chat-head__sub {
+  color: var(--muted);
+  font-family: var(--round);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.chat-head__provider {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.chat-head__provider button {
+  padding: 6px 12px;
+  color: var(--muted);
+  font-family: var(--round);
+  font-size: 0.8rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.chat-head__provider button.is-on {
+  color: #8e6472;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 4px 12px rgba(118, 96, 132, 0.16);
+}
+
+.chat-head__provider button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.chat-head__clear {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.16s ease, opacity 0.16s ease;
+}
+
+.chat-head__clear:active {
+  transform: scale(0.92);
+}
+
+.chat-head__clear:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ---------- 消息区 ---------- */
+.chat-scroll {
+  flex: 1;
+  min-height: 0;
+  /* 顶栏调窄后留白同步缩 */
+  padding: calc(54px + env(safe-area-inset-top)) 14px calc(80px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+.chat-empty {
+  margin-top: 22vh;
+  text-align: center;
+  color: var(--muted);
+}
+
+.chat-empty__paw {
+  font-size: 2.6rem;
+}
+
+.chat-empty p {
+  margin: 10px 0 4px;
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 1.2rem;
+}
+
+.chat-empty span {
+  font-size: 0.82rem;
+}
+
+.bubble-row {
+  display: flex;
+  margin-bottom: 14px;
+}
+
+.bubble-row.is-user {
+  justify-content: flex-end;
+  align-items: flex-start; /* 头像跟气泡顶端对齐 */
+}
+
+.bubble-row.is-bot {
+  align-items: flex-start; /* 头像跟气泡顶端对齐 */
+}
+
+/* 我自己的消息：内容靠右，头像在最右边 */
+.bubble-stack--user {
+  align-items: flex-end;
+}
+
+.bubble-avatar--me {
+  margin-right: 0;
+  margin-left: 8px;
+}
+
+/* 予予头像：每条回复气泡左边 */
+.bubble-avatar {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  margin-right: 8px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.65);
+  box-shadow: 0 4px 12px rgba(118, 96, 132, 0.16);
+}
+
+.bubble-avatar--ph {
+  display: grid;
+  place-items: center;
+  font-size: 1.05rem;
+}
+
+.bubble-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 82%;
+}
+
+.bubble {
+  max-width: 82%;
+  padding: 10px 13px;
+  font-family: var(--chat);
+  font-size: 0.86rem;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-radius: 20px;
+  box-shadow: 0 6px 18px rgba(118, 96, 132, 0.12);
+}
+
+/* 气泡:粉紫渐变淡绿,真液态玻璃半透——参照"星云幻境"配色卡，两色干净对角渐变，
+   不叠第三个色相进去,叠多层半透明色块才是之前显脏的根源。 */
+.bubble--user {
+  position: relative;
+  color: #6b4a86;
+  border-bottom-right-radius: 6px;
+  /* 我的气泡:左下角淡绿(#AAF6F1)→右上角粉紫(#D66EF6)，两色对角渐变。 */
+  background: linear-gradient(to top right, rgba(170, 246, 241, 0.4), rgba(214, 110, 246, 0.32));
+  box-shadow:
+    0 4px 14px rgba(180, 120, 220, 0.1),
+    inset 0 1px 1px rgba(255, 255, 255, 0.24),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  backdrop-filter: blur(20px) saturate(1.2);
+}
+
+.bubble--bot {
+  position: relative;
+  max-width: 100%;
+  padding: 14px 16px;
+  color: #6b4a86;
+  /* 予予的气泡:右下角淡绿(#AAF6F1)→左上角粉紫(#D66EF6)，跟用户气泡镜像对称，
+     整体比用户气泡略淡一点做区分。 */
+  background: linear-gradient(to top left, rgba(170, 246, 241, 0.3), rgba(214, 110, 246, 0.24));
+  border-radius: 20px 20px 20px 6px;
+  box-shadow:
+    0 4px 14px rgba(140, 110, 200, 0.1),
+    inset 0 1px 1px rgba(255, 255, 255, 0.24),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  backdrop-filter: blur(20px) saturate(1.2);
+}
+
+/* 气泡左上角探出的小猫爪 */
+.bubble--bot::before {
+  content: '🐾';
+  position: absolute;
+  top: -6px;
+  left: 12px;
+  font-size: 14px;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ---------- 语音气泡（微信式）---------- */
+.voice-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  max-width: 82%;
+}
+
+.voice-bubble {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  color: #6b4350;
+  border: 0;
+  border-radius: 20px;
+  border-bottom-right-radius: 6px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(243, 191, 208, 0.82));
+  box-shadow: 0 6px 18px rgba(118, 96, 132, 0.12);
+  cursor: pointer;
+}
+
+.voice-bubble:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.voice-bubble__icon {
+  font-size: 0.9rem;
+}
+
+.voice-bubble__bars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 20px;
+  flex: 1;
+}
+
+.voice-bubble__bars i {
+  width: 3px;
+  border-radius: 2px;
+  background: rgba(142, 100, 114, 0.55);
+}
+
+.voice-bubble.is-playing .voice-bubble__bars i {
+  animation: voice-pulse 0.9s infinite ease-in-out;
+}
+
+.voice-bubble.is-playing .voice-bubble__bars i:nth-child(odd) {
+  animation-delay: 0.25s;
+}
+
+@keyframes voice-pulse {
+  0%, 100% { transform: scaleY(0.6); }
+  50% { transform: scaleY(1.15); }
+}
+
+.voice-bubble__dur {
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.voice-wrap__t2t {
+  padding: 3px 12px;
+  color: #7a6bb0;
+  font-family: var(--round);
+  font-size: 0.76rem;
+  border: 1px solid rgba(201, 184, 241, 0.6);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+}
+
+.voice-wrap__t2t:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.voice-wrap__text {
+  padding: 9px 13px;
+  color: var(--ink);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  border-radius: 16px;
+  border-top-right-radius: 6px;
+  background: rgba(255, 255, 255, 0.78);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---------- 思考链折叠卡片 ---------- */
+/* 思考链：液态玻璃磨砂"沉思云朵"——创小公主体 + 紫色 + 真透到背景图 */
+.think-card {
+  position: relative;
+  isolation: isolate;
+  align-self: flex-start;
+  max-width: 100%;
+  margin-bottom: 6px;
+  border-radius: 18px 18px 18px 6px;
+  overflow: hidden;
+  /* Lunar Whisper 微光夜语——回到老婆之前"可以了"那版的厚度 */
+  background: linear-gradient(
+    135deg,
+    rgba(238, 208, 242, 0.42) 0%,
+    rgba(158, 186, 235, 0.36) 55%,
+    rgba(150, 223, 245, 0.42) 100%
+  );
+  box-shadow:
+    0 8px 18px rgba(140, 130, 200, 0.16),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  backdrop-filter: blur(16px) saturate(1.3);
+}
+/* 玻璃顶光（湿润反射） */
+.think-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 48%);
+  pointer-events: none;
+}
+/* 虹彩折射描边 */
+.think-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.2px;
+  background: linear-gradient(
+    155deg,
+    rgba(214, 184, 255, 0.85) 0%,
+    rgba(196, 172, 240, 0.68) 45%,
+    rgba(232, 198, 244, 0.78) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+}
+
+.think-card__toggle {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 14px;
+  color: #8e6fc9; /* 亮紫色，跟聊天字色 #5f5877 拉开 */
+  font-family: "GongZhuFull", "ShunFengFull", var(--serif-cn);
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.think-card__chevron {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: #a78bd8;
+}
+
+/* Mind Theater 品牌字: Quimil 衬线, background-clip 紫渐变文本 +
+   -webkit-text-stroke 深紫描一圈干净加粗。
+   之前只用 font-weight:800 假粗对渐变文本效果太弱, 老婆截图看不到加粗;
+   改用 stroke 描字体外沿——渐变仍在字内, 深紫描边把字轮廓加粗一圈, 视觉上明显更厚 */
+.think-card__brand {
+  font-family: "Quimil", "Marcellus", serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #8e6fc9;
+  letter-spacing: 0.02em;
+  background: linear-gradient(135deg, #c4a7ef 0%, #8e6fc9 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 0.55px #8e6fc9;
+}
+.think-card__label {
+  color: inherit;
+}
+
+.think-card__body {
+  position: relative;
+  z-index: 1;
+  padding: 2px 15px 12px;
+  border-left: 2px solid rgba(155, 123, 200, 0.55);
+  margin: 0 0 8px 13px;
+  color: #7d5fc6; /* 中紫，比标题略深一档；跟正文字色 #5f5877 区分清楚 */
+  font-family: "GongZhuFull", "ShunFengFull", var(--serif-cn);
+  font-size: 0.92rem;
+  line-height: 1.78;
+  letter-spacing: 0.02em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---------- 耳边话（AI 语音）---------- */
+.speak-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  padding: 5px 13px;
+  color: #7a6bb0;
+  font-family: "GongZhuFull", "ShunFengFull", var(--round);
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  border: 1px solid rgba(201, 184, 241, 0.55);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition: background 0.16s ease, transform 0.16s ease;
+}
+
+.speak-btn:active {
+  transform: scale(0.95);
+}
+
+.speak-btn.is-playing {
+  color: #8e6472;
+  background: rgba(243, 191, 208, 0.35);
+}
+
+.speak-btn.is-loading {
+  opacity: 0.7;
+  cursor: default;
+}
+
+/* ---------- 打字省略号 ---------- */
+.typing-dots {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  height: 1.2em;
+}
+
+.typing-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(122, 107, 176, 0.6);
+  animation: typing-bounce 1.1s infinite ease-in-out;
+}
+
+.typing-dots i:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.typing-dots i:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+@keyframes typing-bounce {
+  0%, 80%, 100% {
+    transform: translateY(0);
+    opacity: 0.5;
   }
+  40% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+/* ---------- 输入栏 ---------- */
+.chat-input {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+  /* 不模糊背景：去掉 backdrop-filter，只留极轻一层底色 */
+  background: rgba(255, 255, 255, 0.22);
+  border-top: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.chat-input__mode {
+  flex-shrink: 0;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: transform 0.16s ease;
+}
+
+.chat-input__mode:active {
+  transform: scale(0.92);
+}
+
+.chat-input__mode:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.chat-input__hold {
+  flex: 1;
+  height: 44px;
+  color: #6b4350;
+  font-family: var(--round);
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  transition: background 0.16s ease, transform 0.16s ease;
+}
+
+.chat-input__hold.is-recording {
+  color: #fff;
+  background: linear-gradient(135deg, #d59ab0, #a98fd0);
+  transform: scale(1.01);
+  box-shadow: 0 0 0 4px rgba(201, 184, 241, 0.25);
+}
+
+.chat-input__hold:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.chat-input textarea {
+  flex: 1;
+  max-height: 140px;
+  padding: 11px 14px;
+  color: var(--ink);
+  font-family: var(--chat);
+  font-size: 1.04rem;
+  line-height: 1.5;
+  resize: none;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.85);
+  outline: none;
+}
+
+.chat-input textarea:focus {
+  border-color: rgba(201, 184, 241, 0.8);
+  box-shadow: 0 0 0 3px rgba(201, 184, 241, 0.22);
+}
+/* 占位符调小一点(可爱表情脸不占太多位),真正打字文字保持原尺寸 */
+.chat-input textarea::placeholder {
+  font-size: 0.86rem;
+  color: rgba(107, 74, 134, 0.55);
+  letter-spacing: 0.02em;
+}
+
+/* 待发缩略图槽: 钉在输入框正上方,不进入 flex 流。贴纸/照片各占一格,可以并排两张 */
+.pending-meme {
+  position: absolute;
+  left: 14px;
+  bottom: calc(100% - 4px);
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 8px 22px rgba(118, 96, 132, 0.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  backdrop-filter: blur(12px) saturate(1.2);
+}
+.pending-meme__slot {
+  position: relative;
+  display: inline-block;
+}
+.pending-meme__img {
+  display: block;
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+.pending-meme__img--loading {
+  background: rgba(220, 210, 240, 0.6);
+  animation: pending-meme-pulse 1.4s ease-in-out infinite;
+}
+@keyframes pending-meme-pulse {
+  50% { opacity: 0.5; }
+}
+.pending-meme__remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  background: rgba(210, 130, 160, 0.95);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(118, 96, 132, 0.22);
+}
+.pending-meme__remove:active {
+  transform: scale(0.88);
+}
+
+.chat-input__btn {
+  flex-shrink: 0;
+  min-width: 56px;
+  height: 44px;
+  padding: 0 16px;
+  color: #fff;
+  font-family: var(--round);
+  font-weight: 600;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #d59ab0, #a98fd0);
+  box-shadow: 0 8px 20px rgba(118, 96, 132, 0.22);
+  cursor: pointer;
+  transition: transform 0.16s ease, opacity 0.16s ease;
+}
+
+.chat-input__btn:active {
+  transform: scale(0.95);
+}
+
+.chat-input__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.chat-input__btn.is-stop {
+  background: linear-gradient(135deg, #c9a0a0, #b08fa0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-dots i {
+    animation: none;
+  }
+}
+
+/* ====================== 猫爪足迹 · Paw Trail ====================== */
+.paw-page {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: calc(12px + env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom));
+  /* 浅底默认：深字 + 浅玻璃卡 */
+  --paw-ink: #5d4a7e;
+  --paw-sub: rgba(93, 74, 126, 0.82);
+  /* frosted glass：更透一些，让可爱背景透过玻璃看得见（文字靠描边/阴影兜可读） */
+  --paw-card: rgba(255, 250, 252, 0.46);
+  --paw-card-border: rgba(255, 255, 255, 0.7);
+  color: var(--paw-ink);
+}
+.paw-page.is-night {
+  --paw-ink: #efe7ff;
+  --paw-sub: rgba(226, 220, 250, 0.86);
+  --paw-card: rgba(44, 36, 68, 0.4);
+  --paw-card-border: rgba(214, 200, 245, 0.26);
+}
+
+/* 类别色：莫兰迪低饱和柔色（爪印/方块/时长条/星河石头共用 --cc） */
+.cat-social { --cc: #e7a6ae; }
+.cat-work { --cc: #b3a9d6; }
+.cat-entertainment { --cc: #e3c29a; }
+.cat-reading { --cc: #a6ccc2; }
+.cat-tool { --cc: #a6c3df; }
+.cat-other { --cc: #bfc3d0; }
+
+/* 时段背景：paw-trail 场景图 + 随 tod 的薄色纱 */
+/* 背景：两张交叉淡化拼成的无缝循环长图，贯穿全页随内容滚动 */
+.paw-sky {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+}
+/* 两张只叠一次(云朵处羽化)铺满全页，不重复——图1顶部的猫只在最顶出现一次，不会被复制到下半页切到脸 */
+.paw-sky__photo {
+  position: absolute;
+  inset: 0;
+  background: url("/rooms/paw-trail-stack.webp") top center / 100% auto no-repeat;
+  filter: saturate(1.05);
+}
+/* 深夜档换成专门画的夜版长图（深空紫+月亮+猫），不再靠暗纱压暗白图 */
+.paw-page.is-night .paw-sky__photo {
+  background-image: url("/rooms/paw-trail-stack-night.webp");
+}
+.paw-sky__tint {
+  position: absolute;
+  inset: 0;
+  transition: background 1.2s ease;
+  background: linear-gradient(165deg, rgba(210, 230, 255, 0.16), rgba(225, 215, 245, 0.12));
+}
+.paw-page.is-dawn .paw-sky__tint {
+  background: linear-gradient(165deg, rgba(255, 214, 180, 0.4), rgba(250, 200, 220, 0.28));
+}
+.paw-page.is-dusk .paw-sky__tint {
+  background: linear-gradient(165deg, rgba(245, 180, 210, 0.42), rgba(150, 120, 200, 0.42));
+}
+.paw-page.is-night .paw-sky__tint {
+  /* 夜版图本身已是深空，仅极薄一层保字，不再压暗整张图 */
+  background: rgba(20, 16, 40, 0.12);
+}
+.paw-star {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff, rgba(216, 180, 254, 0.6) 60%, transparent);
+  box-shadow: 0 0 6px 1px rgba(216, 180, 254, 0.7);
+  opacity: 0;
+  animation: twinkle ease-in-out infinite;
+}
+
+/* 顶栏 */
+.paw-top {
+  position: sticky; /* 吸顶：滚足迹时返回/标题一直在 */
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 560px);
+  margin: 0 auto 14px;
+  padding: calc(8px + env(safe-area-inset-top)) 6px 8px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.2));
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+}
+.paw-top__back {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  color: var(--paw-ink);
+  border: 1px solid var(--paw-card-border);
+  border-radius: 999px;
+  background: var(--paw-card);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+.paw-top__title { display: flex; flex-direction: column; line-height: 1.05; }
+.paw-top__cn { font-family: var(--cute); font-size: 1.2rem; letter-spacing: 0.06em; }
+.paw-top__en { font-family: var(--serif-en); font-style: italic; font-size: 0.8rem; color: var(--paw-sub); }
+.paw-top__spacer { margin-left: auto; }
+
+/* 通用毛玻璃卡 */
+.paw-card,
+.paw-chips,
+.paw-comment {
+  width: min(100%, 560px);
+  margin: 0 auto 18px;
+  padding: 18px;
+  border: 1px solid var(--paw-card-border);
+  border-radius: 26px;
+  background: var(--paw-card);
+  box-shadow: 0 18px 40px -22px rgba(93, 74, 126, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(11px) saturate(1.3);
+  -webkit-backdrop-filter: blur(11px) saturate(1.3);
+}
+.paw-h2 {
+  margin: 0 0 12px;
+  font-family: var(--cute);
+  font-size: 1.12rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+.paw-note {
+  width: min(100%, 560px);
+  margin: 0 auto 12px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  text-align: center;
+  backdrop-filter: blur(8px);
+}
+.paw-note--demo { background: rgba(123, 143, 232, 0.2); color: var(--paw-ink); }
+.paw-note--stale { background: rgba(246, 184, 99, 0.22); color: var(--paw-ink); }
+
+/* ① 活动环 */
+.paw-ring-card { position: relative; display: grid; place-items: center; padding-top: 24px; }
+.paw-ring { width: min(72vw, 260px); height: min(72vw, 260px); }
+.paw-ring__track { fill: none; stroke: rgba(155, 123, 200, 0.18); stroke-width: 14; }
+.paw-ring__fill {
+  fill: none;
+  stroke: url(#ringGrad);
+  stroke-width: 14;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  filter: drop-shadow(0 0 6px var(--glow));
+  stroke-dashoffset: var(--ring-off);
+  animation: paw-ring-fill 1.1s ease forwards;
+}
+@keyframes paw-ring-fill {
+  from { stroke-dashoffset: var(--ring-c); }
+  to { stroke-dashoffset: var(--ring-off); }
+}
+.paw-ring__center {
+  position: absolute;
+  top: 24px;
+  display: grid;
+  place-items: center;
+  width: min(72vw, 260px);
+  height: min(72vw, 260px);
+  text-align: center;
+}
+.paw-ring__cat { width: 38%; height: auto; filter: drop-shadow(0 6px 10px rgba(118, 96, 132, 0.3)); }
+.paw-ring__mood { position: absolute; top: 18%; right: 26%; font-size: 1.4rem; }
+.paw-ring__time { margin-top: 2px; font-family: var(--round); font-size: 2rem; font-weight: 600; }
+.paw-ring__label { font-family: var(--cute); font-size: 0.95rem; color: var(--paw-sub); }
+.paw-delta {
+  margin-top: 8px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-family: var(--round);
+}
+.paw-delta.is-less { background: rgba(143, 217, 192, 0.28); color: #3f8f73; }
+.paw-delta.is-more { background: rgba(246, 184, 99, 0.26); color: #a9742f; }
+.paw-page.is-night .paw-delta.is-less { color: #b6f0d9; }
+.paw-page.is-night .paw-delta.is-more { color: #f6cf97; }
+
+/* ② 猫咪点评 */
+.paw-comment { display: flex; align-items: flex-start; gap: 12px; }
+.paw-comment__avatar { flex-shrink: 0; width: 46px; height: 46px; border-radius: 50%; object-fit: cover; }
+.paw-comment__bubble {
+  margin: 0;
+  padding: 11px 14px;
+  font-family: var(--chat);
+  font-size: 1rem;
+  line-height: 1.6;
+  border-radius: 16px;
+  border-top-left-radius: 4px;
+  background: rgba(255, 255, 255, 0.42);
+}
+.paw-page.is-night .paw-comment__bubble { background: rgba(255, 255, 255, 0.12); }
+
+/* ③ 爪印榜 · 肉垫 */
+.paw-apps { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.paw-app { display: flex; align-items: center; gap: 12px; }
+.paw-pad {
+  flex-shrink: 0;
+  display: grid;
+  width: 44px;
+  height: 40px;
+  place-items: center;
+  font-family: var(--cute);
+  font-size: 1.1rem;
+  color: #5d4a7e;
+  /* 圆滚滚肉垫 */
+  border-radius: 50% 50% 48% 48% / 58% 58% 42% 42%;
+  background: var(--cc, #c9c3d8);
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.6), 0 6px 12px -4px rgba(93, 74, 126, 0.4);
+}
+.paw-app.is-top .paw-pad { width: 50px; height: 46px; animation: paw-pad-bob 3s ease-in-out infinite; }
+@keyframes paw-pad-bob { 50% { transform: translateY(-3px); } }
+.paw-app__body { flex: 1; min-width: 0; }
+.paw-app__row { display: flex; justify-content: space-between; gap: 8px; }
+.paw-app__name { font-family: var(--cute); font-size: 0.98rem; }
+.paw-app__dur { font-family: var(--round); font-size: 0.9rem; color: var(--paw-sub); }
+.paw-app__bar { margin-top: 5px; height: 9px; border-radius: 999px; background: rgba(155, 123, 200, 0.16); overflow: hidden; }
+.paw-app__fill { display: block; height: 100%; border-radius: 999px; background: var(--cc, #c9c3d8); }
+
+/* ④ 星河沙滩时间线 */
+.paw-river { position: relative; padding-top: 18px; }
+.paw-river__seg { position: absolute; top: 0; transform: translateX(-50%); font-size: 0.72rem; color: var(--paw-sub); }
+.paw-river__seg:first-child { transform: none; }
+.paw-river__track {
+  position: relative;
+  height: 64px;
+  margin-top: 6px;
+  border-radius: 16px;
+  background: linear-gradient(90deg, rgba(123, 143, 232, 0.18), rgba(242, 169, 196, 0.18));
+  overflow: hidden;
+}
+.paw-step {
+  position: absolute;
+  top: 50%;
+  height: 12px;
+  min-width: 10px;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 999px;
+  background: var(--cc, #c9c3d8);
+  box-shadow: 0 0 8px var(--cc, #c9c3d8);
+  cursor: pointer;
+  padding: 0;
+}
+.paw-step__paw { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 0.8rem; }
+.paw-step.is-night { box-shadow: 0 0 10px rgba(123, 160, 232, 0.9); }
+.paw-step__moon { position: absolute; top: -16px; right: -6px; font-size: 0.78rem; }
+.paw-step.is-active { outline: 2px solid rgba(255, 255, 255, 0.9); outline-offset: 2px; }
+.paw-step__bubble {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 10px;
+  white-space: nowrap;
+  font-size: 0.74rem;
+  color: #6b4350;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 12px;
+  box-shadow: 0 6px 14px rgba(118, 96, 132, 0.25);
+  animation: paw-bubble-bob 2.6s ease-in-out infinite;
+}
+@keyframes paw-bubble-bob { 50% { transform: translateX(-50%) translateY(-3px); } }
+.paw-hourbar {
+  position: absolute;
+  bottom: 0;
+  width: 3px;
+  transform: translateX(-50%);
+  border-radius: 999px 999px 0 0;
+  background: linear-gradient(180deg, var(--sakura), var(--iris));
+  opacity: 0.7;
+}
+.paw-river__detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 0.9rem;
+}
+.paw-river__detail span:last-child { color: var(--paw-sub); }
+.paw-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--cc, #c9c3d8); }
+.paw-river__hint { margin: 12px 0 0; font-size: 0.82rem; color: var(--paw-sub); }
+
+/* ⑤ 7 天趋势 */
+.paw-trend { display: flex; align-items: flex-end; gap: 8px; height: 120px; }
+.paw-trend__col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; }
+.paw-trend__barwrap { flex: 1; display: flex; align-items: flex-end; width: 100%; }
+.paw-trend__bar {
+  width: 100%;
+  border-radius: 8px 8px 4px 4px;
+  background: linear-gradient(180deg, var(--blueviolet), var(--iris));
+  transition: height 0.6s ease;
+}
+.paw-trend__bar.is-weekend { background: linear-gradient(180deg, var(--sakura), #d98fb4); }
+.paw-trend__col.is-today .paw-trend__bar { box-shadow: 0 0 12px var(--glow); }
+.paw-trend__day { font-family: var(--round); font-size: 0.7rem; color: var(--paw-sub); }
+.paw-trend__col.is-today .paw-trend__day { color: var(--paw-ink); font-weight: 600; }
+
+/* ⑥ 小指标 chips */
+.paw-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px; }
+.paw-chip {
+  padding: 7px 13px;
+  font-family: var(--round);
+  font-size: 0.84rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid var(--paw-card-border);
+}
+.paw-page.is-night .paw-chip { background: rgba(255, 255, 255, 0.1); }
+
+.paw-foot { width: min(100%, 560px); margin: 6px auto 0; text-align: center; font-size: 0.76rem; color: var(--paw-sub); }
+
+/* 加载 / 空态 */
+.paw-loading, .paw-empty {
+  width: min(100%, 560px);
+  margin: 16vh auto 0;
+  text-align: center;
+  color: var(--paw-ink);
+}
+.paw-loading__paw { font-size: 2.4rem; animation: paw-pad-bob 1.2s ease-in-out infinite; }
+.paw-loading p { font-family: var(--cute); font-size: 1.05rem; }
+.paw-empty__cat { width: 120px; height: auto; }
+.paw-empty p { margin: 12px 0 4px; font-family: var(--cute); font-size: 1.1rem; }
+.paw-empty span { font-size: 0.85rem; color: var(--paw-sub); }
+
+@media (prefers-reduced-motion: reduce) {
+  .paw-ring__fill,
+  .paw-app.is-top .paw-pad,
+  .paw-step__bubble,
+  .paw-loading__paw,
+  .paw-trend__bar {
+    animation: none !important;
+    transition: none !important;
+  }
+  .paw-star { display: none !important; }
+}
+
+/* ====================== Paw Trail 视觉升级（跟随 GPT 重设计）====================== */
+/* ① 彩虹玻璃活动环 */
+.paw-ring-card { position: relative; display: grid; place-items: center; padding: 26px 18px 22px; }
+.paw-ring2 {
+  position: relative;
+  width: min(74vw, 286px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 210deg,
+    #f7b8d6, #ffd2b8, #fff0ad, #c3eccf, #a9d4f5, #c9b8f1, #f3b9d8, #f7b8d6
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 21px), #000 calc(100% - 20px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 21px), #000 calc(100% - 20px));
+  filter: drop-shadow(0 8px 18px rgba(155, 123, 200, 0.4));
+}
+.paw-ring2::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 42%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 21px), #000 calc(100% - 20px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 21px), #000 calc(100% - 20px));
+  mix-blend-mode: screen;
+}
+.paw-ring2__charm { position: absolute; top: -4px; left: 20%; font-size: 1.2rem; filter: drop-shadow(0 2px 4px rgba(118, 96, 132, 0.3)); }
+.paw-bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.95), rgba(216, 180, 254, 0.35) 70%, transparent);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+}
+.paw-bubble--1 { width: 14px; height: 14px; top: 12%; right: 14%; }
+.paw-bubble--2 { width: 9px; height: 9px; bottom: 18%; left: 10%; }
+.paw-bubble--3 { width: 7px; height: 7px; bottom: 8%; right: 26%; }
+
+.paw-ring-card .paw-ring__center {
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: min(74vw, 286px);
+  height: min(74vw, 286px);
+}
+.paw-ring__cat { width: 46%; height: auto; margin-bottom: -2px; filter: drop-shadow(0 6px 10px rgba(118, 96, 132, 0.3)); }
+.paw-ring__mood { position: absolute; top: 20%; right: 28%; font-size: 1.4rem; }
+.paw-ring__time { font-family: var(--round); font-size: 2.4rem; font-weight: 600; letter-spacing: 0.05em; color: var(--paw-ink); }
+.paw-ring__label {
+  margin-top: 4px;
+  padding: 3px 16px;
+  border-radius: 999px;
+  font-family: var(--cute);
+  font-size: 0.86rem;
+  color: var(--paw-ink);
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+.paw-page.is-night .paw-ring__label { background: rgba(255, 255, 255, 0.16); }
+.paw-delta {
+  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.paw-delta__paw { font-size: 0.9em; }
+
+/* ③ 爪印榜：标题 + 发光 App 方块 */
+.paw-h2wrap { text-align: center; margin-bottom: 14px; }
+.paw-h2wrap .paw-h2 { margin: 0; }
+.paw-sub { margin: 3px 0 0; font-family: var(--cute); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--paw-sub); }
+.paw-tile {
+  flex-shrink: 0;
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 14px;
+  font-family: var(--cute);
+  font-size: 1.15rem;
+  color: #fff;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 52%), var(--cc, #c9c3d8);
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.7),
+    inset 0 -5px 9px rgba(80, 50, 110, 0.12),
+    0 7px 14px -5px rgba(93, 74, 126, 0.5);
+  overflow: hidden;
+  text-shadow: 0 1px 2px rgba(90, 50, 110, 0.3);
+}
+.paw-tile img { width: 100%; height: 100%; object-fit: cover; }
+.paw-app.is-top .paw-tile { width: 52px; height: 52px; animation: paw-pad-bob 3s ease-in-out infinite; }
+.paw-app__dur { color: var(--cc, var(--paw-sub)); font-weight: 600; }
+.paw-app__bar { margin-top: 6px; height: 10px; border-radius: 999px; background: rgba(155, 123, 200, 0.16); overflow: hidden; }
+.paw-app__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 28%), var(--cc, #c9c3d8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* ④ 星河沙滩：胖鹅卵石 */
+.paw-river__seg { font-size: 0.74rem; }
+.paw-river__track {
+  height: 80px;
+  border-radius: 18px;
+  background:
+    radial-gradient(80% 60% at 50% 120%, rgba(255, 255, 255, 0.35), transparent),
+    linear-gradient(90deg, rgba(123, 143, 232, 0.2), rgba(242, 169, 196, 0.2));
+}
+.paw-step {
+  top: 50%;
+  height: 20px;
+  min-width: 18px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 55%), var(--cc, #c9c3d8);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.85), 0 5px 12px -3px var(--cc, #c9c3d8);
+}
+.paw-step.is-active { outline: 2px solid rgba(255, 255, 255, 0.95); outline-offset: 2px; }
+.paw-step__moon { position: absolute; top: -16px; right: -4px; font-size: 0.8rem; }
+
+/* ⑤ 这一周：竖向渐变柱 + 星座点 */
+.paw-trend { height: 132px; }
+.paw-trend__bar {
+  position: relative;
+  width: 80%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #f6b6d4 0%, #c3a6ef 48%, #a6c2f0 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+.paw-trend__bar.is-weekend { background: linear-gradient(180deg, #ffc9a8 0%, #f2a9c4 55%, #c9a6ef 100%); }
+.paw-trend__col.is-today .paw-trend__bar {
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 14px var(--glow), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.paw-trend__stars {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.5px 1.5px at 32% 16%, rgba(255, 255, 255, 0.95), transparent),
+    radial-gradient(1.5px 1.5px at 62% 34%, rgba(255, 255, 255, 0.85), transparent),
+    radial-gradient(1.5px 1.5px at 42% 56%, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(1.5px 1.5px at 58% 78%, rgba(255, 255, 255, 0.85), transparent);
+}
+
+/* ⑥ chips 现在嵌在「这一周」卡内，去掉自身卡样式 */
+.paw-card .paw-chips {
+  width: auto;
+  margin: 16px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  justify-content: center;
+}
+
+/* ===== Paw Trail 果冻质感增强 + 品牌色 ===== */
+.paw-tile {
+  border-radius: 15px;
+  /* 左上强高光 + 实色底，糖果果冻感 */
+  background:
+    radial-gradient(120% 85% at 28% 16%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 48%),
+    var(--cc, #c9c3d8);
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.9),
+    inset 0 -7px 11px rgba(60, 30, 90, 0.2),
+    0 9px 16px -5px var(--cc, rgba(93, 74, 126, 0.5));
+}
+.paw-app__fill {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 55%),
+    var(--cc, #c9c3d8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 2px 6px -2px var(--cc, rgba(93, 74, 126, 0.4));
+}
+.paw-step {
+  height: 22px;
+  background:
+    radial-gradient(120% 90% at 30% 14%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 52%),
+    var(--cc, #c9c3d8);
+  box-shadow:
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.95),
+    inset 0 -4px 7px rgba(60, 30, 90, 0.18),
+    0 6px 13px -3px var(--cc, #c9c3d8);
+}
+
+/* ===== 爪印榜进度条：浅→品牌色 淡彩渐变果冻条（贴合参考图）===== */
+.paw-app__bar {
+  height: 11px;
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 1px 2px rgba(93, 74, 126, 0.12);
+}
+.paw-page.is-night .paw-app__bar { background: rgba(255, 255, 255, 0.12); }
+.paw-app__fill {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.9) 0%, var(--cc, #c9c3d8) 88%);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -3px 5px rgba(60, 30, 90, 0.12),
+    0 2px 7px -2px var(--cc, rgba(93, 74, 126, 0.4));
+}
+
+/* 莫兰迪柔色下，方块占位字改深色保证可读（真 logo 来了用图片不受影响） */
+.paw-tile {
+  color: rgba(74, 58, 96, 0.78);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* ===== 玻璃珠 Icon + 统一字色（VisionOS Jelly Glass · Morandi）===== */
+.paw-tile {
+  border-radius: 16px;
+  color: #534c74;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
+  /* 半透明玻璃珠：品牌色 → 奶白，叠强高光 */
+  background:
+    radial-gradient(120% 90% at 30% 18%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 56%),
+    linear-gradient(160deg, var(--cc, #c9c3d8), rgba(255, 255, 255, 0.28));
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.9),
+    inset 0 -8px 12px rgba(90, 60, 110, 0.16),
+    0 8px 16px -6px var(--cc, rgba(93, 74, 126, 0.5));
+}
+
+/* 原创果冻图标：图标自带玻璃质感，去掉珠子底色，让图标本体填满 */
+.paw-tile--art {
+  background: none !important;
+  box-shadow: none !important;
+  overflow: visible;
+}
+.paw-tile__art {
+  width: 122% !important;
+  height: 122% !important;
+  object-fit: contain !important;
+  filter: drop-shadow(0 6px 10px rgba(93, 74, 126, 0.32));
+}
+
+/* 应用名 / 时间 统一字色，且与进度条不同色 */
+.paw-app__name { color: #534c74; font-weight: 500; }
+.paw-app__dur { color: #7b7398; font-weight: 600; }
+.paw-page.is-night .paw-app__name { color: #e7e0f5; }
+.paw-page.is-night .paw-app__dur { color: #c9c0e6; }
+
+/* 活动环中心的「女孩抱猫」立绘 */
+.paw-ring__cat { width: 62%; margin-bottom: 0; }
+
+/* ===== 星河沙滩 / 周柱 找回的细节（第二轮反馈）===== */
+.paw-page {
+  /* 半透明白爪印的形状（mask 用） */
+  --paw-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cellipse%20cx='12'%20cy='15.5'%20rx='5.6'%20ry='4.6'/%3E%3Cellipse%20cx='5.6'%20cy='9.5'%20rx='2.1'%20ry='2.6'/%3E%3Cellipse%20cx='10'%20cy='6'%20rx='2.1'%20ry='2.7'/%3E%3Cellipse%20cx='14.4'%20cy='6'%20rx='2.1'%20ry='2.7'/%3E%3Cellipse%20cx='18.6'%20cy='9.5'%20rx='2.1'%20ry='2.6'/%3E%3C/svg%3E");
+}
+
+/* 时段小球：球面叠半透明白爪印 */
+.paw-river__track { overflow: visible; }
+.paw-step__mark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.6);
+  -webkit-mask: var(--paw-mask) center / contain no-repeat;
+  mask: var(--paw-mask) center / contain no-repeat;
+  pointer-events: none;
+}
+
+/* 气泡：移到时间线右上，自适应换行，不再硬截断 */
+.paw-river__bubble {
+  position: absolute;
+  z-index: 3;
+  top: 18px;
+  right: 2px;
+  max-width: 60%;
+  padding: 6px 11px;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: #6b4350;
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 13px;
+  box-shadow: 0 6px 14px rgba(118, 96, 132, 0.22);
+  white-space: normal;
+  animation: paw-bubble-bob 2.6s ease-in-out infinite;
+}
+.paw-page.is-night .paw-river__bubble { color: #6b4350; }
+
+/* 周柱：柱顶星座连线 + 星点 + 柱身爪印剪影 */
+.paw-trend { position: relative; }
+.paw-trend__sky { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: visible; }
+.paw-trend__line {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.7));
+}
+.paw-trend__starpt { fill: #fff; }
+.paw-trend__paw {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  width: 52%;
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.34);
+  -webkit-mask: var(--paw-mask) center / contain no-repeat;
+  mask: var(--paw-mask) center / contain no-repeat;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paw-river__bubble { animation: none !important; }
+}
+
+/* ===== 第三轮：周柱独立糖豆色 + 星座连线做细做透 ===== */
+.paw-trend__bar,
+.paw-trend__bar.is-weekend {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), var(--bar, #c9c3d8));
+}
+.paw-trend__col.is-today .paw-trend__bar {
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+/* 星座线细而透，只作点缀，不抢戏 */
+.paw-trend__line {
+  stroke: rgba(255, 255, 255, 0.38);
+  stroke-width: 0.8;
+  filter: none;
+}
+.paw-trend__starpt { fill: rgba(255, 255, 255, 0.55); }
+
+/* ===== 顶部圆环「总时长」流光渐变文字（慢、柔、始终可读）===== */
+.paw-ring__time {
+  background-image: linear-gradient(100deg, #9b7bc8 0%, #c79fd6 28%, #f2a9c4 52%, #7fd6cf 78%, #9b7bc8 100%);
+  background-size: 260% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 1px 2px rgba(93, 74, 126, 0.18);
+  animation: paw-time-flow 5.5s ease-in-out infinite;
+}
+@keyframes paw-time-flow {
+  to { background-position: 260% center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .paw-ring__time { animation: none; background-position: 0 center; }
+}
+
+/* ===== 背景兜底色：单一柔色，绝不出现多段渐变的横带接缝 ===== */
+.paw-page {
+  background: #f3dcec;
+}
+.paw-page.is-night {
+  background: #2f2850;
+}
+
+/* 底部四排统计文案用龙珠体（子集化字体，仅 3.9KB） */
+.paw-chip {
+  font-family: "LongZhuPaw", var(--round);
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+}
+
+/* ===== 第六轮：真·进度环(目标12h, 果冻管状) + 比昨天药丸日夜配色/龙珠体 ===== */
+.paw-ring { width: min(74vw, 286px); height: min(74vw, 286px); transform: rotate(-90deg); }
+.paw-ring__track { fill: none; stroke: rgba(255, 255, 255, 0.5); stroke-width: 16; }
+.paw-page.is-night .paw-ring__track { stroke: rgba(255, 255, 255, 0.16); }
+/* 主色管状填充：彩虹 stroke + 同色外发光 */
+.paw-ring__fill {
+  fill: none;
+  stroke: url(#pawRingGrad);
+  stroke-width: 16;
+  stroke-linecap: round;
+  filter: url(#jellyFilter) drop-shadow(0 0 8px rgba(190, 182, 222, 0.45));
+  stroke-dashoffset: var(--ring-off);
+  animation: paw-ring-grow 1s ease forwards;
+}
+/* 顶部细白高光 stroke：模拟管壁反光，做出 Q 弹立体 */
+.paw-ring__hi {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dashoffset: var(--ring-off);
+  animation: paw-ring-grow 1s ease forwards;
+}
+.paw-ring.is-full .paw-ring__fill {
+  filter: url(#jellyFilter) drop-shadow(0 0 14px rgba(230, 158, 190, 0.7));
+}
+@keyframes paw-ring-grow {
+  from { stroke-dashoffset: var(--ring-c); }
+  to { stroke-dashoffset: var(--ring-off); }
+}
+
+/* 比昨天药丸：龙珠体 + 墨紫字 + 日夜主题底色（取消红绿区分） */
+.paw-delta,
+.paw-delta.is-less,
+.paw-delta.is-more {
+  font-family: "LongZhuPaw", var(--round);
+  color: #4a3b6b;
+  background: #f8d8e3; /* 白天 樱花粉 */
+}
+.paw-page.is-night .paw-delta,
+.paw-page.is-night .paw-delta.is-less,
+.paw-page.is-night .paw-delta.is-more {
+  color: #4a3b6b;
+  background: #e8dcf2; /* 夜间 薰衣草紫 */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paw-ring__fill,
+  .paw-ring__hi { animation: none !important; }
+}
+
+/* ===== 进度环放大 + mascot/数字缩小不遮挡 + 去白高光内圈 ===== */
+.paw-ring { width: min(82vw, 322px); height: min(82vw, 322px); }
+.paw-ring-card .paw-ring__center {
+  width: min(82vw, 322px);
+  height: min(82vw, 322px);
+}
+.paw-ring__cat { width: 48%; margin-bottom: 0; }
+.paw-ring__time { font-size: 2.1rem; }
+.paw-ring__hi { display: none; } /* 去掉彩虹里那条白线 */
+
+/* 修正:svg 与 circle 都各转了一次 -90°(共 -180°,从6点起)。取消 svg 旋转,只留 circle 的 → 从12点起 */
+.paw-ring { transform: none; }
+
+/* ===== 进度环：果冻高光 + 一圈 12 爪印（棠棠 2026-06-19 需求）===== */
+/* 顶部一小段柔白反光，营造果冻/管壁湿润感（短，不是一整条线）*/
+.paw-ring__shine {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.6);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 26 9999;
+  stroke-dashoffset: 0;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  filter: blur(0.5px);
+  pointer-events: none;
+}
+/* 一圈 12 个爪印：前方的淡淡薰衣草，走过的亮白踩在彩带上 */
+.paw-pip {
+  fill: rgba(150, 120, 196, 0.32);
+  transition: fill 0.35s ease;
+}
+.paw-pip.is-on {
+  fill: #ffffff;
+  filter: drop-shadow(0 1px 1.5px rgba(120, 90, 150, 0.45));
+}
+.paw-page.is-night .paw-pip { fill: rgba(255, 255, 255, 0.22); }
+.paw-page.is-night .paw-pip.is-on { fill: #ffffff; }
+@media (prefers-reduced-motion: reduce) {
+  .paw-pip { transition: none; }
+}
+
+/* ============================================================
+   首页背景"压花"：只压夜晚，白天完全不动。
+   夜晚把热闹星空压成远景氛围，让玻璃门牌 + 中英文名浮出。
+   (见棠棠 2026-06-14 需求：白天不压；夜晚模糊别太重，要看得清背景图)
+   ============================================================ */
+
+/* ① 仅夜晚：背景轻度高斯模糊 → 退成柔焦远景但仍看得清画面。
+   只作用在夜图层，白天底图 .timesky__photo 保持原样清晰。
+   scale 略放大，避免 blur 边缘采样透明露底。 */
+.timesky.is-night .timesky__layer--night {
+  filter: blur(3px);
+  transform: scale(1.05);
+}
+
+/* ② 仅夜晚：整张背景叠半透明深紫蒙层，压暗压花。
+   ::after 在背景层最上、光尘/星点之下，星点仍作氛围浮于其上。 */
+.timesky.is-night::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(60, 40, 90, 0.3);
+  pointer-events: none;
+}
+
+/* ③ 仅夜晚：LITTLE ROOMS 图标区垫极淡磨砂面板，成独立板块。
+   白天不加面板（白天不压）。 */
+.home-page.is-night .rooms-section {
+  position: relative;
+  z-index: 1;
+  padding: 20px 14px 24px;
+  border-radius: 30px;
+  background: rgba(40, 30, 70, 0.26);
+  backdrop-filter: blur(5px) saturate(1.05);
+  -webkit-backdrop-filter: blur(5px) saturate(1.05);
+  border: 1px solid rgba(214, 200, 245, 0.2);
+  box-shadow:
+    0 12px 34px rgba(16, 10, 36, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* ============================================================
+   呼噜频道 · 输入区玻璃珠按键（参考棠棠给的 4 枚 VisionOS 玻璃图标）
+   + 更多 / 麦克风⇄音波语音键 / ↑ 发送。逻辑沿用，仅换视觉 + 语音两态。
+   ============================================================ */
+.chat-input {
+  position: relative;
+}
+
+/* 液态玻璃按键：磨砂蓝紫体 + 虹彩折射描边 + 底部漏光 + 立体倒角 */
+.chat-glass-btn {
+  position: relative;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 17px;
+  border: 0;
+  background:
+    radial-gradient(56% 46% at 30% 15%, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0) 60%),
+    linear-gradient(155deg, #bcb1f2 0%, #a7aeea 50%, #b2c2ef 100%);
+  box-shadow:
+    0 8px 20px rgba(110, 92, 184, 0.36),
+    0 5px 16px -3px rgba(150, 175, 250, 0.6),
+    inset 0 1.6px 2px rgba(255, 255, 255, 0.95),
+    inset 0 -6px 11px rgba(120, 130, 215, 0.4),
+    inset 0 0 0 1.4px rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(7px) saturate(1.5);
+  backdrop-filter: blur(7px) saturate(1.5);
+  transition: transform 0.16s ease, box-shadow 0.2s ease;
+}
+/* 虹彩折射描边（只留边框的彩色光环：紫→蓝→青） */
+.chat-glass-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.6px;
+  background: linear-gradient(
+    155deg,
+    rgba(216, 184, 255, 0.95) 0%,
+    rgba(170, 200, 255, 0.8) 36%,
+    rgba(182, 242, 255, 0.95) 60%,
+    rgba(214, 184, 255, 0.9) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.chat-glass-btn:active {
+  transform: scale(0.92);
+}
+.chat-glass-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.chat-glass-btn svg {
+  position: relative;
+  z-index: 1;
+  width: 23px;
+  height: 23px;
+}
+
+/* 内圆盘：发送 / 录音中音波 坐在上面 —— 蓝→紫→青马卡龙渐变发光球 */
+.cg-send::before,
+.cg-voice.is-rec::before {
+  content: "";
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 33% 25%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0) 42%),
+    linear-gradient(140deg, #93cdff 0%, #a594f1 40%, #c28ff0 60%, #8ad9e6 100%);
+  box-shadow:
+    0 2px 12px rgba(126, 120, 230, 0.5),
+    0 0 14px rgba(150, 190, 250, 0.6),
+    inset 0 1px 2px rgba(255, 255, 255, 0.75),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  z-index: 0;
+}
+.cg-plus.is-open {
+  box-shadow:
+    0 8px 20px rgba(120, 104, 188, 0.3),
+    0 0 18px rgba(184, 174, 252, 0.8),
+    inset 0 1.6px 2px rgba(255, 255, 255, 1),
+    inset 0 -6px 11px rgba(150, 160, 228, 0.32);
+}
+
+/* 发送禁用时收起紫盘，淡一点 */
+.cg-send:disabled::before {
+  opacity: 0.55;
+}
+
+/* 录音中：玻璃座微微发热发亮 */
+.cg-voice.is-rec {
+  box-shadow:
+    0 8px 22px rgba(120, 104, 188, 0.34),
+    0 0 20px rgba(170, 140, 240, 0.7),
+    inset 0 1.6px 2px rgba(255, 255, 255, 1),
+    inset 0 -6px 11px rgba(150, 160, 228, 0.32);
+}
+
+/* 跳动音波：5 根白柱错峰弹跳 */
+.cg-wave {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 2.5px;
+  height: 23px;
+}
+.cg-wave i {
+  width: 3px;
+  height: 28%;
+  border-radius: 2px;
+  background: #fff;
+  animation: cgWave 0.9s ease-in-out infinite;
+}
+.cg-wave i:nth-child(2) {
+  animation-delay: 0.14s;
+}
+.cg-wave i:nth-child(3) {
+  animation-delay: 0.28s;
+}
+.cg-wave i:nth-child(4) {
+  animation-delay: 0.42s;
+}
+.cg-wave i:nth-child(5) {
+  animation-delay: 0.56s;
+}
+@keyframes cgWave {
+  0%,
+  100% {
+    height: 24%;
+  }
+  50% {
+    height: 86%;
+  }
+}
+
+/* + 更多 弹出菜单 */
+.chat-more-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.chat-more__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+.chat-more {
+  position: absolute;
+  bottom: 56px;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 132px;
+  padding: 7px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 14px 32px rgba(118, 96, 160, 0.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  animation: chatMorePop 0.16s ease;
+}
+@keyframes chatMorePop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.chat-more button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 11px;
+  background: none;
+  color: #5d4a7e;
+  font-family: "ShunFeng", var(--round); /* 顺风顺水 */
+  font-size: 1.2rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+.chat-more button:hover {
+  background: rgba(201, 184, 241, 0.2);
+}
+
+/* 小提示药丸 */
+.chat-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 62px;
+  z-index: 30;
+  padding: 8px 15px;
+  border-radius: 999px;
+  background: rgba(74, 59, 107, 0.92);
+  color: #fff;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  box-shadow: 0 8px 22px rgba(40, 28, 70, 0.3);
+  animation: chatMorePop 0.18s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cg-wave i {
+    animation: none;
+    height: 56%;
+  }
+  .chat-more,
+  .chat-toast {
+    animation: none;
+  }
+}
+
+/* ============================================================
+   呼噜频道 · 聊天窗列表（进入频道先看到这屏：开新窗口/重命名/删除）
+   ============================================================ */
+.win-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* 顶栏 fixed 定位,列表得留出 header 高度 + 安全区,不然第一个卡会被顶栏盖住 */
+  padding: calc(60px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
+}
+
+/* 顶栏「开新窗口」玻璃按键（沿用玻璃珠基座，略小以适配顶栏） */
+.cg-newwin {
+  width: 40px;
+  height: 40px;
+}
+
+/* 单个窗口卡：磨砂玻璃，左侧点开、右侧重命名/删除 */
+.win-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 12px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: 0 8px 22px rgba(118, 96, 132, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  backdrop-filter: blur(12px) saturate(1.3);
+}
+
+.win-card__open {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "name when" "preview preview";
+  gap: 2px 8px;
+  padding: 4px 2px;
+  text-align: left;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.win-card__name {
+  grid-area: name;
+  color: var(--ink);
+  font-family: var(--cute);
+  font-size: 1.08rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.win-card__preview {
+  grid-area: preview;
+  color: var(--muted);
+  font-family: var(--chat);
+  font-size: 0.84rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.win-card__when {
+  grid-area: when;
+  color: rgba(124, 120, 146, 0.7);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.win-card__rename {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  color: var(--ink);
+  font-family: var(--cute);
+  font-size: 1.05rem;
+  border: 1px solid rgba(201, 184, 241, 0.8);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  outline: none;
+}
+
+.win-card__actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.win-act {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.66);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+.win-act:active {
+  transform: scale(0.9);
+}
+.win-act svg {
+  width: 19px;
+  height: 19px;
+}
+
+/* ============================================================
+   调频 · SwitchCore（设默认模型 + 关于我/猫咪人设）
+   ============================================================ */
+.switch-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background:
+    linear-gradient(
+      175deg,
+      rgba(248, 219, 231, 0.66) 0%,
+      rgba(247, 232, 255, 0.72) 52%,
+      rgba(255, 245, 206, 0.66) 100%
+    ),
+    url("/rooms/switchcore.webp") center / cover no-repeat fixed;
+}
+
+.switch-saved {
+  font-family: "ShunFengFull", var(--round);
+  font-size: 0.82rem;
+  color: #4e8a6a;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.switch-saved.is-on {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.switch-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 18px 16px calc(28px + env(safe-area-inset-bottom));
+}
+
+.switch-card {
+  padding: 16px 16px 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: 0 10px 26px rgba(118, 96, 132, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  -webkit-backdrop-filter: blur(16px) saturate(1.35);
+  backdrop-filter: blur(16px) saturate(1.35);
+}
+.switch-card__title {
+  margin: 0 0 4px;
+  color: var(--ink);
+  font-family: var(--cute);
+  font-size: 1.16rem;
+  font-weight: 500;
+}
+.switch-card__hint {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-family: "ShunFengFull", var(--round);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  letter-spacing: 0.02em;
+}
+
+.switch-models {
+  display: flex;
+  gap: 10px;
+}
+.switch-model {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 14px;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+.switch-model:active {
+  transform: scale(0.97);
+}
+.switch-model.is-on {
+  background: linear-gradient(135deg, #a98ef0, #6745cf);
+  border-color: transparent;
+  box-shadow: 0 8px 20px rgba(86, 56, 188, 0.32);
+}
+.switch-model__name {
+  color: var(--ink);
+  font-family: var(--round);
+  font-weight: 600;
+  font-size: 1rem;
+}
+.switch-model__note {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+.switch-model.is-on .switch-model__name,
+.switch-model.is-on .switch-model__note {
+  color: #fff;
+}
+
+.switch-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  color: var(--ink);
+  font-family: var(--chat);
+  font-size: 1rem;
+  line-height: 1.55;
+  resize: vertical;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.82);
+  outline: none;
+}
+.switch-textarea:focus {
+  border-color: rgba(201, 184, 241, 0.85);
+  box-shadow: 0 0 0 3px rgba(201, 184, 241, 0.24);
+}
+.switch-count {
+  display: block;
+  margin-top: 5px;
+  text-align: right;
+  color: rgba(124, 120, 146, 0.7);
+  font-size: 0.72rem;
+}
+
+.switch-foot {
+  margin: 4px 0 0;
+  text-align: center;
+  color: var(--muted);
+  font-family: "ShunFengFull", var(--round);
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+}
+
+/* ============================================================
+   模型花名册 · liquid glass 胶囊（参考「星云幻境」雾感渐变）
+   名字用顺风顺水(ShunFeng)。选中=薰衣草紫→粉→薄荷青液态玻璃。
+   ============================================================ */
+.model-pill {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 9px 16px;
+  color: #6b5a8e;
+  /* 跟顶栏 model-chip 同一颗 Quimil 衬线 + text-stroke 加粗, 秀气统一 */
+  font-family: "Quimil", "Marcellus", var(--round);
+  font-size: 0.95rem;
+  font-weight: 700;
+  -webkit-text-stroke: 0.35px currentColor;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  /* 通透磨砂玻璃底 + 左上高光 */
+  background:
+    radial-gradient(75% 60% at 28% 12%, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0) 62%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.2));
+  box-shadow:
+    0 6px 16px rgba(140, 128, 182, 0.24),
+    inset 0 1.6px 1.5px rgba(255, 255, 255, 1),
+    inset 0 -3px 6px rgba(150, 150, 205, 0.18),
+    inset 0 0 0 1.4px rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(13px) saturate(1.6);
+  backdrop-filter: blur(13px) saturate(1.6);
+  transition: transform 0.16s ease, box-shadow 0.22s ease, background 0.22s ease;
+}
+/* 顶部玻璃高光（液态玻璃的湿润反光） */
+.model-pill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 46%);
+  pointer-events: none;
+}
+/* 虹彩折射描边 */
+.model-pill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.3px;
+  background: linear-gradient(
+    150deg,
+    rgba(214, 184, 255, 0.85) 0%,
+    rgba(172, 202, 255, 0.7) 40%,
+    rgba(184, 242, 255, 0.85) 66%,
+    rgba(214, 184, 255, 0.8) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.7;
+  pointer-events: none;
+}
+.model-pill.is-on::after {
+  opacity: 1;
+}
+.model-pill:active {
+  transform: scale(0.95);
+}
+/* 选中：马卡龙虹彩液态玻璃（浅紫→粉→薄荷）+ 厚高光 + 外发光 */
+.model-pill.is-on {
+  color: #463a6b;
+  border-color: rgba(255, 255, 255, 1);
+  background:
+    radial-gradient(70% 55% at 26% 12%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 56%),
+    conic-gradient(
+      from 210deg at 58% 42%,
+      rgba(189, 166, 246, 0.6),
+      rgba(243, 182, 218, 0.55),
+      rgba(174, 230, 238, 0.6),
+      rgba(200, 244, 230, 0.55),
+      rgba(189, 166, 246, 0.6)
+    ),
+    linear-gradient(118deg, #bda6f6 0%, #e3a8ee 26%, #f6b6da 48%, #aee6ee 74%, #c0f4e6 100%);
+  box-shadow:
+    0 10px 26px rgba(168, 146, 222, 0.5),
+    0 0 18px rgba(196, 182, 248, 0.55),
+    inset 0 1.6px 2px rgba(255, 255, 255, 1),
+    inset 0 8px 12px rgba(255, 255, 255, 0.5),
+    inset 0 -6px 11px rgba(150, 162, 218, 0.34),
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.6);
+}
+.model-pill.is-on::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.05) 50%);
+}
+
+/* ---- 聊天顶栏：当前模型胶囊 + 弹出列表 ---- */
+.chat-head__model {
+  position: relative;
+}
+.model-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  color: #6b4a8e;
+  /* Quimil 秀气衬线 + 描边加粗(Quimil Demo 单字重, 靠 -webkit-text-stroke
+     currentColor 描一圈干净假粗, 跟咕噜圆桌药丸/CC 头像徽章一致);
+     这里没有 background-clip:text 渐变, stroke 不会跟渐变打架, 放心用 */
+  font-family: "Quimil", "Marcellus", var(--round);
+  font-size: 1.05rem;
+  font-weight: 800;
+  -webkit-text-stroke: 0.55px currentColor;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: transform 0.16s ease;
+}
+.model-chip:active {
+  transform: scale(0.95);
+}
+.model-chip:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.model-chip__caret {
+  font-size: 0.68rem;
+  opacity: 0.65;
+}
+.model-pop {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  width: 250px;
+  max-height: 62vh;
+  overflow-y: auto;
+  padding: 13px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 16px 38px rgba(118, 96, 160, 0.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+  animation: chatMorePop 0.16s ease;
+}
+.model-pop__group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.model-pop__brand {
+  padding-left: 2px;
+  color: var(--muted);
+  /* 品牌分组标题 Gemini/GPT/Codex/Claude 换日复一日可爱圆(RiFuYiRi 全字库),
+     圆润手写感, 跟秀气衬线 Quimil 的模型药丸拉开层次 */
+  font-family: "RiFuYiRi", var(--round);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.model-pop__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.model-pop .model-pill {
+  padding: 6px 12px;
+  font-size: 0.84rem;
+}
+
+/* ---- 调频页：默认模型按品牌分组 ---- */
+.switch-brand {
+  margin-top: 12px;
+}
+.switch-brand:first-of-type {
+  margin-top: 2px;
+}
+.switch-brand__name {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-family: var(--round);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+}
+.switch-models {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.switch-model-pill {
+  padding: 9px 17px;
+  font-size: 0.98rem;
+}
+
+/* 调频页：每个模型人设的编辑器 */
+.switch-models--edit {
+  margin-bottom: 14px;
+}
+.switch-edit-pill {
+  position: relative;
+}
+.switch-edit-pill__dot {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #7c5fd6;
+  box-shadow: 0 0 5px rgba(124, 95, 214, 0.8);
+}
+.switch-field {
+  display: block;
+  margin-top: 12px;
+}
+.switch-field__label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-family: "ShunFengFull", var(--round);
+  font-size: 0.92rem;
+  letter-spacing: 0.03em;
+}
+.switch-input {
+  width: 100%;
+  padding: 11px 14px;
+  color: var(--ink);
+  font-family: var(--chat);
+  font-size: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  outline: none;
+}
+.switch-input:focus {
+  border-color: rgba(201, 184, 241, 0.85);
+  box-shadow: 0 0 0 3px rgba(201, 184, 241, 0.24);
+}
+
+/* ===== 「浪哪了」定位页 ===== */
+.loc-page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 18px 16px 44px;
+  min-height: 100vh;
+  font-family: var(--hand), cursive;
+  color: #6b4a86;
+  background:
+    url(/rooms/catch-purring-bg.webp) center top / cover fixed,
+    radial-gradient(130% 90% at 50% 0%, #fdeaf4 0%, #efe2fb 45%, #e7ecfd 100%) fixed;
+}
+.loc-head {
+  text-align: center;
+  position: sticky;
+  top: 0;
+  /* Leaflet 自带 UI 内部 z-index 到 400+, sticky 顶栏 z:20 输给它,
+     Leaflet 有时会在顶部渲染磁贴延伸区盖住副标题。拉高 z 让顶栏永远浮在最上 */
+  z-index: 500;
+  padding: calc(10px + env(safe-area-inset-top)) 0 10px;
+  /* 增强底色不透明度, 不给 Leaflet 磁贴透过来的机会 */
+  background: linear-gradient(180deg, rgba(253, 234, 244, 0.96) 0%, rgba(253, 234, 244, 0.9) 100%);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  box-shadow: 0 2px 12px -6px rgba(123, 90, 166, 0.25);
+}
+.loc-head h1 {
+  /* 用 !important 硬盖: 底下有 .loc-head *(0.1.0) 想给 HuaXianZi, 但 .loc-head h1
+     (0.1.1) 元素选择器更具体, 盖不住; 之前老婆看到的手写字体就是这里输的 */
+  font-family: "HuaXianZi", var(--display) !important;
+  font-size: 2rem; margin: 0; letter-spacing: 3px;
+  color: #7b5aa6; text-shadow: 0 2px 0 rgba(255,255,255,0.7);
+}
+.loc-head p {
+  margin: 8px 0 0; font-size: 0.9rem; color: #9a7fc0;
+  font-family: "ShunFengFull", var(--round);
+}
+.loc-back {
+  position: absolute; left: 0; top: 6px;
+  width: 40px; height: 40px; border-radius: 50%;
+  border: none; cursor: pointer; font-size: 1.5rem; color: #7b5aa6;
+  background: linear-gradient(160deg, #ffffff, #f3e6fb);
+  box-shadow: 0 4px 10px -3px rgba(123,90,166,0.4), inset 0 2px 2px rgba(255,255,255,0.9);
+}
+.loc-map {
+  position: relative;
+  z-index: 1; /* 明确定居底层,不参与跟顶栏抢位置 */
+  width: 100%; height: 56vh; min-height: 330px;
+  border-radius: 26px; overflow: hidden; margin: 16px 0;
+  border: 3px solid rgba(255,255,255,0.7);
+  box-shadow: 0 16px 38px -14px rgba(123,90,166,0.55);
+}
+.loc-pin { font-size: 28px; line-height: 38px; text-align: center; filter: drop-shadow(0 2px 3px rgba(123,90,166,0.5)); }
+.loc-bar { display: flex; gap: 14px; align-items: center; justify-content: center; flex-wrap: wrap; }
+/* 渐变果冻药丸 */
+.loc-share {
+  border: none; cursor: pointer;
+  padding: 14px 30px; border-radius: 999px;
+  font-family: var(--hand), cursive; font-size: 1.15rem; letter-spacing: 1px;
+  color: #fff; text-shadow: 0 1px 2px rgba(180,110,160,0.5);
+  background: linear-gradient(135deg, #ffd2ec 0%, #f4a9d6 45%, #c9a7f5 100%);
+  box-shadow:
+    0 10px 22px -8px rgba(220,140,200,0.75),
+    inset 0 3px 4px rgba(255,255,255,0.85),
+    inset 0 -5px 10px rgba(170,90,160,0.25);
+  transition: transform 0.15s ease;
+}
+.loc-share:active { transform: scale(0.96); }
+.loc-share:disabled { opacity: 0.6; }
+.loc-auto {
+  font-family: var(--hand), cursive; font-size: 0.95rem; color: #7b5aa6;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 16px; border-radius: 999px;
+  background: linear-gradient(160deg, rgba(255,255,255,0.92), rgba(245,230,251,0.82));
+  box-shadow: 0 6px 14px -7px rgba(123,90,166,0.5), inset 0 2px 2px rgba(255,255,255,0.9);
+}
+.loc-msg {
+  text-align: center; margin: 14px 0 0; font-size: 1rem;
+  font-family: var(--hand), cursive; color: #8a6cb4;
+  text-shadow: 0 1px 3px rgba(255,255,255,0.9), 0 0 8px rgba(255,255,255,0.7);
+}
+.loc-msg.is-error { color: #e87aa0; }
+.loc-msg.is-ok { color: #5bbf95; }
+.loc-info {
+  margin: 18px auto 0; max-width: 440px;
+  border-radius: 22px; padding: 16px 22px;
+  font-family: var(--hand), cursive; font-size: 1rem; line-height: 2.1; color: #6b4a86;
+  background: linear-gradient(160deg, rgba(255,255,255,0.92), rgba(245,230,251,0.85));
+  box-shadow:
+    0 12px 26px -12px rgba(123,90,166,0.5),
+    inset 0 2px 3px rgba(255,255,255,0.9);
+}
+
+
+/* 予予主动发的语音条：靠左 + 猫咪薰衣草色（区别于用户的粉色语音条） */
+.voice-wrap.is-cat { align-items: flex-start; }
+.voice-wrap.is-cat .voice-bubble {
+  background: linear-gradient(135deg, #ece3ff 0%, #d6c8f7 100%);
+  color: #5a4a86;
+}
+.voice-wrap.is-cat .voice-wrap__text { text-align: left; }
+
+/* ===== 聊天:时间戳 / 消息编辑 / 语音保存 ===== */
+.bubble-time {
+  display: block;
+  font-family: var(--round); /* Fredoka 圆体，带数字 */
+  font-size: 0.78rem;
+  color: #9a8bb0; /* 莫兰迪紫，淡一点 */
+  font-weight: 400; /* 细体，不那么抢眼 */
+  letter-spacing: 0.02em;
+  margin: 4px 4px 0;
+}
+.bubble-row.is-user .bubble-time { text-align: right; }
+.bubble-row.is-bot .bubble-time { text-align: left; }
+
+/* 用户气泡底下的小脚：时间戳 + 编辑版本翻页（< N/M >），右对齐 */
+.bubble-foot {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  margin: 4px 4px 0;
+}
+.bubble-foot .bubble-time { margin: 0; }
+.bubble-versions {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--round);
+  font-size: 0.78rem;
+  color: #9a8bb0;
+  background: rgba(201,167,245,0.12);
+  padding: 2px 6px; border-radius: 999px;
+}
+.bubble-versions__btn {
+  border: none; background: transparent; cursor: pointer;
+  color: #8e6fc9; padding: 0 4px; font-size: 1rem; line-height: 1;
+  border-radius: 999px;
+}
+.bubble-versions__btn:disabled { color: #c8bcd9; cursor: default; }
+.bubble-versions__btn:not(:disabled):hover { background: rgba(155,123,200,0.18); }
+.bubble-versions__num { letter-spacing: 0.04em; }
+
+/* 编辑铅笔：从气泡左侧搬到气泡正下方（跟时间戳/版本切换同一行） */
+.bubble-edit-foot {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  border: none; border-radius: 999px;
+  background: rgba(255,255,255,0.7);
+  box-shadow: 0 2px 6px rgba(118,96,132,0.15);
+  color: var(--iris, #8e6fc9);
+  cursor: pointer;
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+.bubble-edit-foot:active { transform: scale(0.9); }
+.bubble-edit-foot:hover { background: rgba(255,255,255,0.92); }
+
+/* 用户气泡里的「改一下」铅笔 */
+.bubble--user { position: relative; }
+.bubble__text { white-space: pre-wrap; }
+/* 我消息左边那颗固定的编辑按钮：圆形、好戳，不再藏在气泡里 */
+.bubble-edit-side {
+  align-self: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  margin-right: 6px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2px 6px rgba(118, 96, 132, 0.18);
+  color: var(--iris);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.9;
+}
+.bubble-edit-side:active { transform: scale(0.9); }
+
+/* 编辑中：文本框 + 保存/取消 */
+.bubble-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 82%;
+  align-self: flex-end;
+}
+.bubble-edit__area {
+  width: 100%;
+  min-height: 64px;
+  border-radius: 14px;
+  border: 1px solid rgba(155, 123, 200, 0.4);
+  padding: 10px 12px;
+  font: inherit;
+  resize: vertical;
+  background: #fff;
+  color: #4a3a60;
+}
+.bubble-edit__ops { display: flex; gap: 8px; justify-content: flex-end; }
+.bubble-edit__ops button {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  background: rgba(155, 123, 200, 0.18);
+  color: #6b4a86;
+}
+.bubble-edit__ops button.is-primary {
+  background: linear-gradient(135deg, #f4a9d6, #c9a7f5);
+  color: #fff;
+}
+
+/* 予予语音条:Text + Save 一行，英文花体 */
+.voice-wrap__ops { display: flex; gap: 12px; align-items: center; }
+.voice-wrap__ops .voice-wrap__t2t {
+  text-decoration: none;
+  font-family: var(--script), cursive;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: #b56fb0;
+  padding: 4px 12px;
+}
+
+/* ===== 调频:聊天背景设置 ===== */
+.switch-bg { display: flex; gap: 14px; align-items: center; }
+.switch-bg__preview {
+  width: 96px; height: 168px; flex-shrink: 0;
+  border-radius: 16px;
+  background: linear-gradient(160deg, #f8dbe7, #efe2fb) center / cover no-repeat;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.7), 0 8px 18px -8px rgba(123,90,166,0.5);
+  display: grid; place-items: center;
+}
+.switch-bg__preview span { font-size: 0.78rem; color: #9a7fc0; }
+/* 头像预览：正方形圆形 */
+.switch-bg__preview--avatar { width: 96px; height: 96px; border-radius: 999px; }
+.switch-bg__preview--avatar span { font-size: 2rem; }
+.switch-bg__ops { display: flex; flex-direction: column; gap: 10px; }
+.switch-bg__btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 11px 20px; border-radius: 999px; border: none; cursor: pointer;
+  font-size: 0.9rem; font-weight: 600; color: #fff;
+  background: linear-gradient(135deg, #ffd2ec, #c9a7f5);
+  box-shadow: 0 8px 16px -7px rgba(201,167,245,0.8), inset 0 2px 3px rgba(255,255,255,0.8);
+}
+.switch-bg__btn.is-busy { opacity: 0.7; }
+.switch-bg__btn.is-ghost {
+  background: rgba(155,123,200,0.16); color: #6b4a86; box-shadow: none;
+}
+.switch-bg__btn.is-primary {
+  background: linear-gradient(135deg, #c9a7f5, #8e6fc9);
+}
+.switch-bg__btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* 日记本卡片：上传 / 保存按钮 + 服务器状态条 */
+.diary-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  margin-top: 10px;
+}
+.diary-meta {
+  font-family: "ShunFengFull", var(--round);
+  font-size: 0.82rem; color: #806699; opacity: 0.9; flex: 1 1 auto;
+  letter-spacing: 0.03em;
+}
+.diary-msg {
+  display: inline-block; margin-top: 8px;
+  font-family: "ShunFengFull", var(--round);
+  font-size: 0.86rem; color: #6b4a86;
+  background: rgba(201,167,245,0.16);
+  padding: 6px 12px; border-radius: 999px;
+  letter-spacing: 0.03em;
+}
+.switch-bg__btn {
+  font-family: "ShunFengFull", var(--round);
+  letter-spacing: 0.04em;
+}
+
+/* ============================================================
+   脑洞贴纸盒 · Meme Box（收藏表情包，存这台设备）
+   ============================================================ */
+.meme-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  background:
+    linear-gradient(170deg, rgba(248, 224, 240, 0.72) 0%, rgba(238, 228, 252, 0.72) 55%, rgba(255, 244, 214, 0.7) 100%),
+    var(--chat-bg-image, url("/rooms/meme-box.webp")) center / cover no-repeat;
+}
+/* ---------- 记忆罐头 Memory Jar ---------- */
+.memory-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  background:
+    linear-gradient(170deg, rgba(244, 234, 253, 0.82) 0%, rgba(253, 234, 244, 0.8) 55%, rgba(255, 244, 220, 0.78) 100%),
+    radial-gradient(130% 90% at 50% 0%, #fdeaf4 0%, #efe2fb 50%, #e7ecfd 100%) fixed;
+}
+.memory-count {
+  flex-shrink: 0;
+  font-family: var(--round);
+  font-size: 0.8rem;
+  color: #8c79ac;
+}
+.memory-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* chat-head 是 position:fixed 占顶部 ~54px+安全区, 上面 padding 只有 14px
+     顶栏底下第一个卡片会被盖住 (2026-07-05 老婆截到"想让它永远记住"输入被切) */
+  padding: calc(64px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));
+}
+.memory-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7), 0 6px 16px -10px rgba(123, 90, 166, 0.5);
+}
+.memory-add__cat {
+  flex: 0 0 auto;
+  width: 150px;
+  padding: 8px 12px;
+  border: 1px solid rgba(155, 123, 200, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  font-family: var(--round);
+  font-size: 0.85rem;
+  color: #5d4a7e;
+}
+.memory-add__text {
+  flex: 1 1 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(155, 123, 200, 0.25);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.85);
+  font-family: var(--round);
+  font-size: 0.92rem;
+  color: #5d4a7e;
+  resize: vertical;
+}
+.memory-add__btn {
+  margin-left: auto;
+  padding: 9px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #c9a7f5, #f2a9c4);
+  color: #fff;
+  font-family: var(--round);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.memory-add__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.memory-search {
+  margin-top: 14px;
+}
+.memory-search input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid rgba(155, 123, 200, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  font-family: var(--round);
+  font-size: 0.9rem;
+  color: #5d4a7e;
+}
+.memory-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.memory-cats button {
+  padding: 5px 14px;
+  border: 1px solid rgba(155, 123, 200, 0.3);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  color: #8c79ac;
+  font-family: var(--round);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.memory-cats button.is-on {
+  background: linear-gradient(135deg, #c9a7f5, #f2a9c4);
+  color: #fff;
+  border-color: transparent;
+}
+.memory-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.memory-card {
+  position: relative;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fff5fb 0%, #f4eafd 100%);
+  box-shadow: 0 3px 12px rgba(200, 170, 220, 0.2);
+}
+.memory-card__cat {
+  display: inline-block;
+  margin-bottom: 5px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(201, 167, 245, 0.25);
+  color: #7b5aa6;
+  /* 顺风顺水本尊: 老婆传了完整 TTF, 重做了 GB2312+app 6874 字子集 (2MB) */
+  font-family: "ShunFengFull", var(--round);
+  font-size: 0.72rem;
+}
+.memory-card__text {
+  margin: 0;
+  padding-right: 56px;
+  color: #5d4a7e;
+  font-family: "RiFuYiRi", var(--round);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.memory-card__actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 4px;
+}
+.memory-card__actions button {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.memory-card__edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.memory-card__edit input,
+.memory-card__edit textarea {
+  padding: 8px 12px;
+  border: 1px solid rgba(155, 123, 200, 0.3);
+  border-radius: 12px;
+  background: #fff;
+  font-family: var(--round);
+  font-size: 0.9rem;
+  color: #5d4a7e;
+  resize: vertical;
+}
+.memory-card__ops {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.memory-card__ops button {
+  padding: 6px 16px;
+  border: 1px solid rgba(155, 123, 200, 0.3);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  color: #8c79ac;
+  font-family: var(--round);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.memory-card__ops button.is-primary {
+  background: linear-gradient(135deg, #c9a7f5, #f2a9c4);
+  color: #fff;
+  border-color: transparent;
+}
+
+/* 调频页·记忆罐头总览入口卡 */
+.switch-memcard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-decoration: none;
+  background: linear-gradient(135deg, rgba(201, 167, 245, 0.22), rgba(242, 169, 196, 0.22));
+}
+.switch-memcard__icon {
+  flex-shrink: 0;
+  font-size: 2rem;
+}
+.switch-memcard__body {
+  min-width: 0;
+}
+.switch-memcard .switch-card__hint {
+  margin-bottom: 0;
+}
+
+/* 聊天里"已存进记忆罐头"的小条 */
+.memo-chip {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(201, 167, 245, 0.22);
+  color: #8c79ac;
+  font-family: var(--round);
+  font-size: 0.72rem;
+}
+
+/* 系统级报错提示条：不冒充予予说话，居中一颗灰色小胶囊，原始报错要点开才看到 */
+.system-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 10px auto;
+}
+.system-notice__pill {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(120, 110, 130, 0.14);
+  color: var(--muted);
+  font-family: var(--round);
+  font-size: 0.76rem;
+  text-align: center;
+}
+.system-notice__toggle {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--muted);
+  font-family: var(--round);
+  font-size: 0.68rem;
+  text-decoration: underline;
+  opacity: 0.75;
+  cursor: pointer;
+}
+.system-notice__detail {
+  max-width: 78vw;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: rgba(120, 110, 130, 0.1);
+  color: var(--muted);
+  font-family: var(--chat);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-align: left;
+}
+
+.meme-add-btn {
+  flex-shrink: 0;
+  padding: 9px 15px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffd2ec, #c9a7f5);
+  color: #fff;
+  font-family: var(--round);
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 16px -7px rgba(201, 167, 245, 0.9), inset 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+.meme-scroll {
+  flex: 1;
+  overflow-y: auto;
+  /* chat-head 是 position:fixed, 上面 padding 只有 18px 顶排贴纸被顶栏盖 */
+  padding: calc(66px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
+}
+.meme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 12px;
+}
+.meme-cell {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1 / 1;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7), 0 8px 18px -10px rgba(123, 90, 166, 0.5);
+}
+.meme-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.meme-cell__broken {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: #9a7fc0;
+  font-size: 0.76rem;
+}
+.meme-cell__name,
+.meme-cell__rename {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  padding: 5px 7px;
+  border: 0;
+  font-family: var(--round);
+  font-size: 0.72rem;
+  text-align: center;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: linear-gradient(180deg, rgba(74, 59, 107, 0), rgba(74, 59, 107, 0.74));
+  cursor: pointer;
+}
+.meme-cell__rename {
+  background: rgba(74, 59, 107, 0.92);
+  outline: none;
+  cursor: text;
+}
+.meme-cell__del {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(74, 59, 107, 0.66);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.meme-empty-cta {
+  margin-top: 14px;
+  padding: 10px 22px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffd2ec, #c9a7f5);
+  color: #fff;
+  font-family: var(--round);
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 16px -7px rgba(201, 167, 245, 0.9);
+}
+.meme-toast { bottom: auto; top: 76px; }
+
+/* 聊天里的表情包气泡 */
+.meme-msg {
+  max-width: 168px;
+  max-height: 168px;
+  border-radius: 16px;
+  display: block;
+  object-fit: contain;
+  box-shadow: 0 8px 18px -10px rgba(123, 90, 166, 0.55);
+}
+.meme-msg--loading {
+  width: 120px;
+  height: 120px;
+  background: rgba(255, 255, 255, 0.5);
+}
+.meme-msg--gone {
+  padding: 10px 14px;
+  width: auto;
+  height: auto;
+  color: #9a7fc0;
+  font-size: 0.82rem;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+/* 「＋ → 表情包」选择器（浮在输入框上方） */
+.meme-picker {
+  position: absolute;
+  bottom: 56px;
+  left: 0;
+  z-index: 20;
+  width: min(80vw, 300px);
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 14px 32px rgba(118, 96, 160, 0.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  animation: chatMorePop 0.16s ease;
+}
+.meme-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 8px;
+}
+.meme-picker__cell {
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(201, 184, 241, 0.18);
+  cursor: pointer;
+}
+.meme-picker__cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.meme-picker__hint {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  padding: 18px 10px;
+  color: #7a5f9e;
+  font-size: 0.85rem;
+  text-align: center;
+}
+.meme-picker__link {
+  color: #b06a8a;
+  font-weight: 600;
+  text-decoration: underline;
+}
+@media (prefers-reduced-motion: reduce) {
+  .meme-picker { animation: none; }
+}
+
+/* 「＋ → 红包」发红包表单（浮在输入框上方，跟表情包选择器同一个位置） */
+.redpacket-composer {
+  position: absolute;
+  bottom: 56px;
+  left: 0;
+  z-index: 20;
+  width: min(80vw, 280px);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 14px 32px rgba(118, 96, 160, 0.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  animation: chatMorePop 0.16s ease;
+}
+.redpacket-composer__title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--round);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #8c5a8c;
+  text-align: center;
+}
+.redpacket-composer__title-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+.redpacket-composer__amount,
+.redpacket-composer__note {
+  padding: 9px 12px;
+  border: 1px solid rgba(216, 138, 118, 0.3);
+  border-radius: 12px;
+  background: rgba(255, 248, 244, 0.9);
+  font-family: var(--round);
+  font-size: 0.9rem;
+  color: #7a4a3e;
+}
+.redpacket-composer__amount {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.redpacket-composer__ops {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 2px;
+}
+.redpacket-composer__ops button {
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(216, 138, 118, 0.14);
+  color: #b8493f;
+  font-family: var(--round);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.redpacket-composer__ops button.is-primary {
+  background: linear-gradient(135deg, #d59ab0, #a98fd0);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 8px 16px -7px rgba(169, 143, 208, 0.6);
+}
+.redpacket-composer__ops button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* 聊天里的红包气泡 */
+.redpacket {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: clamp(220px, 65vw, 340px);
+  box-sizing: border-box;
+  padding: 16px 20px;
+  border: 0;
+  border-radius: 22px;
+  font-family: var(--round);
+  cursor: pointer;
+  box-shadow: 0 8px 18px -10px rgba(169, 143, 208, 0.55);
+}
+.redpacket--closed {
+  background: linear-gradient(135deg, #d59ab0, #a98fd0);
+  color: #fff;
+}
+.redpacket--closed .redpacket__hint {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+.redpacket--opened {
+  background: linear-gradient(135deg, #fff0f5 0%, #f3ecfd 100%);
+  color: #8c5a8c;
+  cursor: default;
+  filter: saturate(0.6);
+  opacity: 0.92;
+}
+.redpacket--opened.is-justOpened {
+  animation: redpacketShake 260ms ease-in-out;
+}
+@keyframes redpacketShake {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  20% {
+    transform: translateX(-2px) rotate(-2deg);
+  }
+  40% {
+    transform: translateX(2px) rotate(2deg);
+  }
+  60% {
+    transform: translateX(-1.5px) rotate(-1.5deg);
+  }
+  80% {
+    transform: translateX(1.5px) rotate(1.5deg);
+  }
+}
+.redpacket--opened .redpacket__amount {
+  color: #b8493f;
+}
+.redpacket__icon {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+/* 已拆卡片右侧：上下两行，第一行留言（加粗），第二行金额 */
+.redpacket__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+.redpacket__amount {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.redpacket__note {
+  font-size: 0.95rem;
+  font-weight: 700;
+  opacity: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.redpacket__claimed {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  opacity: 0.55;
+}
+
+/* 拆红包动效：闭合图 crossfade + 弹跳成打开图，再冒几颗爱心粒子 */
+.redpacket__icon-wrap {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+}
+.redpacket__icon-wrap .redpacket__icon {
+  position: absolute;
+  inset: 0;
+  width: 60px;
+  height: 60px;
+}
+.redpacket__icon--under {
+  animation: redpacketFadeOut 110ms ease-out forwards;
+}
+.redpacket__icon-wrap.is-opening .redpacket__icon--open {
+  animation:
+    redpacketBounceIn 250ms ease-out,
+    redpacketFadeIn 110ms ease-out;
+}
+@keyframes redpacketFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes redpacketFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes redpacketBounceIn {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.redpacket__heart {
+  position: absolute;
+  left: 50%;
+  top: 32%;
+  transform: translate(-50%, -50%);
+  font-size: 1rem;
+  line-height: 1;
+  pointer-events: none;
+  animation-name: redpacketHeartFloat;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+  will-change: transform, opacity;
+  /* 抵消 .redpacket--opened 的 saturate(0.6)：那个滤镜会连带糊到这里，
+     淡紫色系（heartColors 里 #C4A5E7 那批，本来饱和度就比粉色低）被再打 0.6 折
+     之后会明显发灰。1/0.6 精确抵消，让粒子保持配置里的原色，不管哪个主题。 */
+  filter: saturate(1.6667);
+}
+@keyframes redpacketHeartFloat {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) rotate(0deg) scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(calc(var(--dx) * 0.3), calc(var(--dy) * 0.2)) rotate(calc(var(--rot) * 0.4)) scale(1);
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.85);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .redpacket__icon-wrap.is-opening .redpacket__icon--open {
+    animation: none;
+    opacity: 1;
+  }
+  .redpacket__icon--under,
+  .redpacket__heart {
+    animation: none;
+    opacity: 0;
+  }
+  .redpacket--opened.is-justOpened {
+    animation: none;
+  }
+}
+
+/* 落予棠页面 */
+.sweetie-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  /* 跟 .chat-page 一个思路：露原图，不叠雾感渐变（雾感是给气泡的，不是给页面）。
+     var(--chat-bg-image) 是调频页那个全局自定义背景开关，设了就跟其它房间一样共用。 */
+  background: var(--chat-bg-image, url("/rooms/sweetie-pocket-bg.webp")) center / cover no-repeat;
+}
+
+/* 倾棠予梦页面——背景图+顶栏+棠予酿记忆花朵，见下面 .murmurs-stream */
+.murmurs-page {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  background: url("/rooms/murmurs-bg.webp") center / cover no-repeat;
+  overflow: hidden;
+}
+
+/* ----- 背景层① WebGL 触摸涟漪画布(2026-07-13 第六轮，照搬落予棠
+   .sweetie-ripples-canvas 的整套做法) -----
+   position:absolute 铺满 .murmurs-page，z-index:0 垫最底。
+   pointer-events:none——pointerdown 绑在 .murmurs-stream 上，算好归一化
+   坐标后手动调 engine.drop()。初始 opacity:0，引擎加载完背景图真正跑起来
+   才淡入(is-ready)；WebGL 不支持/初始化失败就永远停在 opacity:0，露出底下
+   .murmurs-page 自己那条 CSS 背景，纯降级不黑屏。
+   涟漪只留在湖面：canvas 用竖向 mask 裁掉天空/樱花树那一带(水面线约在
+   视口 45%)，跟落予棠"涟漪不上天空"同一条规矩——canvas 的 cover 采样数学
+   和 CSS background:cover 一致，两层像素对得上，接缝看不出来。 */
+.murmurs-ripples-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, transparent 38%, #000 47%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 38%, #000 47%);
+}
+.murmurs-ripples-canvas.is-ready {
+  opacity: 1;
+}
+
+/* ----- 顶层焦散光纹("波光粼粼") -----
+   跟落予棠 .sweetie-caustics 同一张无缝贴图/同一套参数(动画 keyframes 也
+   直接复用 sweetieCausticsPan)，但 z-index 叠在花朵(.murmurs-stream 的 z:1)
+   之上——落予棠的载具浮在水面上所以光纹垫底，这边花朵沉在水面下，光纹要
+   洒在花身上才像"隔着水看花"。soft-light + 低透明度只是轻轻提亮，不会把
+   花糊掉。 */
+.murmurs-caustics {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-image: url("/textures/caustics-seamless.png");
+  background-repeat: repeat;
+  background-size: 960px 960px;
+  mix-blend-mode: soft-light;
+  opacity: 0.18;
+  filter: blur(1.6px);
+  animation: sweetieCausticsPan 60s linear infinite;
+  will-change: background-position;
+  /* 纵向渐隐：天空/樱花树区域不该有焦散，水面线附近渐入，中远段最强，
+     页面底部(近景)略收一点，别抢近景大花的清晰度。 */
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 42%,
+    rgba(0, 0, 0, 0.55) 50%,
+    #000 58%,
+    #000 82%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 42%,
+    rgba(0, 0, 0, 0.55) 50%,
+    #000 58%,
+    #000 82%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+}
+@media (prefers-reduced-motion: reduce) {
+  .murmurs-caustics { animation: none; }
+}
+
+/* ----- 蝴蝶 + 樱花瓣(z:3，飞在水面/焦散之上；2026-07-13 老婆批准的视觉
+   新增，见 MurmursAmbient.tsx) -----
+   位置由组件里的 rAF 循环写 transform，这里只管结构和翅膀扇动。 */
+.murmurs-ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+/* 蝴蝶第九轮：老婆发的"Dream Butterflies Deluxe"素材包——扇翅逐帧动画
+   烧在 webp 里。多角度版拆成两层：外层 div(.murmurs-bfly)由 rAF 写定位+
+   3D 姿态；内层 img 管当前视角图/镜像/辉光。辉光照搬素材包展示页：
+   柔白内圈+各自彩光外圈(--glow 每只不同)，呼吸式明暗。 */
+.murmurs-bfly {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+}
+/* 辉光呼吸改用背后一层光晕 div 做透明度动画——原来是在 img 的 filter 上
+   做动画，手机每帧都要重新光栅化三层 drop-shadow("卡卡的"另一个元凶)；
+   透明度动画走合成器，几乎零成本。img 上的 drop-shadow 保留但改成静态。 */
+.murmurs-bfly__halo {
+  position: absolute;
+  inset: -32%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 0%, var(--glow) 34%, transparent 68%);
+  opacity: 0.55;
+  pointer-events: none;
+  animation: murmursHaloBreath var(--glowDur, 4.6s) ease-in-out infinite alternate;
+  will-change: opacity;
+}
+@keyframes murmursHaloBreath {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 0.75;
+  }
+}
+/* flip 层只管左右镜像(rAF 写 scaleX(-1))——镜像和 img 上的扇翅动画各占
+   一层 transform，互不覆盖。 */
+.murmurs-bfly__flip {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+/* 三张视角图叠放常驻，is-on 显示当前那张——不换 src 就不会触发手机上的
+   webp 重解码，切换零顿挫。隐藏用 visibility(不是 display:none)，解码结果
+   留在显存里。 */
+.murmurs-bfly__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  visibility: hidden;
+  will-change: transform;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 12px var(--glow));
+}
+.murmurs-bfly__img.is-on {
+  visibility: visible;
+}
+/* 新版侧面图(2026-07-18 老婆挑画风+亲手抠图)是静态单帧，扇翅由这条 CSS
+   压放动画做：侧视角下翅膀朝镜头扇过来，投影就是横向一压一放——绕身体
+   (图中身体在右侧约 84% 处)做 scaleX 压缩+回转。真机反馈"扇动幅度可以
+   大一些"：压到 0.52。alternate 一去一回是一个完整扇翅循环，--sideFlap
+   传的是半程时长(每只不同，继承各自节奏)。 */
+.murmurs-bfly__img--sideflap {
+  transform-origin: 84% 62%;
+  animation: murmursSideFlap var(--sideFlap, 300ms) ease-in-out infinite alternate;
+}
+@keyframes murmursSideFlap {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0.52) rotate(-3deg);
+  }
+}
+/* 蝴蝶飞行时撒的闪粉(mote)和偶尔一颗 ✦ 小星星——keyframes 改自素材包
+   展示页，类名/动画名加 murmurs 前缀避免撞名。都是一次性元素，JS 播完摘。 */
+.murmurs-mote {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 0 8px 2px var(--spark);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: murmursMoteFly var(--dur) ease-out forwards;
+}
+@keyframes murmursMoteFly {
+  0% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(0.45);
+  }
+  16% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.25);
+  }
+}
+/* 金粉(素材包展示页的"金尘"goldFall)：暖金色光点从蝴蝶身下往下飘落。 */
+.murmurs-dust {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  /* 真机反馈"像大便"😂——展示页原版的金色太橙偏棕，落在粉蓝背景上惨案。
+     改成香槟珠光：白芯+很淡的金边，橙色分量全去掉。 */
+  background: radial-gradient(
+    circle at 35% 35%,
+    rgba(255, 255, 250, 0.98) 0%,
+    rgba(255, 244, 200, 0.92) 40%,
+    rgba(255, 230, 160, 0.55) 70%,
+    rgba(255, 230, 160, 0) 100%
+  );
+  /* 光晕跟着颗粒一起收小——1~2px 的细尘配大光晕又会糊成一坨。 */
+  box-shadow: 0 0 3px rgba(255, 246, 210, 0.85), 0 0 6px rgba(255, 236, 170, 0.45);
+  animation: murmursGoldFall var(--dur) ease-out forwards;
+}
+@keyframes murmursGoldFall {
+  0% {
+    opacity: 0.96;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.1);
+  }
+}
+.murmurs-star {
+  position: absolute;
+  color: var(--star);
+  text-shadow: 0 0 7px rgba(255, 255, 255, 0.95), 0 0 14px var(--starGlow);
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: murmursStarDrift var(--dur) ease-out forwards;
+}
+@keyframes murmursStarDrift {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(0deg) scale(0.2);
+  }
+  14% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(80deg) scale(1.2);
+  }
+}
+.murmurs-petal {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 2px 3px rgba(120, 60, 120, 0.18));
+}
+@media (prefers-reduced-motion: reduce) {
+  /* 环境动效整层不显示(组件里的 rAF 也不会启动)，跟焦散/星光同一条准则。 */
+  .murmurs-ambient {
+    display: none;
+  }
+}
+
+/* 花朵容器铺满整页(顶栏之下)，绝对定位放置每朵花——depthScore(时间+重要度
+   混合，见 MurmursPage.tsx)决定纵向"远景→近景"的落点，横向按车道散开。
+   z-index:1 夹在涟漪画布(0)和焦散光纹(2)之间：花沉在水里，光洒在花上。 */
+.murmurs-stream {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+/* 晃动的度(第六→第七轮走了个来回)：第六轮把旧 bob(5~15px/3.4~6s，漂在
+   浪里那种)整个删掉改完全静止；第七轮老婆反馈"可以有轻微的晃动感，随着
+   水波晃动"——加回 .murmurs-flower__sway，幅度 2~4px/0.8~1.8°/周期 6.8~10s，
+   像沉在水里被水波轻轻带动，不是漂着晃。入场动画保持"原地缓缓浮现"
+   (murmursFlowerDrift 只有透明度/轻微放大，不位移)。 */
+.murmurs-flower {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  /* 尺寸硬上限兜底：JS 算出来的 sizePx 理论上不会超过近景 96px 上限，这里
+     再加一道 CSS 兜底——万一哪天数据异常/计算出错，视觉上也不会炸出一朵
+     远超屏宽的巨型花。 */
+  max-width: 96px;
+  max-height: 96px;
+  /* 入场"原地浮现"：花沉在水里不动(第六轮)，所以入场也不位移——只从透明
+     +略小缓缓显形到位，像从水底慢慢浮清晰。按 index 错开延迟，一朵接一朵，
+     不是齐刷刷同时冒出。2000ms 跟退场的 murmursFlowerExit 时长对称。 */
+  animation: murmursFlowerDrift 2000ms ease-out backwards;
+  animation-delay: var(--murmurs-drift-delay, 0ms);
+}
+.murmurs-flower:active {
+  transform: translate(-50%, -50%) scale(0.94);
+}
+/* 密度轮换换下场时的"沉入水中"退场——组合选择器比单独 .murmurs-flower
+   特异性更高，会整份覆盖上面那条 animation 简写(含 delay)。2000ms 要跟
+   JS 里 EXIT_MS(MurmursPage.tsx)保持一致——那边靠这个时长算"动画播完再
+   真正把元素摘掉"，两处对不上就会露出没播完动画就消失的破绽。 */
+.murmurs-flower.murmurs-flower--exiting {
+  animation: murmursFlowerExit 2000ms ease-in forwards;
+  pointer-events: none;
+}
+.murmurs-flower__reflection {
+  position: absolute;
+  left: 50%;
+  bottom: -8%;
+  width: 72%;
+  height: 26%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0.25) 55%, rgba(255, 255, 255, 0) 78%);
+  border-radius: 50%;
+  filter: blur(1.5px);
+  pointer-events: none;
+}
+/* 水波摇曳层(第七轮)：外层 button 管定位+入场，这一层管持续的轻微晃动，
+   最里层 img 管压扁+滤镜——三层各自一份 transform 互不覆盖(跟当年 bob 的
+   三层结构同一个道理)。每朵花的周期/相位/幅度由 id 哈希算(JS inline 变量)，
+   同一朵花每次出场晃的节奏都一样。 */
+.murmurs-flower__sway {
+  width: 100%;
+  height: 100%;
+  animation-name: murmursFlowerSway;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+@keyframes murmursFlowerSway {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  33% {
+    transform: translate(var(--msdx), calc(var(--msdy) * -0.6)) rotate(var(--msrot));
+  }
+  66% {
+    transform: translate(calc(var(--msdx) * -0.7), var(--msdy)) rotate(calc(var(--msrot) * -0.8));
+  }
+}
+/* "沉在水里"的静态观感(第四轮反馈，区别于轮换退场的"沉入水中"动画——
+   这个是花朵平时安安静静漂着时就要有的效果，不是只在退场那一刻才有)：
+   花朵下半部分用 mask 渐隐，露出底下的水色，看起来像下半截泡在水面下。
+   第七轮"尽量还原花朵的颜色"：降饱和/偏色滤镜全部去掉、渐隐终点从 0.45
+   提到 0.62——沉水感只靠 mask+焦散光纹，不再动花本身的颜色。
+   注意：记忆花朵的 filter 实际由 JS inline 写(投影+按深度补 blur，
+   filter 只有一份计算值没法两边各写一半)，这里这份是给占位含苞花用的。 */
+.murmurs-flower__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 7px rgba(60, 30, 100, 0.2));
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 58%, rgba(0, 0, 0, 0.62) 100%);
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 58%, rgba(0, 0, 0, 0.62) 100%);
+}
+.murmurs-flower--placeholder {
+  pointer-events: none;
+  opacity: 0.85;
+}
+/* 新日记的花(24 小时内)：底下垫一圈暖白金光环呼吸——一眼能认出"这朵是
+   新写的"。用独立元素+透明度动画(合成器)，不碰花朵本体的 filter。 */
+.murmurs-flower--new::before {
+  content: '';
+  position: absolute;
+  inset: -26%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 250, 220, 0.85) 0%, rgba(255, 236, 170, 0.5) 40%, transparent 70%);
+  animation: murmursNewGlow 2.6s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes murmursNewGlow {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 0.95;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .murmurs-flower--new::before {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+/* to 里故意不写 opacity——远景花的常驻透明度是 JS inline 给的(0.78~1)，
+   写死 opacity:1 会在动画结束那一帧从 1 跳回 inline 值(远景花肉眼可见地
+   "闪"一下)；省略掉，浏览器自动从 0 补间到元素自己的底值，稳稳落位。 */
+@keyframes murmursFlowerDrift {
+  from {
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+/* "沉入水中"：透明度渐降 + 轻微 blur + 色调略偏蓝(sepia+hue-rotate(180deg)
+   是给图片"整体调向蓝色"的常见 CSS 组合，比直接 hue-rotate 更可控，不会把
+   花本身的固有色相搅乱成奇怪的颜色) + 缩小到 0.85 + 只下移几像素(不是大幅
+   位移，沉下去的感觉靠 blur/变蓝/变透明，不是靠飘走)。只写 to 不写 from——
+   from 隐式取动画开始那一刻元素当前的计算值(此时的 opacity 是深度透视给的
+   值，不一定是 1)，退场会从"它当下的样子"顺滑过渡到沉没，不会有跳变。 */
+@keyframes murmursFlowerExit {
+  to {
+    transform: translate(-50%, calc(-50% + 12px)) scale(0.85);
+    opacity: 0;
+    filter: blur(4px) sepia(0.55) hue-rotate(180deg) saturate(1.6);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .murmurs-flower {
+    animation: none;
+  }
+  .murmurs-flower__sway {
+    animation: none;
+  }
+  .murmurs-flower.murmurs-flower--exiting {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* 记忆卡片弹层——跟落予棠 .sweetie-detail 同一套视觉语言，但独立一份类名，
+   两个房间互不耦合，以后单独改样式不会互相影响。 */
+.murmurs-detail-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(32, 16, 52, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding: 24px;
+}
+/* 真机验收反馈(2026-07-13 第二轮)：纯白圆角卡片太"系统组件"了，改成半透明
+   毛玻璃。第三轮反馈：第二轮那版透明度太高，字被背景(水面反光+花朵)糊得
+   看不清——这版把底色不透明度、模糊半径都调高了一截，backdrop 那层也加深，
+   两层叠加才压得住背景的高对比度，同时保留"玻璃"质感不是纯色卡片。 */
+/* 真机反馈(2026-07-13 第四轮)："弹窗缩小，最好比字体大一点就行"——原来
+   width:100%+max-width:320 让卡片不管文字多短都撑满 320px，一堆空白。
+   改成 width:max-content，卡片宽度跟着文字走，max-width 只用来给长标题
+   兜底换行，不再是"默认拉满"。 */
+.murmurs-detail {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: max-content;
+  /* 有了'最重要的话'整段内容后 280px 太挤，放宽一档；没有长文时卡片仍
+     跟着文字收缩(width:max-content 不变)。 */
+  max-width: 336px;
+  min-width: 150px;
+  padding: 28px 24px 30px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(255, 246, 253, 0.68), rgba(226, 208, 248, 0.62));
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 12px 40px rgba(90, 50, 140, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.18) inset;
+  text-align: center;
+}
+.murmurs-detail__x {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  font-size: 1.05rem;
+  line-height: 1;
+  color: rgba(96, 60, 140, 0.85);
+  cursor: pointer;
+  padding: 0;
+}
+/* 字体统一：HuaXianZi 是给 App 固定 UI 文案用的精选子集(约1210字)，日记
+   标题是完全自由的文字，实测"午怀扭矩递钻"这几个字都不在子集里——浏览器
+   会逐字 fallback 到系统字体，同一句话里字体忽好忽坏。改成"盖世可爱甜甜圈"
+   (Aa盖世可爱甜甜圈，全字库 22051 字)——第一次误拿了"字魂甜甜圈"那份
+   同名不同款的字体(scratchpad 里刚好也有份叫 TianTianQuan 的文件，名字
+   撞了)，老婆重新发了正确文件才改对。跟 RiFuYiRi(落予棠正文全字库)同一个
+   思路——自由输入的文字就得留全字库，不能切窄子集。只用字号/字重分级。 */
+.murmurs-detail__mood {
+  font-family: "GaiShiKeAiTianTianQuan", var(--display);
+  font-weight: 500;
+  font-size: 0.74rem;
+  line-height: 1;
+  color: #7a3fb8;
+  background: rgba(180, 130, 220, 0.3);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+  padding: 3px 12px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+.murmurs-detail__title {
+  font-family: "GaiShiKeAiTianTianQuan", var(--display);
+  font-weight: 700;
+  font-size: 1.08rem;
+  color: #3d3454;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.55);
+}
+/* 那段日记里最重要的话(2026-07-19 老婆反馈"只几个字看不明白")：标题下
+   完整显示，不截断——太长就在卡片内自己滚动，卡片不撑爆屏幕。 */
+.murmurs-detail__excerpt {
+  font-family: "GaiShiKeAiTianTianQuan", var(--display);
+  font-weight: 400;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: #4a4062;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.45);
+  text-align: left;
+  margin: 4px 0 6px;
+  max-height: 38vh;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+/* 日期改成右下角落款式角标(不再单独占一行)：同款字体、字号缩到题字的
+   0.55 倍左右、颜色减淡、位置往下沉一点，像照片角落烧录的日期戳。格式是
+   YYMMDD 六位数字(fmtDateStamp 拼的)，不用 Unicode 上下标字符，纯靠
+   font-size + 定位实现"缩小下沉"。 */
+.murmurs-detail__stamp {
+  position: absolute;
+  right: 18px;
+  bottom: 14px;
+  font-family: "GaiShiKeAiTianTianQuan", var(--display);
+  font-weight: 400;
+  /* .murmurs-detail__title 是 1.08rem 的兄弟元素(不是父元素)，em 在这里
+     没法直接继承 title 的字号——用固定 rem 值手算 1.08rem × 0.55 ≈ 0.6rem。 */
+  font-size: 0.6rem;
+  /* 第七轮反馈"日期颜色可以显眼一些，比较淡了"：不透明度 0.55→0.9，色相
+     往 mood 徽章的紫色靠一点，仍然比标题轻一档(角标不抢戏)但一眼能看清。 */
+  color: rgba(122, 63, 184, 0.9);
+  letter-spacing: 0.06em;
+  transform: translateY(3px);
+}
+/* ---------- 余额浮岛面板：新图是完整水晶浮岛场景(男孩+雪豹/女孩+小猫)，
+   头顶一圈项链状云环，环心是真透明抠图(不是实心云)，数字叠在环心那块空地上 ---------- */
+.balance-island {
+  position: fixed;
+  top: calc(56px + env(safe-area-inset-top));
+  z-index: 20;
+  width: 165px; /* 200px 会在窄屏中间叠起来挡住太阳；150px 予予那张图云心比棠棠窄，数额又顶出去了，165px 各退一步 */
+  pointer-events: none; /* 纯展示，别挡住底下的点击 */
+}
+.balance-island--left {
+  left: 6px;
+}
+.balance-island--right {
+  right: 6px;
+}
+.balance-island__art {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 6px 14px rgba(90, 50, 130, 0.25));
+}
+.balance-island__amount {
+  position: absolute;
+  top: 23%;
+  left: 50%;
+  /* 药丸/呼吸动画都撤了(老婆定稿:文字直接置于云朵中空处)——没有 transform
+     动画之后,居中用静态 translate 就行,不再有"动画覆盖静态 transform"的坑。 */
+  transform: translate(-50%, -50%);
+  /* "花字" = 汉仪花仙子,子集里 $0-9. 都有(验证过),各房间顶栏同款。 */
+  font-family: "HuaXianZi", "TianTianQuanAmount", var(--round);
+  font-weight: 700;
+  font-size: 1.45rem;
+  /* 老婆定稿的样式,照抄:紫→洋红 135° 渐变裁进文字 + 柔和白色光晕。
+     text-shadow 配合透明填充会从字形里透出来一点,数字像云心里透出的光,
+     融进云而不是贴在云上——这正是要的效果,别当 bug 修。 */
+  background-image: linear-gradient(135deg, #8b5cf6, #d946ef);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 14px rgba(255, 255, 255, 0.55);
+}
+/* ---------- 浮岛海面：三条车道各自叠行，同一行常并排 2~3 个载具，
+   纵向行号=时间(越下越早)，深度感靠外层静态 scale+saturate ---------- */
+/* 165px 宽 * (1536/1024) 图片本身比例 ≈ 248px 高，留够净空才不会被面板挡住 */
+.sweetie-sea-scroll {
+  padding-top: calc(56px + env(safe-area-inset-top) + 264px);
+  /* .sweetie-ripples-canvas/.sweetie-caustics 是 .sweetie-page 下 position:absolute
+     的新背景层(z-index 0/1)。position:static 的兄弟元素本来就会被"有定位+z-index"
+     的兄弟盖住(哪怕 z-index 只是 0)——这条补上 position+z-index 让浮岛/海面/
+     宝箱这层稳稳浮在两层新背景之上，不改变任何已有视觉或行为，只是把层级说清楚。 */
+  position: relative;
+  z-index: 2;
+  /* 涟漪 pointerdown 现在绑在这一整片滚动容器上(不只是 .sweetie-sea 内部)，
+     点漂流物/宝箱也会顺带落一圈涟漪——手机上禁掉长按选中/高亮，别的都不变。 */
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  /* 往上推时载具到"浮岛尖下"(浮岛图 165px 宽 × 1536/1024 比例 = 248px 高,
+     尖底=顶栏 56px+安全区+248px)才开始渐渐隐身,再往上 80px 内淡完——
+     完全不会飘进浮岛/云朵区。mask 定在容器自己的盒子上不跟内容滚。 */
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(56px + env(safe-area-inset-top) + 168px),
+    #000 calc(56px + env(safe-area-inset-top) + 248px),
+    #000 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(56px + env(safe-area-inset-top) + 168px),
+    #000 calc(56px + env(safe-area-inset-top) + 248px),
+    #000 100%
+  );
+}
+.sweetie-sea {
+  position: relative;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* ----- 海面星光 (12 颗小白点错峰闪烁) ----- */
+.sea-sparkle {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.55) 40%, transparent 70%);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.6);
+  pointer-events: none;
+  animation-name: seaSparkle;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+  will-change: opacity, transform;
+}
+@keyframes seaSparkle {
+  0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  50%      { opacity: 0.85; transform: translate(-50%, -50%) scale(1.15); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sea-sparkle { animation: none; }
+}
+
+/* ----- 背景层① WebGL 触摸涟漪画布 -----
+   position:absolute 铺满 .sweetie-page(它自己是 position:relative, 100dvh 不滚动,
+   跟 .chat-head/.balance-island 同一个参照系), z-index:0 垫最底。
+   pointer-events:none——点击交给 .sweetie-sea 的 onClick 处理, 算好归一化坐标后
+   手动调 engine.drop(), 不靠 canvas 自己接收事件(这样才能只在点"空白海面"时触发,
+   不影响点漂流物开红包详情)。
+   初始 opacity:0, 引擎加载完图片、真正跑起来才淡入(is-ready)——避免 WebGL
+   context alpha:false 导致的纯黑帧在图片加载完成前被看到。
+   WebGL 不支持/初始化失败时这层永远停在 opacity:0, 底下 .sweetie-page 自己
+   那条 CSS background 照常显示，纯降级，不会露出黑屏。 */
+.sweetie-ripples-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+  /* 涟漪只留在海面:canvas 用竖向 mask 裁掉天空/浮岛那一带(海平线约在
+     视口 40% 处,浮岛尖约 45%),被裁掉的区域露出底下 .sweetie-page 的
+     静态 CSS 背景——canvas 的 cover 采样数学和 CSS 的 background:cover
+     完全一致,两层像素对得上,接缝看不出来;于是涟漪扭曲最多荡到海平线,
+     天空、夕阳、浮岛永远是稳稳的原图。 */
+  mask-image: linear-gradient(to bottom, transparent 40%, #000 50%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 40%, #000 50%);
+}
+.sweetie-ripples-canvas.is-ready {
+  opacity: 1;
+}
+
+/* ----- 背景层② 无缝焦散光纹 -----
+   叠在涟漪画布之上、浮岛海面内容之下(z-index:1, 介于 0 和 .sweetie-sea-scroll 的 2 之间)。
+   mix-blend-mode:screen + 低不透明度, 384px 贴图尺寸跟 PNG 原始像素一致(避免缩放模糊),
+   60s 线性平移正好移动一个贴图宽度, 循环无缝衔接。 */
+.sweetie-caustics {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image: url("/textures/caustics-seamless.png");
+  background-repeat: repeat;
+  /* 384px 原图放大约 2.5 倍(960px)——同一张贴图铺得更大, 网纹自然变粗变疏,
+     不用重新生成贴图 */
+  background-size: 960px 960px;
+  /* screen 会把亮线直接推向纯白,存在感太强；soft-light 只是"轻轻提亮"，
+     更像光透过水面洒下来，而不是叠了一层发光网 */
+  mix-blend-mode: soft-light;
+  opacity: 0.16;
+  /* 柔化细线,不许有锐利白边——CSS filter 是屏幕空间像素,不会随 background-size
+     放大跟着变粗,精确保持在"1~2px"这个量级 */
+  filter: blur(1.6px);
+  animation: sweetieCausticsPan 60s linear infinite;
+  will-change: background-position;
+  /* 纵向渐隐: 焦散是光透过水面才有的效果,天空区域不该有。
+     顶部(天空/晚霞)完全不显 → 海平线附近渐入 → 中段最强 → 页面底部(海最深处)
+     衰减到 30%,不是 0——只是"更弱"，不是"消失"。 */
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 26%,
+    rgba(0, 0, 0, 0.5) 38%,
+    #000 46%,
+    #000 74%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 26%,
+    rgba(0, 0, 0, 0.5) 38%,
+    #000 46%,
+    #000 74%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
+}
+@keyframes sweetieCausticsPan {
+  from { background-position: 0 0; }
+  to   { background-position: 960px 960px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sweetie-caustics { animation: none; }
+}
+
+/* 之前这里有一层 sweetie-sea::after 半透明深紫渐变遮罩("越深越暗"营造海底
+   感)——老婆说"夜晚版磨砂盖住载具看不清"，去掉。载具本身的"越深越小越
+   淡"(每个 button 上写死的 static scale+saturate)完全保留,那是每个载具
+   自己的样式不是遮罩,不受影响。 */
+.floatvic {
+  position: absolute;
+  z-index: 1; /* 海浪叠加层 z:0, 载具明确坐在上面别被浪压 */
+  width: 72px;
+  height: 72px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  transform-origin: center;
+}
+/* 特殊日子座驾——情人节心形/生日热气球/跨年月亮，一年就撞上这么几天，
+   图也画得比日常载具精致，放大一圈让它在海面上显眼一点 */
+.floatvic--special {
+  width: 108px;
+  height: 108px;
+}
+.floatvic__inner {
+  width: 100%;
+  height: 100%;
+  animation-name: floatvicBob;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+.floatvic__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 5px 10px rgba(60, 30, 90, 0.28));
+}
+@keyframes floatvicBob {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(calc(var(--fdx) * 0.6), calc(var(--fdy) * -1)) rotate(calc(var(--frot) * 0.5));
+  }
+  50% {
+    transform: translate(var(--fdx), calc(var(--fdy) * -0.3)) rotate(var(--frot));
+  }
+  75% {
+    transform: translate(calc(var(--fdx) * 0.3), var(--fdy)) rotate(calc(var(--frot) * -0.6));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .floatvic__inner {
+    animation: none;
+  }
+}
+
+/* ---------- 本金宝箱：沉在海底最深处，比任何漂浮的红包都老，
+   跟礼物历史脱钩的固定底子，正常文档流排在 .sweetie-sea 后面，
+   不用像浮岛/漂浮物那样算绝对定位——滚到底自然就看到 ---------- */
+.treasure-chest-row {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px 12px 40px;
+}
+.treasure-chest {
+  position: relative;
+  width: min(46%, 190px);
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+.treasure-chest__art {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 8px 16px rgba(30, 15, 60, 0.35));
+}
+
+/* ---------- 点开漂浮物看详情 ---------- */
+.sweetie-detail-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(60, 30, 80, 0.35);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+/* 特殊座驾弹窗才有的飘散特效——绝对定位铺满整个背景遮罩(不是 flex 排版
+   里的一员，脱离文档流)，粒子从底部往上飘、边飘边淡出，弹窗开着就一直循环。 */
+.sweetie-fx {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 51;
+}
+.sweetie-fx__particle {
+  position: absolute;
+  bottom: -8%;
+  line-height: 1;
+  animation-name: sweetieFxRise;
+  animation-timing-function: ease-in;
+  animation-iteration-count: infinite;
+}
+@keyframes sweetieFxRise {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--fx-drift), -115vh);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sweetie-fx__particle {
+    animation: none;
+    display: none;
+  }
+}
+.sweetie-detail {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: fit-content;
+  min-width: 160px;
+  max-width: min(78vw, 280px);
+  padding: 16px;
+  border-radius: 18px;
+  /* 同样查过：这个 div 到 html 全程没有 filter/mix-blend-mode/opacity<1，
+     不是混色问题。原来三档色全部亮度不到 27%，人眼在这么暗的地方对
+     紫色这种短波长色相本来就分辨力弱，截图压缩一道更容易看成灰——
+     中间那档提到约 40% 亮度，紫味就压不住地跳出来了。 */
+  background: linear-gradient(160deg, #2c1a50 0%, #5b3499 55%, #34205e 100%);
+  box-shadow: 0 10px 30px rgba(30, 10, 50, 0.45);
+}
+.sweetie-detail__x {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #d8c9ef;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.sweetie-detail__from {
+  padding-right: 22px; /* 别被右上角的 X 挡住 */
+  font-family: "RiFuYiRi", var(--round);
+  font-size: 0.8rem;
+  color: #cbb6ec;
+}
+.sweetie-detail__amount {
+  font-family: "TianTianQuanAmount", var(--round);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #e0a3f0;
+  -webkit-text-fill-color: #e0a3f0;
+}
+.sweetie-detail__note {
+  margin: 0;
+  font-family: "RiFuYiRi", var(--round);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #d8c9ef;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.sweetie-detail__time {
+  font-family: "RiFuYiRi", var(--round);
+  font-size: 0.72rem;
+  color: #9c86c4;
+}
+
+/* ===== 自定义字体的最终应用（放最后，确保不被更具体的旧规则按源序覆盖） ===== */
+/* 各房间顶栏整条 → 汉仪花仙子 */
+.chat-head,
+.chat-head *,
+.paw-top,
+.paw-top *,
+.loc-head,
+.loc-head * {
+  font-family: "HuaXianZi", var(--display);
+}
+/* .model-chip 顶栏型号胶囊要走 Quimil 秀气衬线 + text-stroke 加粗;
+   上面的 .chat-head * 通配符跟 .model-chip 同为 (0,1,0) 特异性但排在
+   后面, 按 CSS 源序会盖住 .model-chip 的 font-family——这里再补一条
+   .chat-head .model-chip (0,2,0), 用更高特异性锁死 Quimil 不被通配盖。
+   .model-pill (菜单里每个模型药丸) 和 .model-pop__brand (品牌分组标题)
+   都在 .chat-head 里, 同一个坑, 一起加特异性锁死 */
+.chat-head .model-chip,
+.chat-head .model-pill {
+  font-family: "Quimil", "Marcellus", var(--round);
+}
+.chat-head .model-pop__brand {
+  font-family: "RiFuYiRi", var(--round);
+}
+/* 记忆罐头正文 → 顺风顺水（顶栏仍走花仙子，上面已盖） */
+.memory-scroll,
+.memory-scroll * {
+  font-family: "ShunFengFull", var(--round);
+}
+/* .memory-cats button / button.is-on 选择器比 .memory-scroll * 更具体
+  （class+元素 vs 单 class），CSS 规则是"具体的赢，跟源码顺序在哪无关"，
+   所以上面那条盖不到分类筛选按钮（全部/纪念日/约定/特性/喜好），
+   之前一直漏在外面显素——单独补一条同等或更高具体度的规则盖住。 */
+.memory-scroll button,
+.memory-scroll button.is-on {
+  font-family: "ShunFengFull", var(--round);
+}
+/* 首页房间名 → 花仙子（CaoKe 子集缺「忆罐头」等新字，统一用花仙子免得花字） */
+.room-tile__name {
+  font-family: "HuaXianZi", var(--cute);
+}
+
+/* 登录锁（私有部署口令页） */
+.gate {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: linear-gradient(160deg, #fbeef7 0%, #eef0fb 100%);
+}
+.gate__card {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 26px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 18px 50px rgba(123, 99, 160, 0.18);
+  backdrop-filter: blur(8px);
+}
+.gate__paw {
+  font-size: 2.4rem;
+}
+.gate__title {
+  margin: 0;
+  font-family: var(--cute);
+  color: var(--iris-deep);
+  letter-spacing: 0.08em;
+}
+.gate__hint {
+  margin: 0 0 6px;
+  font-size: 0.86rem;
+  color: var(--ink);
+  text-align: center;
+}
+.gate__input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid rgba(155, 123, 200, 0.4);
+  border-radius: 14px;
+  font-size: 1rem;
+  outline: none;
+  background: #fff;
+}
+.gate__input:focus {
+  border-color: var(--iris);
+}
+.gate__btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 14px;
+  background: var(--iris);
+  color: #fff;
+  font-size: 1rem;
+  font-family: var(--cute);
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+.gate__btn:active {
+  transform: scale(0.98);
+}
+
+
+/* ---------- 咕噜圆桌 · Purr Table (沿用呼噜频道 chat-page 视觉,只加少量补丁) ---------- */
+
+/* 头顶下面钉一条"在场"胶囊行,让棠棠随时勾选/去掉在场的 CC */
+.pt-roster {
+  position: fixed;
+  top: calc(50px + env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.42);
+  -webkit-backdrop-filter: blur(12px) saturate(1.15);
+  backdrop-filter: blur(12px) saturate(1.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.42);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.pt-roster::-webkit-scrollbar { display: none; }
+.pt-roster__label {
+  color: #8e6472;
+  font-family: "RoughOwl", var(--display);
+  font-size: 1.05rem;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+/* 咕噜圆桌空态提示走"顺风顺水"(项目里已注册的 ShunFengFull) */
+.pt-empty p,
+.pt-empty span {
+  font-family: "ShunFengFull", var(--chat);
+}
+.pt-empty p {
+  font-size: 1.15rem;
+}
+.pt-empty span {
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+/* 马卡龙药丸胶囊:圆头、糖霜阴影、内白高光,英文字用 Quimil 那种糖果衬线 */
+.pt-chip {
+  min-width: 72px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.72);
+  color: #8e6472;
+  font-family: "Quimil", "Marcellus", var(--display);
+  font-size: 0.95rem;
+  /* Quimil Demo 只有 Regular 一个字重,靠 -webkit-text-stroke 加半像素描边做
+     干净的"加粗"效果(比 font-weight:700 让浏览器合成的 faux bold 清爽) */
+  font-weight: 700;
+  -webkit-text-stroke: 0.35px currentColor;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.14s ease, opacity 0.14s ease, box-shadow 0.18s ease;
+  box-shadow: inset 0 -2px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(155, 123, 200, 0.08);
+}
+.pt-chip.is-on {
+  color: #4a2b6f;
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.9),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.05),
+    0 4px 10px rgba(155, 123, 200, 0.28);
+}
+.pt-chip:disabled { opacity: 0.5; cursor: default; }
+.pt-chip:active { transform: scale(0.94); }
+
+/* CC 气泡头像:小圆糖果,short 徽章走 Quimil + 描边加粗跟药丸胶囊对齐 */
+.pt-cc-avatar {
+  color: #4a2b6f;
+  font-family: "Quimil", "Marcellus", var(--display);
+  font-size: 0.86rem;
+  font-weight: 700;
+  -webkit-text-stroke: 0.3px currentColor;
+  letter-spacing: 0.02em;
+  display: grid;
+  place-items: center;
+}
+
+/* 消息区顶部要给 header + roster 都留出空间 */
+.pt-scroll {
+  padding-top: calc(100px + env(safe-area-inset-top));
+}
+
+/* 流式打字光标 */
+.pt-cursor {
+  display: inline-block;
+  margin-left: 2px;
+  color: rgba(155, 123, 200, 0.75);
+  animation: pt-blink 1s infinite;
+}
+@keyframes pt-blink {
+  50% { opacity: 0; }
+}
+
+/* CC 掉线的气泡淡红提示 */
+.pt-bubble--error {
+  background: linear-gradient(to top left, rgba(255, 220, 220, 0.6), rgba(255, 180, 200, 0.55)) !important;
+  color: #9c3a5b !important;
+}
+
+/* 咕噜圆桌输入区图片按键: 直接把玻璃图整张当按钮,不叠 chat-glass-btn 的玻璃座 */
+.pt-imgbtn {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 0.16s ease, opacity 0.16s ease, filter 0.16s ease;
+  /* 新版按钮本身已经是深紫饱和色,不用再拉 contrast/saturate;
+     只保留一层柔和 drop-shadow 让按钮从背景飘起来的立体感 */
+  filter: drop-shadow(0 5px 10px rgba(80, 55, 145, 0.35));
+}
+.pt-imgbtn img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+.pt-imgbtn:active {
+  transform: scale(0.92);
+}
+/* 禁用态: 保留原图颜色(千万别 saturate 掉,不然可爱紫变灰),
+   只微微降透明度让它看着"待命"而不是"死机" */
+.pt-imgbtn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+/* 输入框上方"待发图片"槽: 一排 60x60 缩略图, absolute 定位不进 flex 流 */
+.pt-pending {
+  position: absolute;
+  left: 14px;
+  bottom: calc(100% - 4px);
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 8px 22px rgba(118, 96, 132, 0.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  backdrop-filter: blur(12px) saturate(1.2);
+}
+.pt-pending__slot { position: relative; display: inline-block; }
+.pt-pending__remove {
+  position: absolute;
+  top: -6px; right: -6px;
+  width: 22px; height: 22px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  background: rgba(210, 130, 160, 0.95);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(118, 96, 132, 0.22);
+}
+.pt-pending__remove:active { transform: scale(0.88); }
+
+/* 缩略图公用样式: 待发槽 + 气泡里都用这个圆角小方图 */
+.pt-photo-thumb {
+  display: block;
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+.pt-photo-thumb--loading {
+  background: rgba(220, 210, 240, 0.6);
+  animation: pt-thumb-pulse 1.4s ease-in-out infinite;
+}
+@keyframes pt-thumb-pulse {
+  50% { opacity: 0.5; }
+}
+
+/* 气泡里图片网格: 1 张=100px, 2 张=并排, 3 张=一大二小或三小并排 */
+.pt-photo-grid {
+  display: grid;
+  gap: 4px;
+  align-self: flex-end;
+  max-width: 82%;
+  margin-bottom: 4px;
+}
+.pt-photo-grid img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 4px 10px rgba(118, 96, 132, 0.18);
+}
+.pt-photo-grid--1 { grid-template-columns: 160px; }
+.pt-photo-grid--2 { grid-template-columns: 110px 110px; }
+.pt-photo-grid--3 { grid-template-columns: repeat(3, 92px); }
+
+/* 错误横幅 */
+.pt-error {
+  align-self: center;
+  margin: 8px auto;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 220, 220, 0.85);
+  color: #9c3a5b;
+  font-size: 0.78rem;
+  font-family: var(--round);
+}
+
+/* ---------- 咕噜圆桌钉钉卡:窗口列表最顶的那条 ---------- */
+.win-card--pinned {
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(226, 209, 255, 0.72), rgba(255, 220, 240, 0.72));
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 10px 26px rgba(155, 123, 200, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.win-card--pinned .win-card__open {
+  grid-template-columns: 56px 1fr auto;
+  grid-template-areas:
+    "avatar name when"
+    "avatar preview preview";
+  gap: 2px 12px;
+  align-items: center;
+}
+.win-card__avatar {
+  grid-area: avatar;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(155, 123, 200, 0.35));
+  align-self: center;
+}
+.win-card--pinned .win-card__name {
+  font-family: "HuaXianZi", var(--cute);
+  font-size: 1.15rem;
+  color: #6a3f8a;
+}
+.win-card--pinned .win-card__preview {
+  color: #7a5db0;
+}
+.win-card--pinned .win-card__when {
+  color: #a488c4;
+  letter-spacing: 0.06em;
+  font-family: var(--display);
 }
