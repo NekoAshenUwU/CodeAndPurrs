@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -49,7 +50,7 @@ for _playlist_tool_name in (
     "get_spotify_playback",
     "control_spotify",
 ):
-    mcp.tool(getattr(_playlist_module, _playlist_tool_name))
+    __MCP_INSTANCE__.tool(getattr(_playlist_module, _playlist_tool_name))
 # END NEKO PLAYLIST MCP TOOLS
 '''
 
@@ -109,9 +110,14 @@ def main() -> int:
         print(f"提示：GitHub 下载失败，沿用 VPS 现有点歌代码（{exc}）")
 
     source = BASE_SERVER.read_text(encoding="utf-8")
-    if "mcp = FastMCP" not in source and "mcp=FastMCP" not in source:
+    instance_match = re.search(
+        r"(?m)^\s*([A-Za-z_]\w*)(?:\s*:\s*[^=\n]+)?\s*=\s*FastMCP\s*\(",
+        source,
+    )
+    if instance_match is None:
         print("停止：现有 server.py 的 MCP 结构不符合预期，未修改。", file=sys.stderr)
         return 2
+    instance_name = instance_match.group(1)
 
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
@@ -120,17 +126,20 @@ def main() -> int:
     print(f"[2/4] 已备份 {backup}")
 
     if BEGIN_MARKER not in source:
-        guard = 'if __name__ == "__main__":'
-        index = source.rfind(guard)
-        if index < 0:
-            guard = "if __name__ == '__main__':"
-            index = source.rfind(guard)
-        if index < 0:
-            print("停止：找不到 MCP 启动入口，未修改。", file=sys.stderr)
-            return 2
-        updated = source[:index] + MOUNT_BLOCK + "\n" + source[index:]
+        mount_block = MOUNT_BLOCK.replace("__MCP_INSTANCE__", instance_name)
+        guard_match = re.search(
+            r"(?m)^if\s+__name__\s*==\s*['\"]__main__['\"]\s*:", source
+        )
+        if guard_match is not None:
+            index = guard_match.start()
+        else:
+            run_matches = list(
+                re.finditer(rf"(?m)^.*\b{re.escape(instance_name)}\.run\s*\(", source)
+            )
+            index = run_matches[-1].start() if run_matches else len(source)
+        updated = source[:index] + mount_block + "\n" + source[index:]
         atomic_write(BASE_SERVER, updated, BASE_SERVER.stat().st_mode)
-        print("[3/4] 五个 Spotify 工具已加入现有 MCP")
+        print(f"[3/4] 五个 Spotify 工具已加入现有 MCP（实例：{instance_name}）")
     else:
         print("[3/4] 挂载代码已存在，跳过重复写入")
 
