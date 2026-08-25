@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 import re
+import signal
 import shutil
 import subprocess
 import sys
@@ -19,6 +20,7 @@ BASE_SERVER = Path(os.getenv("CODEANDPURRS_MCP_SERVER", "/root/codeandpurrs-mcp/
 PLAYLIST_SERVER = Path(os.getenv("PLAYLIST_MCP_SERVER", "/root/playlist-mcp/server.py"))
 BACKUP_DIR = Path(os.getenv("CODEANDPURRS_BACKUP_DIR", "/root/backups"))
 SERVICE = os.getenv("CODEANDPURRS_MCP_SERVICE", "codeandpurrs-mcp.service")
+MCP_PORT = int(os.getenv("CODEANDPURRS_MCP_PORT", "8891"))
 PLAYLIST_SOURCE = (
     "https://raw.githubusercontent.com/NekoAshenUwU/CodeAndPurrs/"
     "8eb29bf674bafc0176f16bfe546958de6f3bf992/deploy/playlist-mcp/server.py"
@@ -70,9 +72,57 @@ def service_exists() -> bool:
     return result.stdout.strip() not in {"", "not-found"}
 
 
+def listener_pids(port: int) -> list[int]:
+    if not shutil.which("ss"):
+        return []
+    result = command(["ss", "-lntp"], check=False)
+    pids: set[int] = set()
+    for line in result.stdout.splitlines():
+        if re.search(rf":{port}\b", line):
+            pids.update(int(value) for value in re.findall(r"pid=(\d+)", line))
+    return sorted(pids)
+
+
+def clear_stale_listener(port: int) -> bool:
+    pids = listener_pids(port)
+    if not pids:
+        return True
+    for pid in pids:
+        try:
+            command_line = Path(f"/proc/{pid}/cmdline").read_bytes().replace(b"\0", b" ").decode(
+                "utf-8", errors="replace"
+            ).strip()
+        except OSError:
+            command_line = "unknown"
+        print(f"清理占用 {port} 的旧进程 PID {pid}：{command_line[:180]}")
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+    for _ in range(20):
+        if not listener_pids(port):
+            return True
+        time.sleep(0.25)
+    for pid in listener_pids(port):
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    time.sleep(0.5)
+    return not listener_pids(port)
+
+
+def start_clean() -> subprocess.CompletedProcess[str]:
+    command(["systemctl", "stop", SERVICE], check=False)
+    time.sleep(1)
+    if not clear_stale_listener(MCP_PORT):
+        return subprocess.CompletedProcess([], 1, "", f"端口 {MCP_PORT} 仍被占用")
+    return command(["systemctl", "start", SERVICE], check=False)
+
+
 def restore(backup: Path) -> None:
     shutil.copy2(backup, BASE_SERVER)
-    command(["systemctl", "restart", SERVICE], check=False)
+    start_clean()
 
 
 def main() -> int:
@@ -163,7 +213,7 @@ def main() -> int:
         print(compiled.stderr.strip(), file=sys.stderr)
         return 1
 
-    restarted = command(["systemctl", "restart", SERVICE], check=False)
+    restarted = start_clean()
     time.sleep(3)
     active = command(["systemctl", "is-active", SERVICE], check=False)
     if restarted.returncode != 0 or active.stdout.strip() != "active":
