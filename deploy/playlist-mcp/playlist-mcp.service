@@ -1,0 +1,18 @@
+[Unit]
+Description=Neko Playlist MCP Server
+After=network-online.target codeandpurrs.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/playlist-mcp
+ExecStart=/root/playlist-mcp/.venv/bin/python /root/playlist-mcp/server.py
+Restart=always
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+Environment=PLAYLIST_MCP_HOST=127.0.0.1
+Environment=PLAYLIST_MCP_PORT=8891
+Environment=CODEANDPURRS_DIR=/var/www/codeandpurrs
+
+[Install]
+WantedBy=multi-user.target
