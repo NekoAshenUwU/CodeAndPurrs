@@ -42,15 +42,7 @@ if _playlist_spec is None or _playlist_spec.loader is None:
     raise RuntimeError(f"无法载入点歌 MCP：{_playlist_module_path}")
 _playlist_module = _playlist_importlib_util.module_from_spec(_playlist_spec)
 _playlist_spec.loader.exec_module(_playlist_module)
-
-for _playlist_tool_name in (
-    "prepare_spotify_playlist",
-    "list_spotify_devices",
-    "play_spotify_playlist",
-    "get_spotify_playback",
-    "control_spotify",
-):
-    __MCP_INSTANCE__.tool(getattr(_playlist_module, _playlist_tool_name))
+__MCP_INSTANCE__.mount(_playlist_module.mcp)
 # END NEKO PLAYLIST MCP TOOLS
 '''
 
@@ -133,8 +125,20 @@ def main() -> int:
     shutil.copy2(BASE_SERVER, backup)
     print(f"[2/4] 已备份 {backup}")
 
-    if BEGIN_MARKER not in source:
-        mount_block = MOUNT_BLOCK.replace("__MCP_INSTANCE__", instance_name)
+    mount_block = MOUNT_BLOCK.replace("__MCP_INSTANCE__", instance_name)
+    if BEGIN_MARKER in source:
+        marker_pattern = re.compile(
+            rf"(?ms)^\s*{re.escape(BEGIN_MARKER)}\n.*?^\s*{re.escape(END_MARKER)}\s*\n?"
+        )
+        updated, replacements = marker_pattern.subn(
+            mount_block.strip("\n") + "\n", source, count=1
+        )
+        if replacements != 1:
+            print("停止：旧点歌挂载区块无法安全替换，未修改。", file=sys.stderr)
+            return 2
+        atomic_write(BASE_SERVER, updated, BASE_SERVER.stat().st_mode)
+        print(f"[3/4] 点歌工具已改用官方 mount 挂载（实例：{instance_name}）")
+    else:
         guard_match = re.search(
             r"(?m)^if\s+__name__\s*==\s*['\"]__main__['\"]\s*:", source
         )
@@ -147,9 +151,7 @@ def main() -> int:
             index = run_matches[-1].start() if run_matches else len(source)
         updated = source[:index] + mount_block + "\n" + source[index:]
         atomic_write(BASE_SERVER, updated, BASE_SERVER.stat().st_mode)
-        print(f"[3/4] 五个 Spotify 工具已加入现有 MCP（实例：{instance_name}）")
-    else:
-        print("[3/4] 挂载代码已存在，跳过重复写入")
+        print(f"[3/4] 五个 Spotify 工具已挂载（实例：{instance_name}）")
 
     compiled = command(
         [sys.executable, "-m", "py_compile", str(BASE_SERVER), str(PLAYLIST_SERVER)],
