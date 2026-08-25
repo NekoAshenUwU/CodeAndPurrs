@@ -351,5 +351,5 @@ def control_spotify(action: Literal["pause", "resume", "next", "previous"]) -> d
 
 if __name__ == "__main__":
     host = os.getenv("PLAYLIST_MCP_HOST", "127.0.0.1")
-    port = int(os.getenv("PLAYLIST_MCP_PORT", "8891"))
+    port = int(os.getenv("PLAYLIST_MCP_PORT", "8892"))
     mcp.run(transport="http", host=host, port=port)
