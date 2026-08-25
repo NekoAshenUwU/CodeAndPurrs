@@ -11,7 +11,7 @@ Restart=always
 RestartSec=3
 Environment=PYTHONUNBUFFERED=1
 Environment=PLAYLIST_MCP_HOST=127.0.0.1
-Environment=PLAYLIST_MCP_PORT=8891
+Environment=PLAYLIST_MCP_PORT=8892
 Environment=CODEANDPURRS_DIR=/var/www/codeandpurrs
 
 [Install]
