@@ -111,13 +111,21 @@ def main() -> int:
 
     source = BASE_SERVER.read_text(encoding="utf-8")
     instance_match = re.search(
-        r"(?m)^\s*([A-Za-z_]\w*)(?:\s*:\s*[^=\n]+)?\s*=\s*FastMCP\s*\(",
+        r"(?m)^\s*([A-Za-z_]\w*)(?:\s*:\s*[^=\n]+)?\s*=\s*(?:fastmcp\.)?FastMCP\s*\(",
         source,
     )
-    if instance_match is None:
+    if instance_match is not None:
+        instance_name = instance_match.group(1)
+    else:
+        decorator_match = re.search(
+            r"(?m)^\s*@([A-Za-z_]\w*)\.tool(?:\s*\(|\s*$)", source
+        )
+        run_match = re.search(r"(?m)^.*\b([A-Za-z_]\w*)\.run\s*\(", source)
+        inferred_match = decorator_match or run_match
+        instance_name = inferred_match.group(1) if inferred_match is not None else ""
+    if not instance_name:
         print("停止：现有 server.py 的 MCP 结构不符合预期，未修改。", file=sys.stderr)
         return 2
-    instance_name = instance_match.group(1)
 
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
