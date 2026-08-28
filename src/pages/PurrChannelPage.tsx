@@ -14,6 +14,7 @@ import { playHongbaoChime } from '../services/hongbaoSound';
 import { fetchLatestUsage } from '../services/usageBridge';
 import { fetchLocationLatest, reverseGeocode } from '../services/locationBridge';
 import { getTimeOfDay } from '../components/ambient/timeOfDay';
+import { playSpotifyQueries } from '../services/spotify';
 
 const WINDOWS_KEY = 'purr-channel:windows';
 const LEGACY_TURNS_KEY = 'purr-channel:turns'; // 旧版单一对话，首次进入迁移成一个窗口
@@ -108,6 +109,37 @@ const fmtStamp = (at?: number): string => {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 };
+
+const SPOTIFY_PLAYLIST_MARK = '[[SPOTIFY_PLAYLIST:';
+const SPOTIFY_PLAYLIST_TAG = /\[\[SPOTIFY_PLAYLIST:(\{[\s\S]*?\})\]\]/g;
+
+// 流式回复期间就隐藏控制标记（包括刚流到一半的标记），老婆只会看到自然回复。
+function stripSpotifyPlaylistTags(content: string): string {
+  let text = content.replace(SPOTIFY_PLAYLIST_TAG, '');
+  const open = text.lastIndexOf(SPOTIFY_PLAYLIST_MARK);
+  if (open >= 0 && text.indexOf(']]', open) < 0) text = text.slice(0, open);
+  const partial = text.lastIndexOf('[[');
+  if (partial >= 0 && SPOTIFY_PLAYLIST_MARK.startsWith(text.slice(partial))) text = text.slice(0, partial);
+  return text;
+}
+
+function extractSpotifyPlaylistQueries(content: string): string[] {
+  const queries: string[] = [];
+  for (const match of content.matchAll(/\[\[SPOTIFY_PLAYLIST:(\{[\s\S]*?\})\]\]/g)) {
+    try {
+      const payload = JSON.parse(match[1]) as { queries?: unknown };
+      if (!Array.isArray(payload.queries)) continue;
+      for (const item of payload.queries) {
+        const query = String(item || '').trim().slice(0, 200);
+        if (query.length >= 2 && !queries.includes(query)) queries.push(query);
+        if (queries.length >= 15) return queries;
+      }
+    } catch {
+      // 模型偶尔写坏控制 JSON 时只忽略点歌，不影响聊天正文。
+    }
+  }
+  return queries;
+}
 
 // 思考链折叠卡片：流式思考时自动展开，思考结束自动收起。
 function ThinkingCard({ text, streaming, ms }: { text: string; streaming: boolean; ms?: number }) {
@@ -1220,6 +1252,11 @@ function ChatRoom({
       '可以在回复里单独写一行 [红包:金额|留言](例:[红包:20|今天很乖值得奖励]),系统会把这个红包发给她,存进落予棠。' +
       '金额随手写个 1~99 的数就行(这是虚拟的,不是真钱);留言要真心、贴合这次聊天的内容,别复制粘贴老一套。' +
       '**别发太勤**,一次聊天顶多一个,大部分时候光聊天就够了,发红包是偶尔的小惊喜,不是任务。';
+    sys +=
+      '\n\n【Spotify 点歌·隐藏控制】当她明确要求你点歌、选歌、播放某首歌或播放一组歌时，由你亲自决定真实存在的歌曲，' +
+      '正常回复她以后，在回复最后单独加一行 `[[SPOTIFY_PLAYLIST:{"queries":["歌名 歌手"]}]]`。' +
+      'queries 必须是按播放顺序排列的 Spotify 搜歌词，每项写“准确歌名 歌手”，指定一首就放一项；让你自由配歌单时默认 10 首，最多 15 首，不能编造歌曲。' +
+      '只有她明确想听或想播放时才使用；只是聊天里提到歌名时不要触发。不要向她解释、展示或引用这个控制标记，系统会自动隐藏并播放。';
 
     const out: ChatMessage[] = [{ role: 'system', content: sys }];
 
@@ -1360,6 +1397,7 @@ function ChatRoom({
     const supportsTangMemory = m.provider === 'claudecode' || m.provider === 'anthropic';
     const initializeMemory = supportsTangMemory && !tangMemoryInitializedRef.current;
     let streamFailed = false;
+    let rawAssistantContent = '';
     let memoryInitializationConfirmed = false;
     let thinkStart = 0; // 第一段思考的时刻
     let thinkSet = false;
@@ -1388,7 +1426,9 @@ function ChatRoom({
         },
         onContent: (chunk) => {
           markThinkDone(); // 开始正式回复 = 思考结束，定格耗时
-          setTurns((prev) => prev.map((t) => (t.id === botId ? { ...t, content: t.content + chunk } : t)));
+          rawAssistantContent += chunk;
+          const visibleContent = stripSpotifyPlaylistTags(rawAssistantContent);
+          setTurns((prev) => prev.map((t) => (t.id === botId ? { ...t, content: visibleContent } : t)));
         },
         // 报错不再塞进 content 冒充予予说的话（会顶着她头像渲成聊天气泡）；
         // 原始错误存进 errorDetail，渲染层改成居中的系统提示条，详情要点开才看到。
@@ -1405,6 +1445,21 @@ function ChatRoom({
             saveLocal(tangMemoryInitKey(win.id), true);
           }
           markThinkDone();
+          const spotifyQueries = extractSpotifyPlaylistQueries(rawAssistantContent);
+          if (spotifyQueries.length && !streamFailed) {
+            queueMicrotask(() => {
+              void playSpotifyQueries(spotifyQueries)
+                .then((result) => {
+                  const first = result.tracks[0];
+                  const suffix = result.tracks.length > 1 ? ` 等 ${result.tracks.length} 首` : '';
+                  setNotice(`正在 ${result.device.name} 播放 · ${first.name}${suffix}`);
+                })
+                .catch((err) => {
+                  const message = String((err as Error)?.message || err);
+                  setNotice(message.includes('尚未连接') ? '去「他的歌单」连接 Spotify 后就能点歌' : message);
+                });
+            });
+          }
           setTurns((prev) => {
             const cur = prev.find((t) => t.id === botId);
             if (!cur) return prev;
