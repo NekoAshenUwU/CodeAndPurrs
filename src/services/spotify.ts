@@ -20,6 +20,12 @@ export type SpotifyPick = {
   intensity: 'soft' | 'normal' | 'high';
 };
 
+export type SpotifyAIPlayResult = {
+  ok: true;
+  device: { id: string; name: string; type: string };
+  tracks: SpotifyTrack[];
+};
+
 type WebPlaybackTrack = {
   uri: string;
   id: string;
@@ -96,6 +102,19 @@ export async function playSpotifyTrack(deviceId: string, uri: string): Promise<v
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ deviceId, uri }),
+    }),
+  );
+}
+
+// 呼噜频道所有模型共用这条服务端播放桥。浏览器只提交 AI 选出的搜歌词，
+// Spotify token、设备选择和真正的播放请求全部留在 CodeAndPurrs 后端。
+export async function playSpotifyQueries(queries: string[]): Promise<SpotifyAIPlayResult> {
+  return json<SpotifyAIPlayResult>(
+    await fetch('/api/spotify/ai-play', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ queries }),
     }),
   );
 }
