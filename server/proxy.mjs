@@ -196,6 +196,40 @@ async function searchSpotify(accessToken, query, limit = 8) {
   return (data?.tracks?.items || []).filter((track) => track?.is_playable !== false).map(normalizeSpotifyTrack);
 }
 
+async function spotifyDevices(accessToken) {
+  const response = await fetch('https://api.spotify.com/v1/me/player/devices', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.error?.message || `Spotify 设备查询失败（${response.status}）`);
+  return Array.isArray(data?.devices) ? data.devices : [];
+}
+
+async function spotifyPlayUris(accessToken, device, uris) {
+  if (!device?.id) throw new Error('Spotify 没有可用的播放设备，请打开 Spotify App 后再点歌');
+  if (!device.is_active) {
+    const transfer = await fetch('https://api.spotify.com/v1/me/player', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_ids: [device.id], play: false }),
+    });
+    if (!transfer.ok && transfer.status !== 204) {
+      const data = await transfer.json().catch(() => ({}));
+      throw new Error(data?.error?.message || `Spotify 设备切换失败（${transfer.status}）`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 350));
+  }
+  const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(device.id)}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uris }),
+  });
+  if (!response.ok && response.status !== 204) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data?.error?.message || `Spotify 播放失败（${response.status}）`);
+  }
+}
+
 async function planSpotifyPick(prompt) {
   const key = String(process.env.DEEPSEEK_API_KEY || '').trim();
   if (!key) return { query: prompt, reason: '我按你此刻写下的心情，在曲库里挑最贴近的一首。', intensity: 'normal' };
@@ -1554,6 +1588,52 @@ const server = http.createServer(async (req, res) => {
       } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: String(err?.message || err) }));
+      }
+      return;
+    }
+
+    if (requestPath === '/api/spotify/ai-play' && req.method === 'POST') {
+      try {
+        const body = await readJSON(req);
+        const rawQueries = Array.isArray(body?.queries) ? body.queries : [];
+        const queries = [...new Set(
+          rawQueries
+            .map((query) => String(query || '').trim().slice(0, 200))
+            .filter((query) => query.length >= 2),
+        )].slice(0, 15);
+        if (!queries.length) throw new Error('AI 还没有选出歌曲');
+
+        // 只认这个浏览器已经登录过的 Spotify session，不能因为 MCP 是公开入口
+        // 就让网页访客控制老婆的 Spotify。
+        const session = await spotifyAccessFor(req);
+        const tracks = [];
+        const seenUris = new Set();
+        for (const query of queries) {
+          const matches = await searchSpotify(session.accessToken, query, 5);
+          const track = matches.find((item) => item.uri && !seenUris.has(item.uri));
+          if (!track) continue;
+          seenUris.add(track.uri);
+          tracks.push(track);
+        }
+        if (!tracks.length) throw new Error('Spotify 曲库里没有找到 AI 选的歌');
+
+        const devices = await spotifyDevices(session.accessToken);
+        const usable = devices.filter((device) => device?.id && !device?.is_restricted);
+        const device = usable.find((item) => item.is_active) || usable[0];
+        if (!device) throw new Error('Spotify 没有可用的播放设备，请打开 Spotify App 后再点歌');
+        await spotifyPlayUris(session.accessToken, device, tracks.map((track) => track.uri));
+
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify({
+          ok: true,
+          device: { id: device.id, name: String(device.name || 'Spotify'), type: String(device.type || '') },
+          tracks,
+        }));
+      } catch (err) {
+        const message = String(err?.message || err);
+        const status = message.includes('尚未连接') || message.includes('登录已失效') ? 401 : 400;
+        res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify({ error: message }));
       }
       return;
     }
