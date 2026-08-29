@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTimeOfDay } from '../components/ambient/timeOfDay';
 import { usePrefersReducedMotion } from '../components/ambient/usePrefersReducedMotion';
@@ -13,6 +13,7 @@ import {
 const MASCOT = `${import.meta.env.BASE_URL}assets/mascot/neko.png`;
 const PAW_HERO = `${import.meta.env.BASE_URL}assets/mascot/paw-hero.webp`;
 const DAILY_GOAL_MS = 12 * 3600000; // 每日目标：满圈 = 12h（可配置）
+const REFRESH_MS = 5 * 60 * 1000;   // 页面开着时多久自己拿一次新数据
 
 // ---------- 小工具 ----------
 function fmtDuration(ms: number): string {
@@ -173,20 +174,50 @@ export function PawTrailPage() {
   const [trend, setTrend] = useState<TrendResult | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let alive = true;
-    setLoading(true);
-    Promise.all([fetchLatestUsage(owner), fetchTrend(owner, 7)])
-      .then(([latest, t]) => {
-        if (!alive) return;
-        setEnv(latest);
-        setTrend(t);
-      })
-      .finally(() => alive && setLoading(false));
-    return () => {
-      alive = false;
-    };
+  const alive = useRef(true);
+  const inFlight = useRef(false);
+
+  const load = useCallback(async () => {
+    // 上一次还没回来就别再发一次：回来时切前台会同时触发
+    // visibilitychange 和 focus 两个事件。
+    if (inFlight.current) return;
+    inFlight.current = true;
+    try {
+      const [latest, t] = await Promise.all([fetchLatestUsage(owner), fetchTrend(owner, 7)]);
+      if (!alive.current) return;
+      setEnv(latest);
+      setTrend(t);
+    } finally {
+      inFlight.current = false;
+      if (alive.current) setLoading(false);
+    }
   }, [owner]);
+
+  useEffect(() => {
+    alive.current = true;
+    setLoading(true);
+    void load();
+
+    // 手机上真正管用的是这个：切走再切回来就重新拿一次。
+    // 光靠定时器不够——页面在后台时浏览器会把 setInterval 掐到几分钟一次
+    // 甚至冻住，你切回来看到的还是走的时候那份。
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void load();
+    };
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('focus', refresh);
+
+    // 一直开着不动的话，五分钟自己拿一次。app 是两小时上报一次，
+    // 再密没有意义，只是白烧流量和电。
+    const timer = window.setInterval(refresh, REFRESH_MS);
+
+    return () => {
+      alive.current = false;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [load]);
 
   if (loading) {
     return (

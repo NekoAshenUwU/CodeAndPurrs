@@ -1,7 +1,13 @@
 // 猫爪足迹前端 ← VPS 接收端读取层。契约见 docs/neko-usage-bridge-spec.md §4。
 // bridge 还没上线时：抓取失败会回退到 demo 示例数据，方便先看页面效果。
 
-const DEFAULT_BRIDGE_BASE_URL = 'https://api.nekopurrs.uk';
+// 默认走【同源】（空字符串 = 相对路径）。
+// 2026-08-29 之前默认是 https://api.nekopurrs.uk，读接口上锁之后那条路走不通了：
+// 跨域的 401 挑战在 fetch 里不会弹密码框，只会静悄悄失败，页面就一直吃 demo 数据。
+// 同源之后 fetch 默认就带凭据，跟站点共用一把锁。
+// nginx 那边 nekopurrs.uk 有 /api/usage/ 和 /api/location/ 反代到 8788（见
+// server/README-lock-reads.md）。要指回跨域就设 VITE_USAGE_BRIDGE_BASE_URL。
+const DEFAULT_BRIDGE_BASE_URL = '';
 
 export type UsageCategory = 'social' | 'work' | 'entertainment' | 'reading' | 'tool' | 'other';
 

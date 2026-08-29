@@ -64,9 +64,9 @@ python3 server/lock-usage-reads.py            # 只看会改什么
 python3 server/lock-usage-reads.py --apply    # 会先备份；nginx -t 不过两个都还原
 systemctl reload nginx                        # 这一步之前都没生效
 
-# 前端必须用【空的】base URL 重 build，否则页面还在打 api.nekopurrs.uk（跨域）
+# 前端必须重 build：同源那半在代码里，不 build 页面还在打 api.nekopurrs.uk（跨域）
 cd /var/www/codeandpurrs && git pull
-VITE_USAGE_BRIDGE_BASE_URL= npm run build
+npm install && npm run build
 ```
 
 只想锁接口、不动站点：加 `--no-site`（清楚代价再用）。
@@ -128,6 +128,14 @@ curl -si -u neko:'<密码>' https://api.nekopurrs.uk/api/usage/latest | head -1 
 
 同源之后 `fetch` 默认就带凭据（`credentials` 默认值是 `same-origin`），
 浏览器正常弹一次密码框，页面和读接口共用同一把锁。
+
+同源是**代码里的默认值**（`usageBridge.ts` / `locationBridge.ts` 的
+`DEFAULT_BRIDGE_BASE_URL = ''`），不是 build 时传环境变量。
+一开始写的是 `VITE_USAGE_BRIDGE_BASE_URL= npm run build`，**那样没用**——
+Vite 把空字符串当没设，`??` 兜底回默认值，build 出来的包里还是
+`https://api.nekopurrs.uk`。查 `dist/assets/*.js` 才发现。
+所以改成直接改默认值，普通 `npm run build` 就对；
+要指回跨域再设那个环境变量。
 
 ## 还没管的
 

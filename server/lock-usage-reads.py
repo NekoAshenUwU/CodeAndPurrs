@@ -400,9 +400,9 @@ def main() -> int:
     print("  curl -si https://api.nekopurrs.uk/api/usage/latest | head -1")
     print(f"  curl -si -u {USER}:'<密码>' https://api.nekopurrs.uk/api/usage/latest | head -1")
     if site_done:
-        print("\n足迹页要看真数据，前端得用【空的】base URL 重新 build 一次：")
+        print("\n足迹页要看真数据，前端得重新 build 一次（同源那半在代码里）：")
         print("  cd /var/www/codeandpurrs && git pull")
-        print("  VITE_USAGE_BRIDGE_BASE_URL= npm run build")
+        print("  npm install && npm run build")
         print("  （不 build 的话页面还在打 api.nekopurrs.uk，跨域，会退回 demo 数据）")
     print("\n手机 app 不受影响，下次上报照常。不放心就在 app 里点一下立即上传。")
     return 0
