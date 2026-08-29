@@ -71,6 +71,21 @@ VITE_USAGE_BRIDGE_BASE_URL= npm run build
 
 只想锁接口、不动站点：加 `--no-site`（清楚代价再用）。
 
+## 忘了密码
+
+存的是哈希，找不回来，重设一个：
+
+```bash
+python3 server/lock-usage-reads.py --reset-password
+```
+
+只重写口令文件，**一个 nginx 配置都不碰，也不用 reload**——
+口令文件是每次请求现读的，改完直接刷新页面。
+想自己定密码就加 `--password '...'`。
+
+**用户名一直是 `neko`。** 浏览器有时会自动填成别的（比如从别处记住的
+`nekolau`），那样怎么试都进不去，手动改回 `neko`。
+
 密码是随机生成的，**只在 `--apply` 那次打印一次**，存进密码管理器。
 （想自己定就 `--password '...'`。）
 

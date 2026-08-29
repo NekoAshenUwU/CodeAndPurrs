@@ -234,6 +234,9 @@ def main() -> int:
                     help="不动站点，只锁 api.*（足迹页会退回 demo 数据）")
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--password", help="不给就随机生成一个，只打印这一次")
+    ap.add_argument("--reset-password", action="store_true",
+                    help="只重设密码，不碰任何 nginx 配置（密码印一次就没了，"
+                         "存的是哈希找不回来，忘了就用这个）")
     # 下面这几个只为自测搭一套假的 nginx 目录用，正常跑不用给
     ap.add_argument("--map-file", default=MAPFILE)
     ap.add_argument("--htpasswd", default=HTPASSWD)
@@ -244,6 +247,27 @@ def main() -> int:
 
     auth_lines = AUTH_LINES_TPL.format(mark=MARK, htpasswd=a.htpasswd)
     backup_dir = pathlib.Path(a.backup_dir)
+
+    if a.reset_password:
+        # 口令文件是每次请求现读的，不用 reload nginx。
+        pw = a.password or secrets.token_urlsafe(12)
+        f = pathlib.Path(a.htpasswd)
+        f.write_text(htpasswd_line(USER, pw))
+        os.chmod(f, 0o640)
+        grp = worker_user(pathlib.Path(a.nginx_conf))
+        try:
+            shutil.chown(f, group=grp)
+        except (LookupError, PermissionError, OSError) as err:
+            print(f"！属组没能设成 {grp}（{err}）——worker 读不到就是 500 不是 401。",
+                  file=sys.stderr)
+            print(f"  手工补：chown root:{grp} {f} && chmod 640 {f}", file=sys.stderr)
+        print("=" * 52)
+        print(f"  用户名  {USER}")
+        print(f"  密码    {pw}")
+        print("  只打印这一次。存进密码管理器，别贴回聊天里。")
+        print("=" * 52)
+        print("\n不用 reload nginx，口令文件是每次请求现读的。直接刷新页面。")
+        return 0
 
     vhost = pathlib.Path(a.vhost)
     if not vhost.is_file():
