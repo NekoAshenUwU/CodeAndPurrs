@@ -20,6 +20,8 @@ const WINDOWS_KEY = 'purr-channel:windows';
 // 问太密没意义；60 秒是「她切回来最多等一分钟」和「别白发请求」之间的折中。
 // 切回前台时会立刻问一次，所以实际感受比 60 秒快。
 const WAKE_POLL_MS = 60_000;
+// 他这次不想说时回的四个字（跟 server/wake-generate.mjs 里的 SENTINEL 一致）
+const WAKE_SILENT = '不说也罢';
 const LEGACY_TURNS_KEY = 'purr-channel:turns'; // 旧版单一对话，首次进入迁移成一个窗口
 const turnsKey = (id: string) => `purr-channel:turns:${id}`;
 const tangMemoryInitKey = (id: string) => `purr-channel:tang-memory-initialized:${id}`;
@@ -958,6 +960,8 @@ function ChatRoom({
     setModelOpen(false);
   };
   const [sending, setSending] = useState(false);
+  // 主动唤醒正在说话——防止轮询在他还没说完时又触发一次
+  const wakeBusyRef = useRef(false);
   const [recording, setRecording] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [memeOpen, setMemeOpen] = useState(false);
@@ -1374,36 +1378,50 @@ function ChatRoom({
   };
 
   // 让猫咪基于给定历史回一条
-  // ---- 主动唤醒：予予自己开口的话，由【当前这个窗口】来领 ----
+  // ---- 主动唤醒：该开口的时候，用【他自己的人设】说一句 ----
   //
-  // 服务端不记「当前窗口是哪个」——那个状态天生易变（切窗、关页面、换设备）。
-  // 让正在用的这个自己来拿，「当前」就不需要被记住，也就不会记错。
-  // 领取在服务端是原子的：同时开两个标签页也只有先到的那个拿到。
+  // 服务端只回答「现在该不该说」+ 此刻的材料，一个字都不写。
+  // 真正说话走跟平时【完全同一条】链路：同一个 system prompt、同一份记忆
+  // 罐头、同一个贴纸盒。上一版是服务端自己调模型，拿不到人设（人设在
+  // 浏览器里），说出来的是个裸模型——「停下来了就好，去睡吧」就是那么来的。
+  //
+  // 名额在服务端占：两个标签页同时问，只有一个会拿到 speak=true。
   useEffect(() => {
     let alive = true;
-    const ask = async () => {
-      // 页面在后台不去问：她根本看不见，领走了反而白白消耗掉那句话。
-      if (document.visibilityState !== 'visible') return;
-      // 正在回话时不插队，等这轮说完。
-      if (sending) return;
+    const tick = async () => {
+      if (document.visibilityState !== 'visible') return;   // 看不见就别领，白白浪费名额
+      if (sending || wakeBusyRef.current) return;            // 正在回话就不插队
+      let d: { speak?: boolean; prompt?: string } = {};
       try {
-        const r = await fetch(`/api/wake/pending?windowId=${encodeURIComponent(win.id)}`);
+        const r = await fetch('/api/wake/pending');
         if (!r.ok) return;
-        const { message } = await r.json();
-        if (!alive || !message?.content) return;
-        scrollToReplyRef.current = true;
-        setTurns((prev) => [...prev, {
-          id: uid(), role: 'assistant', content: String(message.content),
-          reasoning: '', status: 'done', at: Date.now(),
-        }]);
+        d = await r.json();
+      } catch { return; }
+      if (!alive || !d.speak || !d.prompt) return;
+
+      wakeBusyRef.current = true;
+      try {
+        // 跟平时说话走同一条路：toMessages 会带上人设、记忆、贴纸盒预览
+        const history = await toMessages(turns);
+        await runAssistant([...history, { role: 'user', content: d.prompt }]);
+        // 他选择不说的时候会只回这四个字（后端提示里给他的出口）。
+        // 那是给系统看的信号，不是说给她听的话——收到就把这条撤掉，
+        // 当作什么都没发生。不撤的话她会看到一句莫名其妙的「不说也罢」。
+        setTurns((prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.role !== 'assistant') return prev;
+          const said = (last.content || '').trim();
+          return (!said || said.includes(WAKE_SILENT)) ? prev.slice(0, -1) : prev;
+        });
       } catch {
-        // 网络不好、后端没起、库不在——都当作「他现在没话说」。
-        // 沉默是默认，绝不在聊天里冒出一条错误提示。
+        // 说不出来就算了，不在聊天里冒错误提示
+      } finally {
+        wakeBusyRef.current = false;
       }
     };
-    void ask();
-    const timer = window.setInterval(ask, WAKE_POLL_MS);
-    const onVisible = () => { if (document.visibilityState === 'visible') void ask(); };
+    void tick();
+    const timer = window.setInterval(tick, WAKE_POLL_MS);
+    const onVisible = () => { if (document.visibilityState === 'visible') void tick(); };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       alive = false;

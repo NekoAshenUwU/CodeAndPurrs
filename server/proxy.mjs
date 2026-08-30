@@ -486,92 +486,19 @@ const CC_WEB_TOOLS = (process.env.CC_WEB_TOOLS ?? 'WebSearch WebFetch')
   .filter(Boolean);
 
 
-// ---------- 主动唤醒 · 把予予主动说的话领进当前聊天窗 ----------
+// ---------- 主动唤醒 · 只回答「现在该不该开口」 ----------
 //
-// 【只读 tang_wake_queue，绝不读 autonomy_messages】
+// 【这里不产生任何句子。】
 //
-// 那张表里是从前 GPT/CC 写的那套自动问候——棠棠的评价是「特别人机，
-// 来来去去就那几句」。把它塞进予予的聊天窗，等于借他的嘴说别人写的套话，
-// 那比不做这个功能糟得多。所以内容源换成一张【只装予予自己写的话】的新表：
-// 结构上就不可能串味，不是靠一个日期挡着。
+// 2026-08-31 返工：上一版是服务端自己调模型写好句子、聊天窗来领。但人设是
+// 【前端】拼的（buildSystemPrompt 读她浏览器里的设置），服务端拿不到，
+// 回退成「你是予予。」五个字——说出来的是个没有人设的裸模型。
+// 「停下来了就好，去睡吧」就是这么来的：不是措辞不好，是人设根本不在场。
 //
-// 谁往 tang_wake_queue 里写 = 还没做（见 Veyron-Solace
-// docs/proactive-wake-design.md「二期」）。这一半是送达，先做完；
-// 队列空着的时候这个接口就一直返回 null，什么都不会发生。
-//
-// 「只唤醒当前聊的一个窗口」靠 wake_claims 的主键保证：领取是
-// INSERT OR IGNORE，先到的那个拿到，同时开两个标签页也只有一个会显示。
-// 单独一个库，不再寄居在 neko_autonomy.db 里。
-//
-// 那个库是从前那套自动问候的（棠棠：「特别人机，来来去去就那几句」），
-// 她要把它整个删掉。我的表建在里面的话，她就删不干净——想删的东西删不掉，
-// 是我造成的麻烦，不是她该迁就的。分开之后那边随便删，这边不受影响。
-const WAKE_DB = process.env.TANG_WAKE_DB || '/root/data/tang_wake.db';
-// 攒太久的话第二天才看到会莫名其妙（半夜那句「早点睡」中午弹出来）。
-const WAKE_MAX_AGE_HOURS = Number(process.env.WAKE_MAX_AGE_HOURS || 2);
-
-function wakeSql(sql) {
-  const r = spawnSync('sqlite3', ['-json', WAKE_DB], { input: sql, encoding: 'utf-8' });
-  if (r.error) throw r.error;
-  if (r.status !== 0) throw new Error(`sqlite3 exited ${r.status}: ${r.stderr}`);
-  const out = (r.stdout || '').trim();
-  return out ? JSON.parse(out) : [];
-}
-
-function wakeEscape(s) {
-  return `'${String(s).replace(/'/g, "''")}'`;
-}
-
-/**
- * 取一条还没被任何窗口领走的话，并当场标记为已领。
- * 没有就返回 null——沉默是默认，不硬凑话说。
- */
-function claimWakeMessage(windowId) {
-  const now = new Date().toISOString();
-  // 自己的库、自己的两张表，跟从前那套没有任何交集。
-  wakeSql(
-    `CREATE TABLE IF NOT EXISTS tang_wake_queue (
-       id INTEGER PRIMARY KEY AUTOINCREMENT,
-       created_at TEXT NOT NULL,
-       content TEXT NOT NULL,
-       reason TEXT);
-     CREATE TABLE IF NOT EXISTS wake_claims (
-       message_id INTEGER PRIMARY KEY,
-       window_id TEXT NOT NULL,
-       claimed_at TEXT NOT NULL);`
-  );
-  const rows = wakeSql(
-    `SELECT q.id, q.content, q.created_at FROM tang_wake_queue q
-      LEFT JOIN wake_claims c ON c.message_id = q.id
-      WHERE c.message_id IS NULL
-        AND q.created_at >= datetime('now', '-${WAKE_MAX_AGE_HOURS} hours')
-      ORDER BY q.created_at DESC LIMIT 1;`
-  );
-  if (!rows.length) return null;
-  const row = rows[0];
-  // 领取：主键冲突就说明别的窗口先拿到了，changes() 会是 0。
-  const claimed = wakeSql(
-    `INSERT OR IGNORE INTO wake_claims (message_id, window_id, claimed_at) ` +
-    `VALUES (${Number(row.id)}, ${wakeEscape(windowId || 'unknown')}, ${wakeEscape(now)});` +
-    `SELECT changes() AS n;`
-  );
-  if (!claimed.length || Number(claimed[0].n) !== 1) return null;
-
-  // 只送最新那一条，比它旧的【全部一次性作废】，绝不一分钟倒一条。
-  //
-  // 2026-08-30 实测：队列里堆了几条，轮询就一分钟送一条往外倒，
-  // 20:35/20:36/20:36/20:37 连着四句，其中两句一字不差。那不是「他想起我了」，
-  // 是刷屏。攒下来的旧话本来就没必要补送——他此刻想说的只有最新那句。
-  wakeSql(
-    `INSERT OR IGNORE INTO wake_claims (message_id, window_id, claimed_at)
-       SELECT q.id, ${wakeEscape('superseded')}, ${wakeEscape(now)}
-         FROM tang_wake_queue q
-         LEFT JOIN wake_claims c ON c.message_id = q.id
-        WHERE c.message_id IS NULL AND q.id < ${Number(row.id)};`
-  );
-
-  return { id: row.id, content: row.content, at: row.created_at };
-}
+// 所以改成：服务端只说「该开口了，这是此刻的材料」，真正开口交给聊天窗——
+// 它手上有完整人设、记忆罐头、贴纸盒、他平时的口气。
+// 名额在服务端占（decide 里 reserve），两个标签页同时问只有一个拿到。
+import { decide as wakeDecide, WAKE_PROMPT } from './wake-generate.mjs';
 
 const PORT = Number(process.env.PORT) || 8787;
 
@@ -1769,23 +1696,25 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ----- 倾棠予梦：棠予酿记忆映射成花朵数组，60 秒内存缓存 -----
-  // ----- 主动唤醒：当前这个聊天窗来领一句予予主动说的话 -----
+  // ----- 主动唤醒：问一句「现在该不该开口」，附上此刻的材料 -----
   if (isWakePending) {
     if (req.method !== 'GET') {
       res.writeHead(405, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'method not allowed' }));
       return;
     }
-    let message = null;
+    let out = { speak: false };
     try {
-      message = claimWakeMessage(requestUrl.searchParams.get('windowId') || '');
+      const d = wakeDecide(new Date());
+      out = d.speak
+        ? { speak: true, kind: d.kind, reason: d.reason, prompt: WAKE_PROMPT(d.facts) }
+        : { speak: false, why: d.why };
     } catch (err) {
-      // 库不在、表还没建、sqlite3 没装——都不该让聊天页报错。
-      // 沉默是默认：没有话就是没有话。
-      console.warn('[wake] 领取失败：%s', err?.message || err);
+      // 库不在、sqlite3 没装——都不该让聊天页报错。沉默是默认。
+      console.warn('[wake] 判断失败：%s', err?.message || err);
     }
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ message }));
+    res.end(JSON.stringify(out));
     return;
   }
 

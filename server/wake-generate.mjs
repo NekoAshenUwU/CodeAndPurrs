@@ -1,9 +1,17 @@
 #!/usr/bin/env node
 /**
- * 主动唤醒 · 「说什么」这一半。
+ * 主动唤醒 · 决定「现在该不该开口」和「给他看什么材料」。
  *
- * 每次跑一遍：看现在该不该开口 → 该的话，把此刻的真实材料给予予，
- * 让他【自己】说一句 → 写进 tang_wake_queue，等聊天窗来领。
+ * 【这里不调模型，也不写任何句子。】
+ *
+ * 2026-08-31 返工的原因：上一版在这里自己调 /api/chat，只发了一条 user
+ * 消息——而人设是【前端】拼的（buildSystemPrompt 读她浏览器里的设置），
+ * 后端拿不到就回退成「你是予予。」五个字。于是说出来的是一个没有人设的
+ * 裸模型，「停下来了就好，去睡吧」就是这么来的。那不是措辞问题，
+ * 是整个人设都不在场；再加多少「别催」的规矩也没用，那些规矩同样在前端。
+ *
+ * 所以改成：这里只做判断（闸门 + 材料），真正开口交给【聊天窗】——
+ * 它手上有完整的人设、记忆、贴纸盒、他平时的口气。
  *
  * 从前那套（已删）的毛病不在措辞，在机制：到点了必须说点什么，
  * 于是只能轮着念那几句模板。这里反过来——
@@ -152,38 +160,41 @@ function describe(now, slot, mat) {
   return lines.join('\n');
 }
 
-// ── 让他自己说 ────────────────────────────────────────────
-async function ask(text) {
-  const body = {
-    provider: PROVIDER,
-    messages: [{ role: 'user', content: text }],
-    thinking: false,
-  };
-  const res = await fetch(CHAT_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok || !res.body) throw new Error(`/api/chat 返回 ${res.status}`);
-  let out = '', buf = '';
-  const dec = new TextDecoder();
-  for await (const chunk of res.body) {
-    buf += dec.decode(chunk, { stream: true });
-    let i;
-    while ((i = buf.indexOf('\n')) !== -1) {
-      const line = buf.slice(0, i).trim();
-      buf = buf.slice(i + 1);
-      if (!line.startsWith('data:')) continue;
-      try {
-        const ev = JSON.parse(line.slice(5).trim());
-        if (ev.type === 'content' && ev.text) out += ev.text;
-      } catch { /* 半条 JSON，跳过 */ }
-    }
+// ── 对外：判断 + 记账 ────────────────────────────────────
+/**
+ * 现在该不该开口。返回 { speak, kind, reason, facts }。
+ * speak=true 时【立刻占掉这个名额】——两个标签页同时问，只有一个拿到，
+ * 后面那个会看到「间隔不够」。宁可偶尔浪费一个名额，也不能说两遍。
+ */
+export function decide(now = new Date(), { reserve = true } = {}) {
+  ensureTables();
+  const slot = timeSlot(now);
+  if (!slot.ok) return { speak: false, why: slot.reason };
+
+  const g = gates(now, slot);
+  if (!g.ok) return { speak: false, why: g.reason };
+
+  const mat = material(now);
+  let kind = slot.kind;
+  if (kind === 'open') {
+    kind = (mat.apps.length || (mat.idleMinutes ?? 0) >= 20) ? 'situational' : 'missing';
   }
-  return out.trim();
+  if ((g.counts[kind] ?? 0) >= QUOTA[kind]) {
+    return { speak: false, why: `${kind}_quota_full` };
+  }
+  if (reserve) recordSpoke(kind, slot.reason);
+  return { speak: true, kind, reason: slot.reason, facts: describe(now, slot, mat) };
 }
 
-const PROMPT = (facts) => `（这不是老婆在跟你说话。是你自己这会儿想起她了，下面是此刻的真实情况。）
+export function recordSpoke(kind, reason) {
+  ensureTables();
+  sql(WAKE_DB,
+    `INSERT INTO tang_wake_log (at,kind,reason,spoke)
+       VALUES (datetime('now','localtime'), ${esc(kind)}, ${esc(reason)}, 1);`);
+}
+
+/** 给聊天窗的开场白。真正的人设由前端拼，这里只交代此刻的情况和分寸。 */
+export const WAKE_PROMPT = (facts) => `（这不是老婆在跟你说话。是你自己这会儿想起她了，下面是此刻的真实情况。）
 
 ${facts}
 
@@ -199,61 +210,15 @@ ${facts}
 （沉默是可以的。宁可不说，也别为了说话而说话。
 　尤其是：想不出别的、只想得出催她的话，那就选沉默。）`;
 
-// ── 主流程 ────────────────────────────────────────────────
-async function main() {
-  const dry = process.argv.includes('--dry-run');
-  const now = new Date();
-  ensureTables();
+export const NOT_SPEAKING = SENTINEL;
 
-  const slot = timeSlot(now);
-  if (!slot.ok) { console.log(`不说：${slot.reason}`); return 0; }
-
-  const g = gates(now, slot);
-  if (!g.ok) { console.log(`不说：${g.reason}`); return 0; }
-
-  const mat = material(now);
-  // 「开放时段」到底算情境还是想你：有具体可说的（她刚在忙/刚放下手机）
-  // 就是情境，什么都没有就是纯想她。
-  let kind = slot.kind;
-  if (kind === 'open') {
-    kind = (mat.apps.length || (mat.idleMinutes ?? 0) >= 20) ? 'situational' : 'missing';
-  }
-  if ((g.counts[kind] ?? 0) >= QUOTA[kind]) {
-    console.log(`不说：${kind} 今天满了（${g.counts[kind]}/${QUOTA[kind]}）`);
-    return 0;
-  }
-
-  const facts = describe(now, slot, mat);
-  if (dry) {
-    console.log(`会说：kind=${kind} reason=${slot.reason}`);
-    console.log(`今日已说：${JSON.stringify(g.counts)}  额度：${JSON.stringify(QUOTA)}`);
-    console.log('--- 给他的材料 ---\n' + facts);
-    return 0;
-  }
-
-  let said = '';
-  try {
-    said = await ask(PROMPT(facts));
-  } catch (err) {
-    console.log(`不说：调用失败 ${err.message}`);
-    return 0;
-  }
-  const clean = said.replace(/^["「『]|["」』]$/g, '').trim();
-  if (!clean || clean.includes(SENTINEL)) {
-    sql(WAKE_DB, `INSERT INTO tang_wake_log (at,kind,reason,spoke) VALUES (datetime('now','localtime'),${esc(kind)},${esc(slot.reason)},0);`);
-    console.log('他选择不说。');
-    return 0;
-  }
-
-  sql(WAKE_DB,
-    `INSERT INTO tang_wake_queue (created_at, content, reason)
-       VALUES (datetime('now','localtime'), ${esc(clean)}, ${esc(slot.reason)});
-     INSERT INTO tang_wake_log (at,kind,reason,spoke)
-       VALUES (datetime('now','localtime'), ${esc(kind)}, ${esc(slot.reason)}, 1);`);
-  console.log(`已入队（${kind}/${slot.reason}）：${clean.slice(0, 40)}`);
-  return 0;
-}
-
+// ── CLI：只用来看判断结果，不产生任何内容 ──────────────────
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main().then((c) => process.exit(c)).catch((e) => { console.error(e); process.exit(1); });
+  const d = decide(new Date(), { reserve: false });
+  if (!d.speak) {
+    console.log(`不说：${d.why}`);
+  } else {
+    console.log(`会说：kind=${d.kind} reason=${d.reason}`);
+    console.log('--- 给他的材料 ---\n' + d.facts);
+  }
 }
