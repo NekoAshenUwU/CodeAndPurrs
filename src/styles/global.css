@@ -1112,11 +1112,45 @@ a {
 }
 
 .room-tile__dot.is-ready {
-  /* 樱粉，跟整页配色一致；原来是薄荷绿 #5fd0a6，跟这套色系不搭 */
-  background: var(--sakura);
+  /* 樱粉会呼吸的点。原来是薄荷绿 #5fd0a6 的死点，跟这套色系不搭也不发光。
+     三层叠出「亮」：中心提亮的径向渐变、贴边的一圈实光晕、外面散开的软光。
+     光晕用 box-shadow 不用 filter: blur——filter 会让这个点脱离
+     父元素的层叠上下文，在 Safari 上会盖到卡片圆角外面去。 */
+  background:
+    radial-gradient(circle at 50% 35%, #fff 0%, rgba(255, 255, 255, 0.55) 22%, transparent 55%),
+    var(--sakura);
   box-shadow:
-    0 0 0 3px rgba(242, 169, 196, 0.24),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+    0 0 0 3px rgba(242, 169, 196, 0.3),
+    0 0 8px 2px rgba(242, 169, 196, 0.75),
+    0 0 16px 5px rgba(242, 169, 196, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.75);
+  animation: room-dot-glow 2.6s ease-in-out infinite;
+}
+
+/* 只动光晕不动直径：改 width/height 会挤到旁边的排版，
+   而且每帧都要重新布局，十几个点一起跑手机上会卡。 */
+@keyframes room-dot-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px rgba(242, 169, 196, 0.3),
+      0 0 8px 2px rgba(242, 169, 196, 0.75),
+      0 0 16px 5px rgba(242, 169, 196, 0.4),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.75);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px rgba(242, 169, 196, 0.22),
+      0 0 12px 3px rgba(242, 169, 196, 0.95),
+      0 0 24px 8px rgba(242, 169, 196, 0.55),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-tile__dot.is-ready {
+    animation: none;   /* 不呼吸了，但还是亮的 */
+  }
 }
 
 .room-tile__name {
