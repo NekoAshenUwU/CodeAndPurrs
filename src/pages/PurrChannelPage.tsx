@@ -1236,15 +1236,18 @@ function ChatRoom({
   // 一次最多 3 张,超了切掉多余的; 已经加了几张就只允许补足够
   const MAX_PHOTOS_PER_SEND = 3;
   const pickPhoto = async (files: FileList | null) => {
-    // Android/部分 WebView 会在清空 input.value 后同步清空这份 live FileList。
-    // 必须先复制成普通数组，否则相册明明选了图，下面却会读到 0 张。
+    // Android/部分 WebView 的 FileList 是 live 对象；先复制成普通数组再处理。
     const selectedFiles = files ? Array.from(files) : [];
-    if (photoFileRef.current) photoFileRef.current.value = '';
     if (selectedFiles.length === 0 || sending) return;
     const remaining = MAX_PHOTOS_PER_SEND - pendingPhotos.length;
     if (remaining <= 0) return;
-    const list = selectedFiles.filter((f) => f.type.startsWith('image/')).slice(0, remaining);
-    if (list.length === 0) return;
+    // 部分 Android 相册通过 content:// 回传时 File.type 是空字符串；input 已经用
+    // accept="image/*" 限定过，空 MIME 也应该接收，不能静默丢掉。
+    const list = selectedFiles.filter((f) => !f.type || f.type.startsWith('image/')).slice(0, remaining);
+    if (list.length === 0) {
+      setNotice('没有读到可用图片，请换一张重试');
+      return;
+    }
     try {
       const ids = await Promise.all(list.map((f) => addPhoto(f)));
       setPendingPhotos((prev) => [...prev, ...ids]);
@@ -2074,8 +2077,8 @@ function ChatRoom({
             ref={photoFileRef}
             type="file"
             accept="image/*"
-            multiple
             hidden
+            onClick={(event) => { event.currentTarget.value = ''; }}
             onChange={(e) => void pickPhoto(e.target.files)}
           />
         </div>

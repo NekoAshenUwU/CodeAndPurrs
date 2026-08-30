@@ -71,6 +71,55 @@ if selected_sentinel not in text:
         1,
     )
 
+# Android 相册多选在部分 Chrome/WebView 上会停在“完成”而不回传；恢复单选，
+# 老婆仍可连续打开相册，最多累计三张待发图。
+old_clear = "    if (photoFileRef.current) photoFileRef.current.value = '';\n"
+if old_clear in text:
+    if text.count(old_clear) != 1:
+        raise SystemExit("图片 input 清理结构不符，未改动线上。")
+    text = text.replace(old_clear, "", 1)
+
+old_filter = "    const list = selectedFiles.filter((f) => f.type.startsWith('image/')).slice(0, remaining);"
+new_filter = "    const list = selectedFiles.filter((f) => !f.type || f.type.startsWith('image/')).slice(0, remaining);"
+if old_filter in text:
+    if text.count(old_filter) != 1:
+        raise SystemExit("图片类型过滤结构不符，未改动线上。")
+    text = text.replace(old_filter, new_filter, 1)
+elif new_filter not in text:
+    raise SystemExit("图片类型过滤结构缺失，未改动线上。")
+
+old_empty = "    if (list.length === 0) return;"
+empty_notice = "没有读到可用图片，请换一张重试"
+if empty_notice not in text:
+    if text.count(old_empty) != 1:
+        raise SystemExit("空图片提示结构不符，未改动线上。")
+    text = text.replace(
+        old_empty,
+        "    if (list.length === 0) {\n"
+        "      setNotice('没有读到可用图片，请换一张重试');\n"
+        "      return;\n"
+        "    }",
+        1,
+    )
+
+input_click = "onClick={(event) => { event.currentTarget.value = ''; }}"
+if input_click not in text:
+    old_input = (
+        '            accept="image/*"\n'
+        "            multiple\n"
+        "            hidden\n"
+        "            onChange={(e) => void pickPhoto(e.target.files)}\n"
+    )
+    new_input = (
+        '            accept="image/*"\n'
+        "            hidden\n"
+        "            onClick={(event) => { event.currentTarget.value = ''; }}\n"
+        "            onChange={(e) => void pickPhoto(e.target.files)}\n"
+    )
+    if text.count(old_input) != 1:
+        raise SystemExit("图片 input 多选结构不符，未改动线上。")
+    text = text.replace(old_input, new_input, 1)
+
 error_sentinel = "图片没有存进去："
 if error_sentinel not in text:
     old_store = (
