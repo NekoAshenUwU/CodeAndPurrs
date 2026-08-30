@@ -25,6 +25,13 @@ export function HomePage() {
   const navigate = useNavigate();
   const tod = useTimeOfDay();
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  // 装修好的排前面，没开的往后挪。rooms.ts 里的原始顺序保持不动——
+  // 那份是「门牌表」，改它等于把每间房的身份跟它在首页的位置绑死；
+  // 这里只管显示顺序。sort 用的是稳定排序，同一档内还是原来的次序。
+  const orderedRooms = useMemo(
+    () => [...rooms].sort((a, b) => Number(b.status === 'ready') - Number(a.status === 'ready')),
+    [],
+  );
   const readyRoom = useMemo(() => rooms.find((room) => room.status === 'ready') ?? rooms[0], []);
   const mascotSrc = `${import.meta.env.BASE_URL}assets/mascot/home-couple.webp`;
 
@@ -127,7 +134,7 @@ export function HomePage() {
           <span>先把门牌挂好，后面一间一间装修。</span>
         </div>
         <div className="rooms-grid">
-          {rooms.map((room, i) => (
+          {orderedRooms.map((room, i) => (
             <RoomCard key={room.id} room={room} index={i} onSelect={openRoom} />
           ))}
         </div>

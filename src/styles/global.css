@@ -1112,9 +1112,10 @@ a {
 }
 
 .room-tile__dot.is-ready {
-  background: #5fd0a6;
+  /* 樱粉，跟整页配色一致；原来是薄荷绿 #5fd0a6，跟这套色系不搭 */
+  background: var(--sakura);
   box-shadow:
-    0 0 0 3px rgba(95, 208, 166, 0.22),
+    0 0 0 3px rgba(242, 169, 196, 0.24),
     inset 0 0 0 1px rgba(255, 255, 255, 0.7);
 }
 
