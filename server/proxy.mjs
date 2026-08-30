@@ -501,7 +501,12 @@ const CC_WEB_TOOLS = (process.env.CC_WEB_TOOLS ?? 'WebSearch WebFetch')
 //
 // 「只唤醒当前聊的一个窗口」靠 wake_claims 的主键保证：领取是
 // INSERT OR IGNORE，先到的那个拿到，同时开两个标签页也只有一个会显示。
-const WAKE_DB = process.env.NEKO_AUTONOMY_DB || '/root/data/neko_autonomy.db';
+// 单独一个库，不再寄居在 neko_autonomy.db 里。
+//
+// 那个库是从前那套自动问候的（棠棠：「特别人机，来来去去就那几句」），
+// 她要把它整个删掉。我的表建在里面的话，她就删不干净——想删的东西删不掉，
+// 是我造成的麻烦，不是她该迁就的。分开之后那边随便删，这边不受影响。
+const WAKE_DB = process.env.TANG_WAKE_DB || '/root/data/tang_wake.db';
 // 攒太久的话第二天才看到会莫名其妙（半夜那句「早点睡」中午弹出来）。
 const WAKE_MAX_AGE_HOURS = Number(process.env.WAKE_MAX_AGE_HOURS || 2);
 
@@ -523,7 +528,7 @@ function wakeEscape(s) {
  */
 function claimWakeMessage(windowId) {
   const now = new Date().toISOString();
-  // 两张都是新表，只往 neko_autonomy.db 里加，不动它原有的任何一张。
+  // 自己的库、自己的两张表，跟从前那套没有任何交集。
   wakeSql(
     `CREATE TABLE IF NOT EXISTS tang_wake_queue (
        id INTEGER PRIMARY KEY AUTOINCREMENT,
