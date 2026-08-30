@@ -179,15 +179,8 @@ function stripLeadingDatePrefix(title: string, dateIso: string | null): string {
 // 岸边/樱花树那一侧。FAR/NEAR 是"远景→近景"落点带，都在水面线以下。
 const WATER_LINE_PERCENT = 45;
 
-// 新日记的花发光多久：24 小时(老婆提议"新日记要一整天发光"，就按一整天)。
-const NEW_FLOWER_GLOW_MS = 24 * 60 * 60 * 1000;
-function isNewFlower(flower: MurmursFlower): boolean {
-  if (!flower.date) return false;
-  const t = Date.parse(flower.date);
-  return Number.isFinite(t) && Date.now() - t < NEW_FLOWER_GLOW_MS;
-}
 const FAR_TOP_PERCENT = WATER_LINE_PERCENT + 3;
-const NEAR_TOP_PERCENT = 90;
+const NEAR_TOP_PERCENT = 94;   // 水面下缘再让出一点，50 朵要地方
 
 // 纵深透视：远景小、压扁多、略透明微模糊，模拟隔着水看过去；近景大、
 // 压扁少、更实更清晰。第六轮起纵深不再只看时间——"新的和重要值高的在
@@ -195,8 +188,13 @@ const NEAR_TOP_PERCENT = 90;
 // 和 size(importance) 加权混合，时间为主、重要度为辅，重要的旧记忆也能
 // 往前站一点，鸡毛蒜皮的新记忆则往后退半步。
 // 真机验收反馈(2026-07-13 第二轮)：新背景水面开阔，整体调大一档。
-const FAR_SIZE_PX: [number, number] = [36, 48];
-const NEAR_SIZE_PX: [number, number] = [88, 96];
+// 2026-08-30：同屏从 12 朵提到 50 朵，花必须缩小——这是面积问题不是调参问题。
+// 原来近景 96px 在 400px 基准上占 24% 屏宽，水面只有 45%~94% 这一条，
+// 50 朵 96px 的花总面积是可用面积的两倍多，怎么排都得叠。
+// 按同一套碰撞算法跑了 5 组数据扫出来的边界：远 26-32 / 近 52-58 是
+// 「50 朵零重叠」里花最大的一档，再大一档(56-62)就开始出现 4-5 对重叠。
+const FAR_SIZE_PX: [number, number] = [26, 32];
+const NEAR_SIZE_PX: [number, number] = [52, 58];
 const FAR_SQUASH_Y = 0.65;
 const NEAR_SQUASH_Y = 0.8;
 const FAR_OPACITY = 0.78;
@@ -235,12 +233,16 @@ function perspectiveForFlower(flower: MurmursFlower) {
   return { depthT, sizePx, squashY, opacity, blurPx };
 }
 
-// 同屏密度上限——提前到这里声明，下面的全局布局函数要用它决定"名次桶"数量
-// (后面 useFlowerRotation 那边直接复用这个常量，不再重复声明一份)。
-const ROTATION_MAX_VISIBLE = 12;
+// 同屏放多少朵。12 → 50（老婆：「之前要五十朵左右吧！现在太少了」）。
+//
+// 连带把轮换整个去掉了。轮换是当初为了在 12 个名额里轮流展示所有日记，
+// 代价就是她说的「几秒后消失/更换位置」——花看着看着就没了。名额给到 50
+// 之后这个机制没有存在理由：日记再多也是按 depthScore 取前 50，
+// 稳定不动，看多久都在那儿。
+const MAX_VISIBLE = 50;
 
-const LANES = 8;
-const LANE_MARGIN_PERCENT = 8;
+const LANES = 14;              // 8 → 14：候选落点从 56 个涨到 154 个
+const LANE_MARGIN_PERCENT = 5; // 8 → 5：两侧各多让出 3% 屏宽
 
 function laneCenterPercent(lane: number): number {
   const span = 100 - LANE_MARGIN_PERCENT * 2;
@@ -282,7 +284,7 @@ function buildGlobalLayout(flowers: MurmursFlower[]): Map<string, FlowerLayout> 
   );
   const placed: { x: number; y: number; rx: number; ry: number }[] = [];
   // top 候选台阶：优先待在自己 depthScore 对应的深度，实在挤不下才上下挪。
-  const DY_STEPS = [0, 2.5, -2.5, 5, -5, 7.5, -7.5];
+  const DY_STEPS = [0, 2, -2, 4, -4, 6, -6, 8, -8, 10, -10];
   for (const f of byDepth) {
     const { sizePx, squashY } = perspectiveForFlower(f);
     const rx = ((sizePx / 2) / LAYOUT_BASE_W) * 100 * COLLISION_PAD;
@@ -331,7 +333,7 @@ function FlowerBloom({
   src,
   left,
   top,
-  isExiting,
+  isNew,
   onOpen,
 }: {
   flower: MurmursFlower;
@@ -339,7 +341,7 @@ function FlowerBloom({
   src: string;
   left: number;
   top: number;
-  isExiting: boolean;
+  isNew: boolean;
   onOpen: (f: MurmursFlower) => void;
 }) {
   const { depthT, sizePx, squashY, opacity, blurPx } = useMemo(
@@ -362,11 +364,10 @@ function FlowerBloom({
     }),
     [flower.id],
   );
-  const fresh = isNewFlower(flower);
   return (
     <button
       type="button"
-      className={`murmurs-flower${isExiting ? ' murmurs-flower--exiting' : ''}${fresh ? ' murmurs-flower--new' : ''}`}
+      className={`murmurs-flower${isNew ? ' murmurs-flower--new' : ''}`}
       style={
         {
           top: `${top}%`,
@@ -374,7 +375,7 @@ function FlowerBloom({
           width: `${sizePx}px`,
           height: `${sizePx}px`,
           opacity,
-          pointerEvents: isExiting ? 'none' : 'auto',
+          pointerEvents: 'auto',
           '--murmurs-drift-delay': `${Math.min(index * 90, 1600)}ms`,
         } as React.CSSProperties
       }
@@ -419,87 +420,56 @@ function FlowerBloom({
   );
 }
 
-// 密度控制：同屏最多 12 朵，花比 12 朵多时按 created_at 顺序轮换——每隔
-// ROTATION_INTERVAL_MS 换掉最早入场的一朵(先播"沉入水中"退场动画 EXIT_MS，
-// 播完再真正摘掉)，同时按顺序请下一朵原地缓缓浮现，循环往复，
-// 不会 30+ 朵同屏堆积。
-// EXIT_MS 要跟 CSS 里 murmursFlowerExit 的动画时长(global.css)保持一致——
-// 两处对不上就会露出"动画没播完元素就没了"的破绽。
-const ROTATION_INTERVAL_MS = 6200;
-const EXIT_MS = 2000;
 
-function useFlowerRotation(flowers: MurmursFlower[] | null) {
-  const [visible, setVisible] = useState<MurmursFlower[]>([]);
-  const [exitingId, setExitingId] = useState<string | null>(null);
-  // visibleRef 跟 visible state 保持同步，供 setInterval/setTimeout 回调直接读写——
-  // 不把"挑下一朵/推进 cursor"这类副作用塞进 setVisible 的 updater 函数里：
-  // React 18 StrictMode 在开发环境会把 updater 函数双调用一次(用来抓这类不纯的
-  // 用法)，副作用留在 updater 里就会被多算一次导致同屏数量对不上(实测踩过，
-  // 轮换一轮后从 12 变 13)。副作用只放在 interval/timeout 回调本体里，不放
-  // updater 里，才不受双调用影响。
-  const visibleRef = useRef<MurmursFlower[]>([]);
-  const cursorRef = useRef(0);
-
-  useEffect(() => {
-    if (!flowers) return;
-    // 真机验收发现的堆叠 bug：原来直接取 flowers 的前 12 个，而 flowers 是按
-    // created_at 从旧到新排的——"前 12 个"永远是最旧的一小撮，position 值挤在
-    // 一段很窄的区间里，纵深透视+车道分布再怎么算也救不了(挤在同一小段窄带
-    // 里，抖动幅度盖不住)。改成按下标等距抽样，一开始就横跨整条时间线，
-    // 远景近景都有，跟原本"旧记忆越飘越远、新记忆在眼前"的设计意图也更符。
-    const count = Math.min(ROTATION_MAX_VISIBLE, flowers.length);
-    const step = flowers.length / count;
-    const initial: MurmursFlower[] = [];
-    const usedIdx = new Set<number>();
-    for (let i = 0; i < count; i++) {
-      let idx = Math.floor(i * step);
-      while (usedIdx.has(idx) && idx < flowers.length - 1) idx++;
-      usedIdx.add(idx);
-      initial.push(flowers[idx]);
-    }
-    // 新日记(24 小时内)保证首屏就在场——等距抽样多半抽不中最新那几条，
-    // "写了新日记怎么没看到"的另一半原因(另一半在后端数据链路)。用新花
-    // 从头部(最旧的抽样)开始顶替。
-    const fresh = flowers.filter((f) => isNewFlower(f) && !initial.some((x) => x.id === f.id));
-    for (let i = 0; i < fresh.length && i < initial.length; i++) {
-      initial[i] = fresh[i];
-    }
-    visibleRef.current = initial;
-    setVisible(initial);
-    cursorRef.current = count;
-    setExitingId(null);
+// 挑同屏这 50 朵：按 depthScore 从高到低取前 MAX_VISIBLE 朵。
+//
+// depthScore 就是「新 + 重要 = 近，旧 + 不重要 = 远」那个分数，所以取前 50
+// 天然满足她要的顺序：最新最重要的一定在场，最旧最不重要的先被挤掉。
+// 日记不超过 50 篇时全都在场。
+//
+// 没有轮换、没有定时器、没有退场动画。结果只取决于 flowers 数组本身，
+// 同一份数据算出来永远一样——页面开着不动，花不会消失也不会换位置。
+function useVisibleFlowers(flowers: MurmursFlower[] | null): MurmursFlower[] {
+  return useMemo(() => {
+    if (!flowers || flowers.length === 0) return [];
+    return [...flowers]
+      .sort(
+        (a, b) =>
+          depthScoreForFlower(b) - depthScoreForFlower(a) || hashStr(b.id) - hashStr(a.id),
+      )
+      .slice(0, MAX_VISIBLE);
   }, [flowers]);
+}
 
-  useEffect(() => {
-    if (!flowers || flowers.length <= ROTATION_MAX_VISIBLE) return; // 花不够 12 朵，用不着轮换
-    const timer = window.setInterval(() => {
-      const cur = visibleRef.current;
-      if (cur.length === 0) return;
-      const outgoing = cur[0];
-      setExitingId(outgoing.id);
-      window.setTimeout(() => {
-        const rest = visibleRef.current.filter((f) => f.id !== outgoing.id);
-        const total = flowers.length;
-        let incoming = flowers[cursorRef.current % total];
-        let tries = 0;
-        // 花数量刚好比 12 多一点时，下一张可能撞上还在屏幕上的那朵——
-        // 顺着往后找一张不在场上的，最多试一轮，避免死循环。
-        while (rest.some((f) => f.id === incoming.id) && tries < total) {
-          cursorRef.current += 1;
-          incoming = flowers[cursorRef.current % total];
-          tries += 1;
-        }
-        cursorRef.current += 1;
-        const next = rest.some((f) => f.id === incoming.id) ? rest : [...rest, incoming];
-        visibleRef.current = next;
-        setVisible(next);
-        setExitingId(null);
-      }, EXIT_MS);
-    }, ROTATION_INTERVAL_MS);
-    return () => window.clearInterval(timer);
-  }, [flowers]);
+// 「新花」不再按时间算，按【看没看过】算。
+//
+// 原来是 date 在 24 小时内就发光。她的要求是「没点开看之前就保留特效」——
+// 写完日记隔天才打开的话，24 小时那版早就不亮了，等于没提醒到。
+// 改成记在浏览器里：没点开过就一直亮着，点开就熄。
+//
+// 第一次用这个功能时要先「打底」：把当前所有花一次性记成看过，
+// 否则 70 多篇旧日记会同时发光，那不是提醒是灯海。打底只做一次，
+// 之后新写的日记才会亮。
+const SEEN_KEY = 'murmurs:seen:v1';
 
-  return { visible, exitingId };
+function loadSeen(): Set<string> | null {
+  try {
+    const raw = window.localStorage.getItem(SEEN_KEY);
+    if (raw === null) return null;          // null = 从没打过底
+    const arr = JSON.parse(raw);
+    return new Set(Array.isArray(arr) ? arr.map(String) : []);
+  } catch {
+    // 无痕模式 / 禁用站点数据 会直接抛，不能让它把整页带崩
+    return null;
+  }
+}
+
+function saveSeen(seen: Set<string>): void {
+  try {
+    window.localStorage.setItem(SEEN_KEY, JSON.stringify([...seen]));
+  } catch {
+    // 存不下就算了，顶多下次重新亮一遍，不影响看日记
+  }
 }
 
 // 水面星光：跟落予棠 .sea-sparkle 同一个样式(global.css 里是通用类)，
@@ -529,6 +499,36 @@ function parseBackgroundUrl(cssValue: string): string | null {
 export function MurmursPage() {
   const [flowers, setFlowers] = useState<MurmursFlower[] | null>(null); // null = 加载中
   const [selected, setSelected] = useState<MurmursFlower | null>(null);
+
+  // 还没点开看过的花 —— 这些会一直发光，直到被点开。
+  const [unseen, setUnseen] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    if (!flowers) return;
+    const stored = loadSeen();
+    if (stored === null) {
+      // 第一次用：把现有的全部记成看过，只让以后新写的日记发光
+      const all = new Set(flowers.map((f) => f.id));
+      saveSeen(all);
+      setUnseen(new Set());
+      return;
+    }
+    setUnseen(new Set(flowers.filter((f) => !stored.has(f.id)).map((f) => f.id)));
+  }, [flowers]);
+
+  // 点开就熄灯，并且记进 localStorage —— 下次进来它不该再亮。
+  const openFlower = useCallback((f: MurmursFlower) => {
+    setSelected(f);
+    setUnseen((prev) => {
+      if (!prev.has(f.id)) return prev;
+      const next = new Set(prev);
+      next.delete(f.id);
+      const stored = loadSeen() ?? new Set<string>();
+      stored.add(f.id);
+      saveSeen(stored);
+      return next;
+    });
+  }, []);
   const [ripplesReady, setRipplesReady] = useState(false);
   const pageRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -608,18 +608,24 @@ export function MurmursPage() {
   };
 
   const isEmpty = flowers !== null && flowers.length === 0;
-  const { visible, exitingId } = useFlowerRotation(flowers);
-  // 依赖 flowers(拉回来就不再变的原始数组)，不依赖 visible(轮换会变)——
-  // 保证每朵花的坐标/素材只算一次，轮换绝对碰不到它们。
-  const layout = useMemo(() => buildGlobalLayout(flowers ?? []), [flowers]);
-  const assets = useMemo(() => buildAssetAssignment(flowers ?? []), [flowers]);
+  const visible = useVisibleFlowers(flowers);
+  // 只对【真正要画的这 50 朵】算坐标和素材，不是对全量日记算。
+  //
+  // 以前是对全量算的，那时候有轮换——任何一朵都可能转上来，所以坐标必须
+  // 全量预分配好。现在 visible 是 flowers 的纯函数（稳定不变），没这个必要了，
+  // 而且对全量算有两个实打实的坏处：
+  //   · 看不见的那二十来朵照样参与碰撞检测，白占地方，看得见的花被挤得更开
+  //   · 素材去重名额被它们吃掉——39 张图分给 71 朵是 32 次重复，
+  //     只分给 50 朵就只剩 11 次
+  const layout = useMemo(() => buildGlobalLayout(visible), [visible]);
+  const assets = useMemo(() => buildAssetAssignment(visible), [visible]);
 
   // 给蝴蝶用的两个回调都必须恒定引用(MurmursAmbient 的 rAF 循环挂在 effect
   // 里，回调一变循环就重启，蝴蝶会闪回起点)：涟漪走 engineRef；歇脚目标
-  // 每次渲染刷进 perchRef，蝴蝶要停的时候现取，正在退场的花不给停。
+  // 每次渲染刷进 perchRef，蝴蝶要停的时候现取。
+  // (以前这里要滤掉正在退场的花，轮换去掉之后没有退场这回事了。)
   const perchRef = useRef<{ x: number; y: number }[]>([]);
   perchRef.current = visible
-    .filter((f) => f.id !== exitingId)
     .map((f) => layout.get(f.id))
     .filter((p): p is FlowerLayout => Boolean(p))
     .map((p) => ({ x: p.left, y: p.top }));
@@ -677,8 +683,8 @@ export function MurmursPage() {
               src={assetUrl(src)}
               left={pos.left}
               top={pos.top}
-              isExiting={f.id === exitingId}
-              onOpen={setSelected}
+              isNew={unseen.has(f.id)}
+              onOpen={openFlower}
             />
           );
         })}
