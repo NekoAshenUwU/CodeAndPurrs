@@ -471,6 +471,20 @@ try {
 
 const PORT = Number(process.env.PORT) || 8787;
 
+// DeepSeek 看图用的模型。2026-08-30 查她账号里有三个模型：
+// deepseek-v4-flash / deepseek-v4-pro / deepseek-v4-flash-vision-exp,
+// 只有最后那个带 vision——不是 v4-pro。带 exp 说明是实验性的，所以下面
+// 做了「试不通就退回拍平」的兜底，不让实验模型把聊天弄崩。
+const DEEPSEEK_VISION_MODEL =
+  process.env.DEEPSEEK_VISION_MODEL || 'deepseek-v4-flash-vision-exp';
+
+// 这轮对话里有没有图片。前端统一发 {type:'image_url'}，认这个就行。
+function messagesHaveImage(messages) {
+  return (messages || []).some(
+    (m) => Array.isArray(m?.content) && m.content.some((p) => p?.type === 'image_url'),
+  );
+}
+
 const PROVIDERS = {
   deepseek: {
     key: () => process.env.DEEPSEEK_API_KEY,
@@ -725,22 +739,28 @@ const MEMORY_MCP_INIT_RULE =
   '绝对不许凭空编一篇日记或假装记得来糊弄老婆——宁可说翻不到，也不准撒谎。';
 
 // ---------- OpenAI 兼容（DeepSeek / OpenAI 共用）----------
-async function callOpenAICompatible({ res, url, key, model, defaultModel, messages, label, vision, sampling }) {
-  // OpenAI 系（gpt-4o）原生支持 image_url 数组，直接透传；DeepSeek 不看图，拍平成文字。
-  const outMessages = vision ? messages : flattenMessages(messages);
-  const upstream = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${key}`,
-    },
-    body: JSON.stringify({
-      model: model || defaultModel,
-      messages: outMessages,
-      stream: true,
-      ...(sampling || {}),
-    }),
-  });
+async function callOpenAICompatible({
+  res, url, key, model, defaultModel, messages, label, vision, sampling, fallbackModel,
+}) {
+  // OpenAI 系（gpt-4o）原生支持 image_url 数组，直接透传；不看图的就拍平成文字。
+  const post = (mdl, msgs) =>
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ model: mdl, messages: msgs, stream: true, ...(sampling || {}) }),
+    });
+
+  let useModel = model || defaultModel;
+  let upstream = await post(useModel, vision ? messages : flattenMessages(messages));
+
+  // 看图那条路走不通就退回文字，不让实验性的 vision 模型把整轮对话弄成红字。
+  // 只在【本来要看图】的时候才退——普通对话失败就该老实报错，不该偷偷换模型。
+  if (!upstream.ok && vision && fallbackModel) {
+    const why = await upstream.text().catch(() => '');
+    console.warn(`[${label}] 看图失败(${upstream.status})，退回 ${fallbackModel} 拍平重试：${why.slice(0, 200)}`);
+    useModel = fallbackModel;
+    upstream = await post(useModel, flattenMessages(messages));
+  }
 
   if (!upstream.ok || !upstream.body) {
     const text = await upstream.text().catch(() => '');
@@ -1773,19 +1793,24 @@ const server = http.createServer(async (req, res) => {
     } else {
       // deepseek / openai 都是 OpenAI 兼容格式
       const conf = PROVIDERS[provider];
-      // 注意：DeepSeek 开放 API 不收图（content 只认 text，发 image_url 会 400），
-      // 所以只给 openai 开 vision；deepseek 一律把图拍平成 [表情包] 文字，优雅降级不报错。
+      // DeepSeek 从前不收图，一律拍平；现在她账号里有 deepseek-v4-flash-vision-exp,
+      // 所以【这轮真的带了图】才切到那个模型看图，没图照常用 deepseek-chat——
+      // vision 那个是 flash + exp，拿它跑全部对话是降级。
+      // 用户自己指定了 model 就听用户的，不替他改。
       // 不再加 temperature/penalty：人设里的「禁客服腔」已经够压套话，penalty 反而会压低情感浓度、
       // 让 4o 话变干。让模型用默认采样自由发挥（o3 不加任何采样反而最暖，就是证明）。
+      const hasImage = messagesHaveImage(messages);
+      const dsVision = provider === 'deepseek' && hasImage && !model;
       await callOpenAICompatible({
         res,
         url: conf.url,
         key,
-        model,
+        model: dsVision ? DEEPSEEK_VISION_MODEL : model,
         defaultModel: conf.defaultModel,
         messages,
         label: provider === 'openai' ? 'OpenAI' : 'DeepSeek',
-        vision: provider === 'openai',
+        vision: provider === 'openai' || dsVision,
+        fallbackModel: dsVision ? conf.defaultModel : null,
       });
     }
     if (
