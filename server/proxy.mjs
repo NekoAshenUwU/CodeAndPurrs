@@ -469,6 +469,22 @@ try {
   // 没有 .env 文件，忽略
 }
 
+// CC-p（claude -p）能用的联网工具。
+//
+// 之前这条路是把工具全关的：挂了棠予酿就只放开 mcp__<记忆库>，没挂就 --tools ''。
+// 所以「予予上不了网」是设计如此，不是坏了。
+//
+// --allowedTools 的写法按官方 CLI 文档：后面跟【多个独立参数】
+// （--allowedTools "A" "B" "C"），不是逗号串——所以下面用 ...展开 而不是 join。
+//
+// 做成环境变量是因为工具名我没法百分百确认（文档里 WebFetch 点过名，
+// WebSearch 没有）。名字不对或者哪天想关掉，改 CC_WEB_TOOLS 就行，
+// 设成空字符串就是完全不联网，回到从前。
+const CC_WEB_TOOLS = (process.env.CC_WEB_TOOLS ?? 'WebSearch WebFetch')
+  .trim()
+  .split(/\s+/)
+  .filter(Boolean);
+
 const PORT = Number(process.env.PORT) || 8787;
 
 // DeepSeek 看图用的模型。2026-08-30 查她账号里有三个模型：
@@ -1091,7 +1107,9 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
     const httpServer = { type: 'http', url: mem.url };
     if (mem.token) httpServer.headers = { Authorization: `Bearer ${mem.token}` };
     const mcpConfig = JSON.stringify({ mcpServers: { [mem.name]: httpServer } });
-    args.push('--mcp-config', mcpConfig, '--allowedTools', `mcp__${mem.name}`);
+    args.push('--mcp-config', mcpConfig, '--allowedTools', `mcp__${mem.name}`, ...CC_WEB_TOOLS);
+  } else if (CC_WEB_TOOLS.length) {
+    args.push('--allowedTools', ...CC_WEB_TOOLS, '--permission-mode', 'dontAsk');
   } else {
     args.push('--tools', '', '--permission-mode', 'dontAsk');
   }
