@@ -6,6 +6,7 @@ import {
   fetchLatestUsage,
   fetchTrend,
   type TrendPoint,
+  type UsageApp,
   type UsageEnvelope,
   type TrendResult,
 } from '../services/usageBridge';
