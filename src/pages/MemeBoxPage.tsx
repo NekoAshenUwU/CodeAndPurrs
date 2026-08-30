@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { addMeme, getMemeURL, listMemes, removeMeme, renameMeme, type MemeItem } from '../services/memes';
+import { looksLikeImage } from '../services/photos';
 
 // 脑洞贴纸盒 —— 上传/收藏表情包，存这台设备的 IndexedDB。
 // 聊天时呼噜频道「＋ → 表情包」会从这里读出来发。
@@ -51,21 +52,27 @@ export function MemeBoxPage() {
     return () => window.clearTimeout(t);
   }, [notice]);
 
+  // 跟呼噜频道发图同一处坑：安卓从相册挑出来的 File，MIME 常常是空字符串，
+  // 原来 `if (!file.type.startsWith('image/')) continue` 会把整批好图跳过，
+  // 最后只剩一句「没找到图片文件」。MIME/扩展名只当参考，真正的裁判是能不能解码。
   const onPick = async (files: FileList | null) => {
     if (!files || !files.length) return;
+    const picked = Array.from(files);
+    const likely = picked.filter(looksLikeImage);
     let added = 0;
-    for (const file of Array.from(files)) {
-      if (!file.type.startsWith('image/')) continue;
+    let lastErr = '';
+    for (const file of (likely.length ? likely : picked)) {
       try {
         await addMeme(file);
         added += 1;
-      } catch {
-        // 单张失败不打断其它
+      } catch (err) {
+        // 单张失败不打断其它，但要留住原因——全军覆没时得告诉她为什么
+        lastErr = (err as Error)?.message || String(err);
       }
     }
     if (fileRef.current) fileRef.current.value = '';
     await refresh();
-    setNotice(added ? `存好 ${added} 张啦～` : '没找到图片文件');
+    setNotice(added ? `存好 ${added} 张啦～` : lastErr || '一张都没存进来');
   };
 
   const onDelete = async (item: MemeItem) => {

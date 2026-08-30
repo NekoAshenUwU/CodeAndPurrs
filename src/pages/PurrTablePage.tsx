@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom';
 import { streamChat, type ChatMessage, type ContentPart } from '../services/chat';
 import { loadChatBg, loadChatUserAvatar } from '../services/purrConfig';
 import { loadLocal, saveLocal } from '../services/storage';
-import { addPhoto, getPhotoURL, getPhotoDataUrl, storageHint } from '../services/photos';
+import { addPhoto, getPhotoURL, getPhotoDataUrl, storageHint, looksLikeImage } from '../services/photos';
 
 // 圆桌成员:只放 CC 家版(用棠棠订阅额度,不烧 API)。
 // pillLabel 是药丸上的全型号名(以后 API Claude 上来也不会混); short 是气泡小圆头像里的简写。
@@ -280,13 +280,17 @@ export function PurrTablePage() {
     if (!files || sending) return;
     const remaining = MAX_PHOTOS_PER_SEND - pendingPhotos.length;
     if (remaining <= 0) return;
-    const list = Array.from(files).filter((f) => f.type.startsWith('image/')).slice(0, remaining);
-    if (list.length === 0) return;
-    try {
-      const ids = await Promise.all(list.map((f) => addPhoto(f)));
-      setPendingPhotos((prev) => [...prev, ...ids]);
-    } catch (err) {
-      window.alert(`照片存不进来：${(err as Error)?.message || String(err)}${await storageHint()}`);
+    // 同呼噜频道：安卓上 file.type 常常是空的，不能拿它当门神（见 photos.ts）
+    const picked = Array.from(files).slice(0, remaining);
+    if (picked.length === 0) return;
+    const likely = picked.filter(looksLikeImage);
+    const settled = await Promise.allSettled((likely.length ? likely : picked).map((f) => addPhoto(f)));
+    const ids = settled.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
+    const errs = settled.flatMap((r) => (r.status === 'rejected' ? [r.reason] : []));
+    if (ids.length) setPendingPhotos((prev) => [...prev, ...ids]);
+    if (errs.length) {
+      const msg = (errs[0] as Error)?.message || String(errs[0]);
+      window.alert(ids.length ? `有 ${errs.length} 张没加进来：${msg}` : `${msg}${await storageHint()}`);
     }
   };
 

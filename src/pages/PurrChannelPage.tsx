@@ -8,7 +8,7 @@ import { loadRollingSummary, saveRollingSummary, type RollingSummary } from '../
 import { clearLocal, loadLocal, saveLocal } from '../services/storage';
 import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
 import { getMemeURL, getMemeDataUrl, listMemes, type MemeItem } from '../services/memes';
-import { addPhoto, getPhotoURL, getPhotoDataUrl, storageHint } from '../services/photos';
+import { addPhoto, getPhotoURL, getPhotoDataUrl, storageHint, looksLikeImage } from '../services/photos';
 import { addPacket } from '../services/redPacket';
 import { playHongbaoChime } from '../services/hongbaoSound';
 import { fetchLatestUsage } from '../services/usageBridge';
@@ -1128,16 +1128,28 @@ function ChatRoom({
       setNotice(`一次最多 ${MAX_PHOTOS_PER_SEND} 张，先发出去再接着挑～`);
       return;
     }
-    const list = Array.from(files).filter((f) => f.type.startsWith('image/')).slice(0, remaining);
-    if (list.length === 0) {
-      setNotice('挑中的这些不是图片格式，加不进来～');
-      return;
-    }
-    try {
-      const ids = await Promise.all(list.map((f) => addPhoto(f)));
-      setPendingPhotos((prev) => [...prev, ...ids]);
-    } catch (err) {
-      setNotice(`照片存不进来：${(err as Error)?.message || String(err)}${await storageHint()}`);
+    const picked = Array.from(files).slice(0, remaining);
+    if (picked.length === 0) return;
+    // 【不拿 file.type 当门神】安卓从相册挑出来的 File，MIME 常常是空字符串，
+    // 原来那句 filter(f => f.type.startsWith('image/')) 会把整批好照片判死。
+    // 现在 MIME/扩展名只当参考：认得出来的优先，一个都认不出来就全都试一遍
+    // ——挑图的 input 本来就带 accept="image/*"，真正的裁判是能不能解码。
+    const likely = picked.filter(looksLikeImage);
+    const list = likely.length ? likely : picked;
+    // allSettled 不用 all：三张里坏一张，另外两张照样进待发槽，
+    // 不要一颗老鼠屎坏一锅粥。
+    const settled = await Promise.allSettled(list.map((f) => addPhoto(f)));
+    const ids = settled.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
+    const errs = settled.flatMap((r) => (r.status === 'rejected' ? [r.reason] : []));
+    if (ids.length) setPendingPhotos((prev) => [...prev, ...ids]);
+    if (errs.length) {
+      const msg = (errs[0] as Error)?.message || String(errs[0]);
+      const quota = /quota|storage|exceed/i.test(msg);
+      setNotice(
+        ids.length
+          ? `有 ${errs.length} 张没加进来：${msg}`
+          : `${msg}${quota ? await storageHint() : ''}`,
+      );
     }
   };
 

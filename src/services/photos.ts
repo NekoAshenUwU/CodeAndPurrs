@@ -49,14 +49,34 @@ function loadImage(blob: Blob): Promise<HTMLImageElement> {
   });
 }
 
+// 安卓上 file.type 靠不住：从相册/文件管理器挑出来的 File，MIME 经常是空字符串
+// （content:// 那头解析不出类型），拿 type.startsWith('image/') 当门神会把好好的
+// 照片整批判死——2026-08-30 就是这么"发不了图"的。所以 MIME 说不上来就看扩展名，
+// 两个都说不上来也不急着否掉：能不能解码才是最终裁判，交给 addPhoto 去试。
+const IMAGE_EXT_RE = /\.(jpe?g|png|gif|webp|bmp|avif|heic|heif|tiff?)$/i;
+const ANIMATED_RE = /\.(gif|webp)$/i;
+
+export function looksLikeImage(f: File): boolean {
+  return f.type.startsWith('image/') || IMAGE_EXT_RE.test(f.name);
+}
+
 // 缩到 MAX_DIM 见方 + 转 JPEG，动图(gif/webp)原样保留避免被拍成一帧
 async function compress(file: File): Promise<Blob> {
-  if (file.type === 'image/gif' || file.type === 'image/webp') return file;
+  // 动图判断同样不能只信 MIME
+  if (file.type === 'image/gif' || file.type === 'image/webp' || ANIMATED_RE.test(file.name)) return file;
   let img: HTMLImageElement;
   try {
     img = await loadImage(file);
   } catch {
-    return file;
+    // 以前这里 return file 当没事发生：解不开的东西照样存进库，
+    // 结果是气泡里一个碎图、发给模型也是一坨浏览器都不认的字节。
+    // 解不开就说出来——最常见的是 iPhone/部分安卓相机存的 HEIC。
+    const heic = /\.(heic|heif)$/i.test(file.name) || /hei[cf]/i.test(file.type);
+    throw new Error(
+      heic
+        ? `「${file.name}」是 HEIC 格式，浏览器打不开。相册里选「导出为 JPG」再发～`
+        : `「${file.name}」这个格式浏览器解不开（${file.type || '类型未知'}）`,
+    );
   }
   const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height) || 1);
   const w = Math.max(1, Math.round(img.width * scale));
