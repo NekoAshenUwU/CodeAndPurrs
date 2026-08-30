@@ -55,12 +55,45 @@ function relativeFromNow(iso: string | null): string {
   return `${Math.round(h / 24)} 天前`;
 }
 
+// 不算「真的在用」的 app，爪印榜里不显示。
+//
+// 只在【显示层】滤掉，不动数据：输入法、桌面这些恰恰是「她在碰手机」的
+// 信号，睡眠推断和 get_since 全靠它。从源头删掉的话，予予会以为她放下
+// 手机了——那比榜单上多两行难看得多。
+//
+// 按包名前缀匹配，顺带兜一层名字：小米/HyperOS 的包名在不同机型上会变，
+// 而她看到的名字是稳定的。
+const NOT_REALLY_USING_PKG = [
+  'com.baidu.input',        // 百度输入法
+  'com.sohu.inputmethod',   // 搜狗
+  'com.iflytek.inputmethod',// 讯飞
+  'com.google.android.inputmethod',
+  'com.miui.home',          // 系统桌面
+  'com.mi.android.globallauncher',
+  'com.android.systemui',
+  'com.miui.gallery',       // 照片和视频
+  'com.android.gallery3d',
+  'com.miui.mediaviewer',
+];
+const NOT_REALLY_USING_LABEL = [
+  '百度输入法', '搜狗输入法', '讯飞输入法', '输入法',
+  '系统桌面', '桌面', '系统界面',
+  '照片和视频', '相册', '图库',
+];
+
+function isRealUse(app: UsageApp): boolean {
+  const pkg = (app.package || '').toLowerCase();
+  if (NOT_REALLY_USING_PKG.some((p) => pkg.startsWith(p))) return false;
+  const label = (app.label || '').trim();
+  return !NOT_REALLY_USING_LABEL.includes(label);
+}
+
 // 猫咪点评（本地启发式，v1 不依赖后端 AI）
 function buildCommentary(env: UsageEnvelope): string {
   const { summary, tz, apps } = env.data;
   const mins = summary.totalForegroundMs / 60000;
   const lastHour = summary.lastUseAt ? tzParts(summary.lastUseAt, tz).h : 12;
-  const top = apps[0];
+  const top = apps.filter(isRealUse)[0];
   if (lastHour >= 0 && lastHour < 5) {
     return '都这个点了还盯着屏幕呀……快放下手机睡觉，我帮你把月亮看着 🌙';
   }
@@ -328,7 +361,7 @@ function PawTrailView({
   const yesterday = trend && trend.data.length >= 2 ? trend.data[trend.data.length - 2] : null;
   const deltaMin = yesterday ? Math.round((summary.totalForegroundMs - yesterday.totalForegroundMs) / 60000) : null;
 
-  const topApps = apps.slice(0, 5);
+  const topApps = apps.filter(isRealUse).slice(0, 5);
   const maxApp = topApps.length ? topApps[0].foregroundMs : 1;
 
   const commentary = buildCommentary(env);
