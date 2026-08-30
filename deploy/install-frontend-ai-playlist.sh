@@ -73,6 +73,16 @@ def inject_before_last(relative, marker, block, sentinel):
         raise SystemExit(f"补丁结构定位失败：{relative}，未改动线上。")
     path.write_text(text[:index] + block + text[index:], encoding="utf-8")
 
+def inject_after(relative, marker, block, sentinel):
+    path = root / relative
+    text = path.read_text(encoding="utf-8")
+    if sentinel in text:
+        return
+    count = text.count(marker)
+    if count != 1:
+        raise SystemExit(f"补丁回调定位失败：{relative}（命中 {count} 次），未改动线上。")
+    path.write_text(text.replace(marker, marker + block, 1), encoding="utf-8")
+
 inject_before(
     "src/services/spotify.ts",
     "function loadSpotifySdk(): Promise<void> {",
@@ -313,11 +323,10 @@ replace_once(
     "const visibleContent = stripSpotifyPlaylistTags(rawAssistantContent);",
 )
 
-replace_once(
+inject_after(
     "src/pages/PurrChannelPage.tsx",
-    "          markThinkDone();\n          setTurns((prev) => {",
-    '''          markThinkDone();
-          const spotifyQueries = extractSpotifyPlaylistQueries(rawAssistantContent);
+    "        onDone: () => {\n",
+    '''          const spotifyQueries = extractSpotifyPlaylistQueries(rawAssistantContent);
           if (spotifyQueries.length && !streamFailed) {
             queueMicrotask(() => {
               void playSpotifyQueries(spotifyQueries)
@@ -332,7 +341,7 @@ replace_once(
                 });
             });
           }
-          setTurns((prev) => {''',
+''',
     "const spotifyQueries = extractSpotifyPlaylistQueries(rawAssistantContent);",
 )
 
