@@ -481,7 +481,9 @@ function useVisibleFlowers(flowers: MurmursFlower[] | null): MurmursFlower[] {
 // 第一次用这个功能时要先「打底」：把当前所有花一次性记成看过，
 // 否则 70 多篇旧日记会同时发光，那不是提醒是灯海。打底只做一次，
 // 之后新写的日记才会亮。
-const SEEN_KEY = 'murmurs:seen:v1';
+const SEEN_KEY = 'murmurs:seen:v2';   // v1 → v2：打底规则变了，重新打一次
+// 第一次打底时，多近的日记算「还没看过」
+const FIRST_RUN_FRESH_MS = 7 * 24 * 60 * 60 * 1000;
 
 function loadSeen(): Set<string> | null {
   try {
@@ -538,10 +540,21 @@ export function MurmursPage() {
     if (!flowers) return;
     const stored = loadSeen();
     if (stored === null) {
-      // 第一次用：把现有的全部记成看过，只让以后新写的日记发光
-      const all = new Set(flowers.map((f) => f.id));
-      saveSeen(all);
-      setUnseen(new Set());
+      // 第一次用要"打底"，否则七十多篇旧日记会同时发光，那不是提醒是灯海。
+      //
+      // 但全部记成看过也不对：她装完当场看不到任何效果，没法确认这功能到底
+      // work 不 work（2026-08-30 实测反馈「没看到有特效的新花朵」）。
+      // 折中：只把【一周以前】的记成看过，最近七天的留着发光。
+      // 这一周内确实写过日记的话，装完立刻就能看见；没写过就还是不亮——
+      // 那是对的，本来就没有新日记。
+      const cutoff = Date.now() - FIRST_RUN_FRESH_MS;
+      const isRecent = (f: MurmursFlower) => {
+        const t = f.date ? Date.parse(f.date) : NaN;
+        return Number.isFinite(t) && t > cutoff;
+      };
+      const seed = new Set(flowers.filter((f) => !isRecent(f)).map((f) => f.id));
+      saveSeen(seed);
+      setUnseen(new Set(flowers.filter(isRecent).map((f) => f.id)));
       return;
     }
     setUnseen(new Set(flowers.filter((f) => !stored.has(f.id)).map((f) => f.id)));

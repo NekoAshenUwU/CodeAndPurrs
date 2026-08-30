@@ -352,12 +352,15 @@ async function loadDiaryComposed() {
 // 不额外引入第二份 key、不硬编码任何密钥。
 let _murmursFlowersCache = { at: 0, flowers: null };
 const MURMURS_CACHE_MS = Number(process.env.MURMURS_FLOWERS_CACHE_MS || 60_000);
-// 页面最多要 40 朵花；但 diary/list 是"从旧到新排序再截断"的(2026-07-19
+// 后端给多少朵。2026-08-30 从 40 提到 60：前端同屏改成 50 朵之后，
+// 这里卡在 40 就成了真正的天花板——前端 MAX_VISIBLE 调多大都没用。
+// 给 60 留点余量，具体画几朵由前端 MAX_VISIBLE 决定，这边不做视觉决策。
+// 但 diary/list 是"从旧到新排序再截断"的(2026-07-19
 // 真机抓包实锤：库里 96 条、limit=3 拉回来的是半个月前的 Day 190-191)——
 // 直接 limit=40 拿到的永远是最旧的 40 条，记忆一超 40 条新日记就全被截在
 // 门外("写了新日记怎么没看到"的根因)。所以拉的时候放大限额把全量捞回来，
 // 排序后自己挑最新的 MURMURS_LIMIT 条。
-const MURMURS_LIMIT = 40;
+const MURMURS_LIMIT = 60;
 const MURMURS_FETCH_LIMIT = 500;
 
 // valence/arousal 实测范围(棠予酿真实数据校准)：没有这两个字段或不是有限数字时
