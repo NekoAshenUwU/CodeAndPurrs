@@ -191,10 +191,17 @@ const NEAR_TOP_PERCENT = 94;   // 水面下缘再让出一点，50 朵要地方
 // 2026-08-30：同屏从 12 朵提到 50 朵，花必须缩小——这是面积问题不是调参问题。
 // 原来近景 96px 在 400px 基准上占 24% 屏宽，水面只有 45%~94% 这一条，
 // 50 朵 96px 的花总面积是可用面积的两倍多，怎么排都得叠。
-// 按同一套碰撞算法跑了 5 组数据扫出来的边界：远 26-32 / 近 52-58 是
-// 「50 朵零重叠」里花最大的一档，再大一档(56-62)就开始出现 4-5 对重叠。
-const FAR_SIZE_PX: [number, number] = [26, 32];
-const NEAR_SIZE_PX: [number, number] = [52, 58];
+// 2026-08-30 第二轮（「花可以再大一些，近一些，后面还有很多位置」）：
+// 「后面很多位置」是真的——取 depthScore 前 50 之后，这 50 朵的分数本来就
+// 都偏高(0.36~0.89)，全挤在屏幕 65%~89% 那一段，水面上半截 48%~65% 空着,
+// 白白浪费 36% 的纵深。所以改成【按名次铺开】(见 buildRankDepth)，
+// 50 朵均匀铺满 48%~94% 整片水面，腾出来的地方换成更大的花。
+// 重新扫的结果（把「花瓣轻挨」和「一朵盖住另一朵中心」分开量）：
+//   远 30-38 / 近 62-70 → 轻挨 16 对，严重压住 0 对   ← 用这个
+//   远 32-40 / 近 70-78 → 轻挨 23 对，严重压住 2 对
+// 她要的是「不要太严重重叠」，花瓣边缘挨着本来就是水面该有的样子。
+const FAR_SIZE_PX: [number, number] = [30, 38];
+const NEAR_SIZE_PX: [number, number] = [62, 70];
 const FAR_SQUASH_Y = 0.65;
 const NEAR_SQUASH_Y = 0.8;
 const FAR_OPACITY = 0.78;
@@ -219,8 +226,25 @@ function depthScoreForFlower(flower: MurmursFlower): number {
   );
 }
 
-function perspectiveForFlower(flower: MurmursFlower) {
-  const depthT = depthScoreForFlower(flower);
+// 把「同屏这几朵」的 depthScore 换算成 0~1 的名次。
+//
+// 为什么不直接用 depthScore：它是【全库】尺度上的绝对分数，而同屏只放
+// depthScore 最高的 50 朵——这 50 朵的分数天然挤在高位，直接拿去当纵深，
+// 结果就是全堆在近景、远景空一大片。按名次重排之后，同屏最靠后的那朵
+// 一定落在最远处、最靠前的一定落在最近处，整片水面才用得满。
+// 顺序没变：排序依据仍是 depthScore，也就是「新+重要=近，旧+不重要=远」。
+function buildRankDepth(flowers: MurmursFlower[]): Map<string, number> {
+  const rank = new Map<string, number>();
+  const order = [...flowers].sort(
+    (a, b) => depthScoreForFlower(a) - depthScoreForFlower(b) || hashStr(a.id) - hashStr(b.id),
+  );
+  const n = order.length;
+  order.forEach((f, i) => rank.set(f.id, n > 1 ? i / (n - 1) : 1));
+  return rank;
+}
+
+function perspectiveForFlower(flower: MurmursFlower, depthOverride?: number) {
+  const depthT = depthOverride ?? depthScoreForFlower(flower);
   // importance 在当前深度带内的相对位置，决定花开多大——重要的记忆即使
   // 在远景也能开得靠近带宽上限。
   const impT = importanceT(flower);
@@ -276,20 +300,23 @@ const COLLISION_PAD = 1.12;
 // 半径之和"的椭圆距离对已落位的全量花做碰撞检查，取第一个完全不碰的候选；
 // 全都碰(花太多水面太挤)就退而求其次拿"离邻居最远"的那个候选——不会有
 // 硬保证下的死循环，挤的时候也只是贴得近，不会精确叠死在同一点。
-function buildGlobalLayout(flowers: MurmursFlower[]): Map<string, FlowerLayout> {
+function buildGlobalLayout(
+  flowers: MurmursFlower[],
+  rank: Map<string, number>,
+): Map<string, FlowerLayout> {
   const layout = new Map<string, FlowerLayout>();
   if (flowers.length === 0) return layout;
   const byDepth = [...flowers].sort(
-    (a, b) => depthScoreForFlower(a) - depthScoreForFlower(b) || hashStr(a.id) - hashStr(b.id),
+    (a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0) || hashStr(a.id) - hashStr(b.id),
   );
   const placed: { x: number; y: number; rx: number; ry: number }[] = [];
   // top 候选台阶：优先待在自己 depthScore 对应的深度，实在挤不下才上下挪。
-  const DY_STEPS = [0, 2, -2, 4, -4, 6, -6, 8, -8, 10, -10];
+  const DY_STEPS = [0, 2, -2, 4, -4, 6, -6, 8, -8, 10, -10, 12, -12, 14, -14];
   for (const f of byDepth) {
-    const { sizePx, squashY } = perspectiveForFlower(f);
+    const depthT = rank.get(f.id) ?? depthScoreForFlower(f);
+    const { sizePx, squashY } = perspectiveForFlower(f, depthT);
     const rx = ((sizePx / 2) / LAYOUT_BASE_W) * 100 * COLLISION_PAD;
     const ry = (((sizePx * squashY) / 2) / LAYOUT_BASE_H) * 100 * COLLISION_PAD;
-    const depthT = depthScoreForFlower(f);
     const baseTop = FAR_TOP_PERCENT + depthT * (NEAR_TOP_PERCENT - FAR_TOP_PERCENT);
     const jitterTop = (hashStr(`${f.id}-y`) % 300) / 100 - 1.5; // ±1.5%
     const jitterLeft = (hashStr(`${f.id}-x`) % 300) / 100 - 1.5; // ±1.5%
@@ -334,6 +361,7 @@ function FlowerBloom({
   left,
   top,
   isNew,
+  depthT,
   onOpen,
 }: {
   flower: MurmursFlower;
@@ -342,11 +370,14 @@ function FlowerBloom({
   left: number;
   top: number;
   isNew: boolean;
+  depthT: number;
   onOpen: (f: MurmursFlower) => void;
 }) {
-  const { depthT, sizePx, squashY, opacity, blurPx } = useMemo(
-    () => perspectiveForFlower(flower),
-    [flower],
+  // depthT 必须跟 buildGlobalLayout 用的是同一个（名次深度）——各算各的话，
+  // 排版按一个尺寸留位置、渲染按另一个尺寸画，碰撞检测就白做了。
+  const { sizePx, squashY, opacity, blurPx } = useMemo(
+    () => perspectiveForFlower(flower, depthT),
+    [flower, depthT],
   );
   // 晃动的度走过一个来回：第六轮"完全静止"，第七轮老婆反馈"可以有轻微的
   // 晃动感，随着水波晃动"——加回一层 sway，但跟被删掉的旧 bob 是两个量级：
@@ -617,7 +648,8 @@ export function MurmursPage() {
   //   · 看不见的那二十来朵照样参与碰撞检测，白占地方，看得见的花被挤得更开
   //   · 素材去重名额被它们吃掉——39 张图分给 71 朵是 32 次重复，
   //     只分给 50 朵就只剩 11 次
-  const layout = useMemo(() => buildGlobalLayout(visible), [visible]);
+  const rankDepth = useMemo(() => buildRankDepth(visible), [visible]);
+  const layout = useMemo(() => buildGlobalLayout(visible, rankDepth), [visible, rankDepth]);
   const assets = useMemo(() => buildAssetAssignment(visible), [visible]);
 
   // 给蝴蝶用的两个回调都必须恒定引用(MurmursAmbient 的 rAF 循环挂在 effect
@@ -684,6 +716,7 @@ export function MurmursPage() {
               left={pos.left}
               top={pos.top}
               isNew={unseen.has(f.id)}
+              depthT={rankDepth.get(f.id) ?? 0}
               onOpen={openFlower}
             />
           );
