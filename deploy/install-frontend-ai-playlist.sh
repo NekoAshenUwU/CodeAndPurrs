@@ -63,6 +63,16 @@ def replace_once(relative, old, new, sentinel):
         raise SystemExit(f"补丁锚点异常：{relative}（命中 {count} 次），未改动线上。")
     path.write_text(text.replace(old, new, 1), encoding="utf-8")
 
+def inject_before_last(relative, marker, block, sentinel):
+    path = root / relative
+    text = path.read_text(encoding="utf-8")
+    if sentinel in text:
+        return
+    index = text.rfind(marker)
+    if index < 0:
+        raise SystemExit(f"补丁结构定位失败：{relative}，未改动线上。")
+    path.write_text(text[:index] + block + text[index:], encoding="utf-8")
+
 inject_before(
     "src/services/spotify.ts",
     "function loadSpotifySdk(): Promise<void> {",
@@ -177,10 +187,10 @@ function extractSpotifyPlaylistQueries(content: string): string[] {
     "const SPOTIFY_PLAYLIST_MARK = '[[SPOTIFY_PLAYLIST:';",
 )
 
-replace_once(
+inject_before(
     "src/pages/PurrChannelPage.tsx",
-    "  editHistory?: string[]; // 这条消息编辑过的历史版本（按时间顺序，旧→较新），当前展示的是 content\n",
-    "  editHistory?: string[]; // 这条消息编辑过的历史版本（按时间顺序，旧→较新），当前展示的是 content\n  spotify?: { deviceName: string; tracks: SpotifyTrack[]; startedAt: number }; // AI 点歌成功后嵌在回复里的播放器卡\n",
+    "};\n\nconst uid =",
+    "  spotify?: { deviceName: string; tracks: SpotifyTrack[]; startedAt: number }; // AI 点歌成功后嵌在回复里的播放器卡\n",
     "spotify?: { deviceName: string; tracks: SpotifyTrack[]; startedAt: number };",
 )
 
@@ -344,17 +354,10 @@ replace_once(
     "spotify: { deviceName: result.device.name, tracks: result.tracks, startedAt: Date.now() },",
 )
 
-replace_once(
+inject_before_last(
     "src/pages/PurrChannelPage.tsx",
-    '''                  })()
-                )}
-                {turn.redPacket ? (
-''',
-    '''                  })()
-                )}
-                {turn.spotify ? <SpotifyMusicCard attachment={turn.spotify} onError={setNotice} /> : null}
-                {turn.redPacket ? (
-''',
+    "{turn.redPacket ? (",
+    "{turn.spotify ? <SpotifyMusicCard attachment={turn.spotify} onError={setNotice} /> : null}\n                ",
     "{turn.spotify ? <SpotifyMusicCard attachment={turn.spotify} onError={setNotice} /> : null}",
 )
 
