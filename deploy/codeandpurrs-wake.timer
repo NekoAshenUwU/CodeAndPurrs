@@ -1,0 +1,13 @@
+[Unit]
+Description=每 20 分钟看一眼予予要不要开口
+
+[Timer]
+# 20 分钟而不是 1 小时：prompt 缓存 TTL 是 1 小时，间隔超过它每次都要全量
+# 重读，醒得勤反而更省 token。真正决定"说不说"的是脚本里那几道闸门，
+# 不是这个间隔——大多数次数它看一眼就闭嘴了。
+OnBootSec=10min
+OnUnitActiveSec=20min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

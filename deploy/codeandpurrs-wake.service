@@ -1,0 +1,10 @@
+[Unit]
+Description=倾棠予梦 · 予予主动开口（只入队，送达由聊天窗自己领）
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/var/www/codeandpurrs
+# 复用聊天后端那份 .env（人设、各家 key 都在里面）
+EnvironmentFile=-/var/www/codeandpurrs/.env
+ExecStart=/usr/bin/node /var/www/codeandpurrs/server/wake-generate.mjs
