@@ -8,7 +8,7 @@ import { loadRollingSummary, saveRollingSummary, type RollingSummary } from '../
 import { clearLocal, loadLocal, saveLocal } from '../services/storage';
 import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
 import { getMemeURL, getMemeDataUrl, listMemes, type MemeItem } from '../services/memes';
-import { addPhoto, getPhotoURL, getPhotoDataUrl } from '../services/photos';
+import { addPhoto, getPhotoURL, getPhotoDataUrl, storageHint } from '../services/photos';
 import { addPacket } from '../services/redPacket';
 import { playHongbaoChime } from '../services/hongbaoSound';
 import { fetchLatestUsage } from '../services/usageBridge';
@@ -1054,7 +1054,8 @@ function ChatRoom({
   // 小提示自动消失
   useEffect(() => {
     if (!notice) return;
-    const t = window.setTimeout(() => setNotice(''), 2200);
+    // 短提示 2.2 秒够看；带真错误的长句子得留久一点，不然她还没读完就没了
+    const t = window.setTimeout(() => setNotice(''), notice.length > 16 ? 6000 : 2200);
     return () => window.clearTimeout(t);
   }, [notice]);
 
@@ -1105,15 +1106,39 @@ function ChatRoom({
   // 老婆再打字或直接按发送时一起走出去(见 send()),跟贴纸同一套流程。
   // 一次最多 3 张,超了切掉多余的; 已经加了几张就只允许补足够
   const MAX_PHOTOS_PER_SEND = 3;
+  // 「点了图片、挑好了、回来什么都没有」——这里原来有五条路都是一声不吭地 return：
+  //   1. 上一条还在回（sending 是全局闸门）
+  //   2. 待发槽已经钉满 3 张
+  //   3. 选中的文件不是 image/*
+  //   4. 压缩/解码失败
+  //   5. IndexedDB 写不进去 —— 相册库只增不减，手机存储满了就是写不进去
+  // 第 4、5 条最要命：addPhoto 抛出来的异常落在 Promise.all 里，而这个函数是被
+  // void 掉的（onChange 里 void pickPhoto(...)），异常直接进控制台，界面上完全静默。
+  // 她只会看到「我明明选了图，怎么没反应」，根本没法判断是自己没点中还是坏了。
+  // 挑图失败必须出声，而且要把真错误带出来。
   const pickPhoto = async (files: FileList | null) => {
     if (photoFileRef.current) photoFileRef.current.value = '';
-    if (!files || sending) return;
+    if (!files) return;
+    if (sending) {
+      setNotice('上一条还在回，等他说完再发图～');
+      return;
+    }
     const remaining = MAX_PHOTOS_PER_SEND - pendingPhotos.length;
-    if (remaining <= 0) return;
+    if (remaining <= 0) {
+      setNotice(`一次最多 ${MAX_PHOTOS_PER_SEND} 张，先发出去再接着挑～`);
+      return;
+    }
     const list = Array.from(files).filter((f) => f.type.startsWith('image/')).slice(0, remaining);
-    if (list.length === 0) return;
-    const ids = await Promise.all(list.map((f) => addPhoto(f)));
-    setPendingPhotos((prev) => [...prev, ...ids]);
+    if (list.length === 0) {
+      setNotice('挑中的这些不是图片格式，加不进来～');
+      return;
+    }
+    try {
+      const ids = await Promise.all(list.map((f) => addPhoto(f)));
+      setPendingPhotos((prev) => [...prev, ...ids]);
+    } catch (err) {
+      setNotice(`照片存不进来：${(err as Error)?.message || String(err)}${await storageHint()}`);
+    }
   };
 
   // 填好金额和留言，发一个红包给予予：先记进落予棠账本(棠棠 → 予予)，再作为一条用户消息发出去。

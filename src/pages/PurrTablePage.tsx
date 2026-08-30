@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom';
 import { streamChat, type ChatMessage, type ContentPart } from '../services/chat';
 import { loadChatBg, loadChatUserAvatar } from '../services/purrConfig';
 import { loadLocal, saveLocal } from '../services/storage';
-import { addPhoto, getPhotoURL, getPhotoDataUrl } from '../services/photos';
+import { addPhoto, getPhotoURL, getPhotoDataUrl, storageHint } from '../services/photos';
 
 // 圆桌成员:只放 CC 家版(用棠棠订阅额度,不烧 API)。
 // pillLabel 是药丸上的全型号名(以后 API Claude 上来也不会混); short 是气泡小圆头像里的简写。
@@ -273,14 +273,21 @@ export function PurrTablePage() {
   };
 
   // 挑图片:一次最多 3 张, 已经有几张就只补足够到 3 张。压缩后存 IndexedDB
+  // 跟呼噜频道同一处坑：addPhoto 失败（存储满/解码不了）时异常被 void 吞掉，
+  // 表现成「选了图，回来什么都没有」。这里也得出声。
   const pickPhotos = async (files: FileList | null) => {
+    if (photoFileRef.current) photoFileRef.current.value = '';
     if (!files || sending) return;
     const remaining = MAX_PHOTOS_PER_SEND - pendingPhotos.length;
     if (remaining <= 0) return;
     const list = Array.from(files).filter((f) => f.type.startsWith('image/')).slice(0, remaining);
-    const ids = await Promise.all(list.map((f) => addPhoto(f)));
-    setPendingPhotos((prev) => [...prev, ...ids]);
-    if (photoFileRef.current) photoFileRef.current.value = '';
+    if (list.length === 0) return;
+    try {
+      const ids = await Promise.all(list.map((f) => addPhoto(f)));
+      setPendingPhotos((prev) => [...prev, ...ids]);
+    } catch (err) {
+      window.alert(`照片存不进来：${(err as Error)?.message || String(err)}${await storageHint()}`);
+    }
   };
 
   const purrMore = async () => {

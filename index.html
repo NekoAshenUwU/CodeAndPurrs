@@ -7,7 +7,12 @@
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- crossorigin="use-credentials" 不能省：站点加了 basic auth 之后，manifest 默认是
+         【不带凭据】去取的（规范如此，不是 bug），会吃一个 401；manifest 一废，name 和
+         icons 跟着废，加到主屏就只剩一个浏览器拿域名首字母画的圆图标。
+         另外 server/open-pwa-icons.py 把 manifest 和几个图标从 auth 里放了出来——图标是
+         浏览器在页面之外单独取的，只靠这一行不保险，两头都堵上。 -->
+    <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="CodeAndPurrs" />

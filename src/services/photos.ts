@@ -112,3 +112,18 @@ export async function getPhotoDataUrl(id: string): Promise<string | null> {
     fr.readAsDataURL(blob);
   });
 }
+
+// 照片存不进去的时候补一句「到底还剩多少」。浏览器抛的原文是
+// QuotaExceededError: The quota has been exceeded. —— 对她等于没说。
+// 这个库只增不减（发过的照片一张都没删过），存储满是迟早的事，
+// 所以报错要顺手把用量报出来，一眼看得出是不是撑爆了。
+export async function storageHint(): Promise<string> {
+  try {
+    const est = await navigator.storage?.estimate?.();
+    if (!est || !est.quota) return '';
+    const mb = (n: number) => `${Math.round(n / 1024 / 1024)}M`;
+    return `（本站已用 ${mb(est.usage ?? 0)} / 上限 ${mb(est.quota)}）`;
+  } catch {
+    return '';
+  }
+}
