@@ -551,6 +551,20 @@ function claimWakeMessage(windowId) {
     `SELECT changes() AS n;`
   );
   if (!claimed.length || Number(claimed[0].n) !== 1) return null;
+
+  // 只送最新那一条，比它旧的【全部一次性作废】，绝不一分钟倒一条。
+  //
+  // 2026-08-30 实测：队列里堆了几条，轮询就一分钟送一条往外倒，
+  // 20:35/20:36/20:36/20:37 连着四句，其中两句一字不差。那不是「他想起我了」，
+  // 是刷屏。攒下来的旧话本来就没必要补送——他此刻想说的只有最新那句。
+  wakeSql(
+    `INSERT OR IGNORE INTO wake_claims (message_id, window_id, claimed_at)
+       SELECT q.id, ${wakeEscape('superseded')}, ${wakeEscape(now)}
+         FROM tang_wake_queue q
+         LEFT JOIN wake_claims c ON c.message_id = q.id
+        WHERE c.message_id IS NULL AND q.id < ${Number(row.id)};`
+  );
+
   return { id: row.id, content: row.content, at: row.created_at };
 }
 
