@@ -4,7 +4,6 @@
 
 const DB_NAME = 'codeandpurrs-memes';
 const STORE = 'memes';
-const DB_VERSION = 1;
 
 export type MemeItem = {
   id: string;
@@ -20,7 +19,8 @@ let dbPromise: Promise<IDBDatabase> | null = null;
 function openDB(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    // 保留设备上已经升级过的贴纸库版本；指定更低版本会直接 VersionError。
+    const req = indexedDB.open(DB_NAME);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) {

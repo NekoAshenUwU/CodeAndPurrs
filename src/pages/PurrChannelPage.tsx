@@ -1236,14 +1236,21 @@ function ChatRoom({
   // 一次最多 3 张,超了切掉多余的; 已经加了几张就只允许补足够
   const MAX_PHOTOS_PER_SEND = 3;
   const pickPhoto = async (files: FileList | null) => {
+    // Android/部分 WebView 会在清空 input.value 后同步清空这份 live FileList。
+    // 必须先复制成普通数组，否则相册明明选了图，下面却会读到 0 张。
+    const selectedFiles = files ? Array.from(files) : [];
     if (photoFileRef.current) photoFileRef.current.value = '';
-    if (!files || sending) return;
+    if (selectedFiles.length === 0 || sending) return;
     const remaining = MAX_PHOTOS_PER_SEND - pendingPhotos.length;
     if (remaining <= 0) return;
-    const list = Array.from(files).filter((f) => f.type.startsWith('image/')).slice(0, remaining);
+    const list = selectedFiles.filter((f) => f.type.startsWith('image/')).slice(0, remaining);
     if (list.length === 0) return;
-    const ids = await Promise.all(list.map((f) => addPhoto(f)));
-    setPendingPhotos((prev) => [...prev, ...ids]);
+    try {
+      const ids = await Promise.all(list.map((f) => addPhoto(f)));
+      setPendingPhotos((prev) => [...prev, ...ids]);
+    } catch (err) {
+      setNotice(`图片没有存进去：${String((err as Error)?.message || err)}`);
+    }
   };
 
   // 填好金额和留言，发一个红包给予予：先记进落予棠账本(棠棠 → 予予)，再作为一条用户消息发出去。

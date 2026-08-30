@@ -4,7 +4,6 @@
 
 const DB_NAME = 'codeandpurrs-photos';
 const STORE = 'photos';
-const DB_VERSION = 1;
 
 const MAX_DIM = 1024;
 const JPEG_QUALITY = 0.8;
@@ -14,7 +13,9 @@ let dbPromise: Promise<IDBDatabase> | null = null;
 function openDB(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    // 不指定版本：直接打开浏览器现有的最高版本，避免旧前端把已经升级过的
+    // 照片库强行按 v1 打开而触发 VersionError。
+    const req = indexedDB.open(DB_NAME);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) {
