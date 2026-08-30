@@ -46,97 +46,66 @@ root = Path(sys.argv[1])
 purr = root / "src/pages/PurrChannelPage.tsx"
 text = purr.read_text(encoding="utf-8")
 
-selected_sentinel = "const selectedFiles = files ? Array.from(files) : [];"
-if selected_sentinel not in text:
-    marker = "  const pickPhoto = async (files: FileList | null) => {\n"
-    if text.count(marker) != 1:
-        raise SystemExit("图片选择回调结构不符，未改动线上。")
-    block = (
-        "    // 复制 FileList 后才能清空 input；Android 会同步清空 live FileList。\n"
-        "    const selectedFiles = files ? Array.from(files) : [];\n"
-    )
-    text = text.replace(marker, marker + block, 1)
+# 线上分支经历过多次人工合并，旧 guard 的具体拼法并不稳定。定位唯一的
+# pickPhoto 函数并整体替换，避免再依赖其中某一行文字。
+function_marker = "  const pickPhoto = async "
+if text.count(function_marker) != 1:
+    raise SystemExit("图片选择函数数量异常，未改动线上。")
+function_start = text.index(function_marker)
+function_end_marker = "\n  };\n"
+function_end = text.find(function_end_marker, function_start)
+if function_end == -1:
+    raise SystemExit("图片选择函数结尾缺失，未改动线上。")
+function_end += len(function_end_marker)
 
-    old_guard = "    if (!files || sending) return;"
-    if text.count(old_guard) != 1:
-        raise SystemExit("图片选择 guard 结构不符，未改动线上。")
-    text = text.replace(old_guard, "    if (selectedFiles.length === 0 || sending) return;", 1)
+max_line = "  const MAX_PHOTOS_PER_SEND = 3;\n"
+if max_line not in text[:function_start]:
+    text = text[:function_start] + max_line + text[function_start:]
+    function_start += len(max_line)
+    function_end += len(max_line)
 
-    old_list = "    const list = Array.from(files).filter((f) => f.type.startsWith('image/')).slice(0, remaining);"
-    if text.count(old_list) != 1:
-        raise SystemExit("图片列表结构不符，未改动线上。")
-    text = text.replace(
-        old_list,
-        "    const list = selectedFiles.filter((f) => f.type.startsWith('image/')).slice(0, remaining);",
-        1,
-    )
+new_function = '''  const pickPhoto = async (files: FileList | null) => {
+    // Android/部分 WebView 的 FileList 是 live 对象；先复制成普通数组再处理。
+    const selectedFiles = files ? Array.from(files) : [];
+    if (selectedFiles.length === 0 || sending) return;
+    const remaining = MAX_PHOTOS_PER_SEND - pendingPhotos.length;
+    if (remaining <= 0) return;
+    // content:// 图片有时没有 MIME；accept 已限定为图片，空 MIME 也接收。
+    const list = selectedFiles.filter((f) => !f.type || f.type.startsWith('image/')).slice(0, remaining);
+    if (list.length === 0) {
+      setNotice('没有读到可用图片，请换一张重试');
+      return;
+    }
+    try {
+      const ids = await Promise.all(list.map((f) => addPhoto(f)));
+      setPendingPhotos((prev) => [...prev, ...ids]);
+    } catch (err) {
+      setNotice(`图片没有存进去：${String((err as Error)?.message || err)}`);
+    }
+  };
+'''
+text = text[:function_start] + new_function + text[function_end:]
 
-# Android 相册多选在部分 Chrome/WebView 上会停在“完成”而不回传；恢复单选，
-# 老婆仍可连续打开相册，最多累计三张待发图。
-old_clear = "    if (photoFileRef.current) photoFileRef.current.value = '';\n"
-if old_clear in text:
-    if text.count(old_clear) != 1:
-        raise SystemExit("图片 input 清理结构不符，未改动线上。")
-    text = text.replace(old_clear, "", 1)
-
-old_filter = "    const list = selectedFiles.filter((f) => f.type.startsWith('image/')).slice(0, remaining);"
-new_filter = "    const list = selectedFiles.filter((f) => !f.type || f.type.startsWith('image/')).slice(0, remaining);"
-if old_filter in text:
-    if text.count(old_filter) != 1:
-        raise SystemExit("图片类型过滤结构不符，未改动线上。")
-    text = text.replace(old_filter, new_filter, 1)
-elif new_filter not in text:
-    raise SystemExit("图片类型过滤结构缺失，未改动线上。")
-
-old_empty = "    if (list.length === 0) return;"
-empty_notice = "没有读到可用图片，请换一张重试"
-if empty_notice not in text:
-    if text.count(old_empty) != 1:
-        raise SystemExit("空图片提示结构不符，未改动线上。")
-    text = text.replace(
-        old_empty,
-        "    if (list.length === 0) {\n"
-        "      setNotice('没有读到可用图片，请换一张重试');\n"
-        "      return;\n"
-        "    }",
-        1,
-    )
-
-input_click = "onClick={(event) => { event.currentTarget.value = ''; }}"
-if input_click not in text:
-    old_input = (
-        '            accept="image/*"\n'
-        "            multiple\n"
-        "            hidden\n"
-        "            onChange={(e) => void pickPhoto(e.target.files)}\n"
-    )
-    new_input = (
-        '            accept="image/*"\n'
-        "            hidden\n"
-        "            onClick={(event) => { event.currentTarget.value = ''; }}\n"
-        "            onChange={(e) => void pickPhoto(e.target.files)}\n"
-    )
-    if text.count(old_input) != 1:
-        raise SystemExit("图片 input 多选结构不符，未改动线上。")
-    text = text.replace(old_input, new_input, 1)
-
-error_sentinel = "图片没有存进去："
-if error_sentinel not in text:
-    old_store = (
-        "    const ids = await Promise.all(list.map((f) => addPhoto(f)));\n"
-        "    setPendingPhotos((prev) => [...prev, ...ids]);\n"
-    )
-    if text.count(old_store) != 1:
-        raise SystemExit("图片存储结构不符，未改动线上。")
-    new_store = (
-        "    try {\n"
-        "      const ids = await Promise.all(list.map((f) => addPhoto(f)));\n"
-        "      setPendingPhotos((prev) => [...prev, ...ids]);\n"
-        "    } catch (err) {\n"
-        "      setNotice(`图片没有存进去：${String((err as Error)?.message || err)}`);\n"
-        "    }\n"
-    )
-    text = text.replace(old_store, new_store, 1)
+# 同样整体替换唯一的相册 input：取消 Android 容易卡住的 multiple，
+# 在打开相册前清空 value，确保同一张图也能再次触发 change。
+input_ref = "ref={photoFileRef}"
+if text.count(input_ref) != 1:
+    raise SystemExit("图片 input 数量异常，未改动线上。")
+ref_index = text.index(input_ref)
+input_start = text.rfind("          <input", 0, ref_index)
+input_end = text.find("          />", ref_index)
+if input_start == -1 or input_end == -1:
+    raise SystemExit("图片 input 边界缺失，未改动线上。")
+input_end += len("          />")
+new_input = '''          <input
+            ref={photoFileRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onClick={(event) => { event.currentTarget.value = ''; }}
+            onChange={(event) => void pickPhoto(event.currentTarget.files)}
+          />'''
+text = text[:input_start] + new_input + text[input_end:]
 
 purr.write_text(text, encoding="utf-8")
 
