@@ -26,6 +26,14 @@ export type SpotifyAIPlayResult = {
   tracks: SpotifyTrack[];
 };
 
+export type SpotifyPlayback = {
+  active: boolean;
+  isPlaying: boolean;
+  progressMs: number;
+  track: SpotifyTrack | null;
+  device: { id: string; name: string; type: string } | null;
+};
+
 type WebPlaybackTrack = {
   uri: string;
   id: string;
@@ -115,6 +123,23 @@ export async function playSpotifyQueries(queries: string[]): Promise<SpotifyAIPl
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ queries }),
+    }),
+  );
+}
+
+export async function getSpotifyPlayback(): Promise<SpotifyPlayback> {
+  return json<SpotifyPlayback>(
+    await fetch('/api/spotify/playback', { credentials: 'include', cache: 'no-store' }),
+  );
+}
+
+export async function controlSpotifyPlayback(action: 'pause' | 'resume' | 'next'): Promise<void> {
+  await json<{ ok: boolean }>(
+    await fetch('/api/spotify/control', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
     }),
   );
 }

@@ -1751,6 +1751,138 @@ a {
   pointer-events: none;
 }
 
+/* AI 点歌成功后留在聊天记录里的 Spotify 控制卡。 */
+.spotify-chat-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  width: min(100%, 440px);
+  padding: 11px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 18px;
+  color: #5d4679;
+  background:
+    radial-gradient(circle at 12% 15%, rgba(187, 255, 246, 0.48), transparent 42%),
+    linear-gradient(135deg, rgba(249, 240, 255, 0.88), rgba(222, 207, 255, 0.72));
+  box-shadow:
+    0 10px 24px rgba(109, 81, 153, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  -webkit-backdrop-filter: blur(22px) saturate(1.25);
+  backdrop-filter: blur(22px) saturate(1.25);
+}
+
+.spotify-chat-card__cover {
+  width: 58px;
+  height: 58px;
+  object-fit: cover;
+  border-radius: 14px;
+  box-shadow: 0 5px 15px rgba(71, 50, 104, 0.2);
+}
+
+.spotify-chat-card__cover--empty {
+  display: grid;
+  place-items: center;
+  color: #7d5da4;
+  font-size: 1.7rem;
+  background: rgba(255, 255, 255, 0.54);
+}
+
+.spotify-chat-card__body {
+  min-width: 0;
+}
+
+.spotify-chat-card__eyebrow,
+.spotify-chat-card__time {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: rgba(93, 70, 121, 0.62);
+  font-size: 0.58rem;
+  line-height: 1.2;
+}
+
+.spotify-chat-card__title,
+.spotify-chat-card__artist {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.spotify-chat-card__title {
+  margin-top: 4px;
+  color: #50376f;
+  font-size: 0.83rem;
+}
+
+.spotify-chat-card__artist {
+  margin-top: 1px;
+  color: rgba(80, 55, 111, 0.72);
+  font-size: 0.65rem;
+}
+
+.spotify-chat-card__timeline {
+  height: 3px;
+  margin-top: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(95, 67, 128, 0.16);
+}
+
+.spotify-chat-card__timeline > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7adfd3, #9f71e9);
+  transition: width 0.35s linear;
+}
+
+.spotify-chat-card__time {
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.spotify-chat-card__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.spotify-chat-card__controls button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 50%;
+  color: #67478e;
+  background: rgba(255, 255, 255, 0.52);
+  box-shadow: 0 4px 12px rgba(91, 65, 126, 0.12);
+  cursor: pointer;
+}
+
+.spotify-chat-card__controls button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+@media (max-width: 420px) {
+  .spotify-chat-card {
+    grid-template-columns: 50px minmax(0, 1fr) auto;
+    gap: 9px;
+    padding: 9px;
+  }
+  .spotify-chat-card__cover {
+    width: 50px;
+    height: 50px;
+  }
+}
+
 /* ---------- 语音气泡（微信式）---------- */
 .voice-wrap {
   display: flex;

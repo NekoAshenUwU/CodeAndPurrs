@@ -1638,6 +1638,70 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (requestPath === '/api/spotify/playback' && req.method === 'GET') {
+      try {
+        const session = await spotifyAccessFor(req);
+        const response = await fetch('https://api.spotify.com/v1/me/player', {
+          headers: { Authorization: `Bearer ${session.accessToken}` },
+        });
+        if (response.status === 204) {
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+          res.end(JSON.stringify({ active: false, isPlaying: false, progressMs: 0, track: null, device: null }));
+          return;
+        }
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data?.error?.message || `Spotify 播放状态查询失败（${response.status}）`);
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify({
+          active: Boolean(data?.item),
+          isPlaying: Boolean(data?.is_playing),
+          progressMs: Number(data?.progress_ms || 0),
+          track: data?.item ? normalizeSpotifyTrack(data.item) : null,
+          device: data?.device?.id ? {
+            id: String(data.device.id),
+            name: String(data.device.name || 'Spotify'),
+            type: String(data.device.type || ''),
+          } : null,
+        }));
+      } catch (err) {
+        const message = String(err?.message || err);
+        const status = message.includes('尚未连接') || message.includes('登录已失效') ? 401 : 400;
+        res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify({ error: message }));
+      }
+      return;
+    }
+
+    if (requestPath === '/api/spotify/control' && req.method === 'POST') {
+      try {
+        const body = await readJSON(req);
+        const action = String(body?.action || '');
+        const command = {
+          pause: { method: 'PUT', path: 'pause' },
+          resume: { method: 'PUT', path: 'play' },
+          next: { method: 'POST', path: 'next' },
+        }[action];
+        if (!command) throw new Error('不支持这个播放操作');
+        const session = await spotifyAccessFor(req);
+        const response = await fetch(`https://api.spotify.com/v1/me/player/${command.path}`, {
+          method: command.method,
+          headers: { Authorization: `Bearer ${session.accessToken}` },
+        });
+        if (!response.ok && response.status !== 204) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data?.error?.message || `Spotify 播放控制失败（${response.status}）`);
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (err) {
+        const message = String(err?.message || err);
+        const status = message.includes('尚未连接') || message.includes('登录已失效') ? 401 : 400;
+        res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify({ error: message }));
+      }
+      return;
+    }
+
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'not found' }));
     return;

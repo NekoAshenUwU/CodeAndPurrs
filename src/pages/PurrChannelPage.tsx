@@ -14,7 +14,13 @@ import { playHongbaoChime } from '../services/hongbaoSound';
 import { fetchLatestUsage } from '../services/usageBridge';
 import { fetchLocationLatest, reverseGeocode } from '../services/locationBridge';
 import { getTimeOfDay } from '../components/ambient/timeOfDay';
-import { playSpotifyQueries } from '../services/spotify';
+import {
+  controlSpotifyPlayback,
+  getSpotifyPlayback,
+  playSpotifyQueries,
+  type SpotifyPlayback,
+  type SpotifyTrack,
+} from '../services/spotify';
 
 const WINDOWS_KEY = 'purr-channel:windows';
 const LEGACY_TURNS_KEY = 'purr-channel:turns'; // 旧版单一对话，首次进入迁移成一个窗口
@@ -99,6 +105,7 @@ type Turn = {
   at?: number; // 消息创建时间戳
   thinkMs?: number; // 思考链耗时（从第一段思考到开始正式回复），用来显示「想了 N 秒」
   editHistory?: string[]; // 这条消息编辑过的历史版本（按时间顺序，旧→较新），当前展示的是 content
+  spotify?: { deviceName: string; tracks: SpotifyTrack[]; startedAt: number }; // AI 点歌成功后嵌在回复里的播放器卡
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -139,6 +146,105 @@ function extractSpotifyPlaylistQueries(content: string): string[] {
     }
   }
   return queries;
+}
+
+function SpotifyMusicCard({
+  attachment,
+  onError,
+}: {
+  attachment: NonNullable<Turn['spotify']>;
+  onError: (message: string) => void;
+}) {
+  const [snapshot, setSnapshot] = useState<{ playback: SpotifyPlayback; checkedAt: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [clock, setClock] = useState(Date.now());
+  const fallback = attachment.tracks[0];
+
+  const refresh = async () => {
+    try {
+      const playback = await getSpotifyPlayback();
+      setSnapshot({ playback, checkedAt: Date.now() });
+    } catch {
+      // 卡片仍可用点歌时返回的资料显示；短暂网络错误不把整张卡变成报错。
+    }
+  };
+
+  useEffect(() => {
+    void refresh();
+    const poll = window.setInterval(() => void refresh(), 5_000);
+    const tick = window.setInterval(() => setClock(Date.now()), 1_000);
+    return () => {
+      window.clearInterval(poll);
+      window.clearInterval(tick);
+    };
+    // 每张历史卡只在挂载时建立自己的状态轮询。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const live = snapshot?.playback;
+  const liveUri = live?.track?.uri;
+  const liveBelongsToCard = Boolean(
+    liveUri && attachment.tracks.some((item) => item.uri === liveUri),
+  );
+  const track = liveBelongsToCard ? live?.track || fallback : fallback;
+  const isPlaying = snapshot ? liveBelongsToCard && Boolean(live?.active && live.isPlaying) : true;
+  const baseProgress = liveBelongsToCard ? Number(live?.progressMs || 0) : Math.max(0, snapshot ? 0 : clock - attachment.startedAt);
+  const movingProgress = isPlaying && snapshot ? baseProgress + Math.max(0, clock - snapshot.checkedAt) : baseProgress;
+  const duration = Math.max(1, track?.durationMs || 1);
+  const progress = Math.min(duration, Math.max(0, movingProgress));
+  const queued = attachment.tracks.length > 1 ? `队列 ${attachment.tracks.length} 首` : attachment.deviceName;
+
+  const control = async (action: 'pause' | 'resume' | 'next') => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await controlSpotifyPlayback(action);
+      await new Promise<void>((resolve) => window.setTimeout(resolve, action === 'next' ? 500 : 180));
+      await refresh();
+    } catch (err) {
+      onError(String((err as Error)?.message || err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="spotify-chat-card" aria-label="Spotify 正在播放">
+      {track?.image ? (
+        <img className="spotify-chat-card__cover" src={track.image} alt="" />
+      ) : (
+        <span className="spotify-chat-card__cover spotify-chat-card__cover--empty" aria-hidden="true">♪</span>
+      )}
+      <div className="spotify-chat-card__body">
+        <div className="spotify-chat-card__eyebrow">
+          <span>Listening Together</span>
+          <span>{queued}</span>
+        </div>
+        <strong className="spotify-chat-card__title">{track?.name || 'Spotify'}</strong>
+        <span className="spotify-chat-card__artist">{track?.artist || '正在准备播放'}</span>
+        <div className="spotify-chat-card__timeline" aria-label={`已播放 ${fmt(Math.floor(progress / 1000))}`}>
+          <span style={{ width: `${(progress / duration) * 100}%` }} />
+        </div>
+        <div className="spotify-chat-card__time">
+          <span>{fmt(Math.floor(progress / 1000))}</span>
+          <span>{fmt(Math.floor(duration / 1000))}</span>
+        </div>
+      </div>
+      <div className="spotify-chat-card__controls">
+        <button
+          type="button"
+          disabled={busy || Boolean(snapshot && !liveBelongsToCard)}
+          onClick={() => void control(isPlaying ? 'pause' : 'resume')}
+          aria-label={isPlaying ? '暂停' : '继续播放'}
+        >
+          {busy ? '…' : isPlaying ? 'Ⅱ' : '▶'}
+        </button>
+        {attachment.tracks.length > 1 ? (
+          <button type="button" disabled={busy || Boolean(snapshot && !liveBelongsToCard)} onClick={() => void control('next')} aria-label="下一首">›|</button>
+        ) : null}
+      </div>
+    </section>
+  );
 }
 
 // 思考链折叠卡片：流式思考时自动展开，思考结束自动收起。
@@ -1452,6 +1558,9 @@ function ChatRoom({
                 .then((result) => {
                   const first = result.tracks[0];
                   const suffix = result.tracks.length > 1 ? ` 等 ${result.tracks.length} 首` : '';
+                  patchTurn(botId, {
+                    spotify: { deviceName: result.device.name, tracks: result.tracks, startedAt: Date.now() },
+                  });
                   setNotice(`正在 ${result.device.name} 播放 · ${first.name}${suffix}`);
                 })
                 .catch((err) => {
@@ -1859,6 +1968,7 @@ function ChatRoom({
                     );
                   })()
                 )}
+                {turn.spotify ? <SpotifyMusicCard attachment={turn.spotify} onError={setNotice} /> : null}
                 {turn.redPacket ? (
                   <RedPacketBubble
                     amount={turn.redPacket.amount}
