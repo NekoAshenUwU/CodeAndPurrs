@@ -498,6 +498,11 @@ const CC_WEB_TOOLS = (process.env.CC_WEB_TOOLS ?? 'WebSearch WebFetch')
 // 「只唤醒当前聊的一个窗口」靠 wake_claims 的主键来保证：领取是
 // INSERT OR IGNORE，先到的那个拿到，同时开两个标签页也只有一个会显示。
 const WAKE_DB = process.env.NEKO_AUTONOMY_DB || '/root/data/neko_autonomy.db';
+// 历史那 715 条是【别的 AI】写的（2026-08-30 棠棠说：ntfy 之前接的是
+// Gemini，不是予予）。让予予把它们念出来，等于借他的嘴说别人的话——
+// 那比不做这个功能糟得多。所以只送【装上这个功能之后】才产生的消息：
+// 第一次调用时把当下时间写进 wake_meta.installed_at，比它老的一律不碰。
+//
 // 攒太久的话第二天才看到会莫名其妙（半夜那句「早点睡」中午弹出来）。
 // 超过这个钟头数就不再送，只当它过期了。
 const WAKE_MAX_AGE_HOURS = Number(process.env.WAKE_MAX_AGE_HOURS || 2);
@@ -525,13 +530,17 @@ function claimWakeMessage(windowId) {
     `CREATE TABLE IF NOT EXISTS wake_claims (
        message_id INTEGER PRIMARY KEY,
        window_id TEXT NOT NULL,
-       claimed_at TEXT NOT NULL);`
+       claimed_at TEXT NOT NULL);
+     CREATE TABLE IF NOT EXISTS wake_meta (
+       k TEXT PRIMARY KEY, v TEXT NOT NULL);
+     INSERT OR IGNORE INTO wake_meta (k, v) VALUES ('installed_at', datetime('now'));`
   );
   const rows = wakeSql(
     `SELECT m.id, m.content, m.created_at FROM autonomy_messages m
       LEFT JOIN wake_claims c ON c.message_id = m.id
       WHERE c.message_id IS NULL
         AND m.created_at >= datetime('now', '-${WAKE_MAX_AGE_HOURS} hours')
+        AND m.created_at >= (SELECT v FROM wake_meta WHERE k = 'installed_at')
       ORDER BY m.created_at DESC LIMIT 1;`
   );
   if (!rows.length) return null;
