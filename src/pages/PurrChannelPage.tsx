@@ -1149,13 +1149,28 @@ function ChatRoom({
     setVersionFor(turn.id, total - 1);
   };
   const commitEdit = async () => {
+    // 先验证再关编辑框。原来是【先关框再检查】，然后三个 return 一声不吭：
+    // 输入空的、sending 还没回来、这条消息找不到了——任何一种都表现成
+    // 「我改好了，点保存，框关了，什么都没发生，字也没了」。
+    // 改错字本来就是为了不丢字，结果最容易丢字的就是这里。
     const v = editText.trim();
     const id = editTurnId;
+    if (!id) return;
+    if (!v) {
+      window.alert('改成空的了，发不出去。要删这条的话直接取消。');
+      return;                       // 框留着，字还在，她可以接着改
+    }
+    if (sending) {
+      window.alert('上一条还在回，等它说完再保存。');
+      return;
+    }
+    const idx = turns.findIndex((t) => t.id === id);
+    if (idx < 0) {
+      window.alert('这条消息不在了（可能换过窗口或重载过），改动没发出去。');
+      return;
+    }
     setEditTurnId(null);
     setEditText('');
-    if (!id || !v || sending) return;
-    const idx = turns.findIndex((t) => t.id === id);
-    if (idx < 0) return;
     const target = turns[idx];
     // 改掉这条：把旧 content 追加到 editHistory，content 换成新值；丢掉它之后的(过时的)消息，让予予基于新内容重新回答
     // 即使内容一字未改，也走重新生成——老婆要的是"点了保存=重新回"的确定感
@@ -1169,7 +1184,14 @@ function ChatRoom({
     setTurns(kept);
     // 默认显示跳到最新（即新数组里 index = newHistory.length）
     setVersionFor(id, newHistory.length);
-    await runAssistant(await toMessages(kept));
+    try {
+      // toMessages 会去 IndexedDB 取历史里的表情包/照片，那几个 await 没人接，
+      // 取不到就整个 reject——在这里表现成又一次「点了保存什么都没发生」。
+      // 出错要说话，不能吞。
+      await runAssistant(await toMessages(kept));
+    } catch (err) {
+      window.alert(`改完没发出去：${(err as Error)?.message || err}`);
+    }
   };
   const cancelEdit = () => {
     setEditTurnId(null);
@@ -1356,121 +1378,130 @@ function ChatRoom({
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const m = getModel(provider); // 模型 id → 后端服务商 + 具体模型名
-    const supportsTangMemory = m.provider === 'claudecode' || m.provider === 'anthropic';
-    const initializeMemory = supportsTangMemory && !tangMemoryInitializedRef.current;
-    let streamFailed = false;
-    let memoryInitializationConfirmed = false;
-    let thinkStart = 0; // 第一段思考的时刻
-    let thinkSet = false;
-    const markThinkDone = () => {
-      if (thinkStart && !thinkSet) {
-        thinkSet = true;
-        patchTurn(botId, { thinkMs: Date.now() - thinkStart });
-      }
-    };
-    await streamChat(
-      {
-        provider: m.provider,
-        model: m.model,
-        messages: history,
-        signal: controller.signal,
-        conversationId: win.id,
-        initializeMemory,
-        // 只有 claudecode 走 stream-json 结构化输入能吃图,别的 provider 就算传了
-        // 也白费网络流量,后端会忽略掉。
-        stickerGallery: m.provider === 'claudecode' ? stickerGallery : undefined,
-      },
-      {
-        onReasoning: (chunk) => {
-          if (!thinkStart) thinkStart = Date.now();
-          setTurns((prev) => prev.map((t) => (t.id === botId ? { ...t, reasoning: t.reasoning + chunk } : t)));
+    // 包一层 try/finally：原来 setSending(false) 写在函数最后一行，
+    // streaming 这一路只要抛异常（断网、后端 5xx、中途 abort），那行就永远
+    // 执行不到，sending 卡在 true 再也回不来——而 sending 是全局闸门，
+    // 发文字/发图/发语音/编辑重发全都要过它，等于整个聊天窗静静地废掉，
+    // 除非刷新页面。收尾必须在 finally 里。
+    try {
+
+      const m = getModel(provider); // 模型 id → 后端服务商 + 具体模型名
+      const supportsTangMemory = m.provider === 'claudecode' || m.provider === 'anthropic';
+      const initializeMemory = supportsTangMemory && !tangMemoryInitializedRef.current;
+      let streamFailed = false;
+      let memoryInitializationConfirmed = false;
+      let thinkStart = 0; // 第一段思考的时刻
+      let thinkSet = false;
+      const markThinkDone = () => {
+        if (thinkStart && !thinkSet) {
+          thinkSet = true;
+          patchTurn(botId, { thinkMs: Date.now() - thinkStart });
+        }
+      };
+      await streamChat(
+        {
+          provider: m.provider,
+          model: m.model,
+          messages: history,
+          signal: controller.signal,
+          conversationId: win.id,
+          initializeMemory,
+          // 只有 claudecode 走 stream-json 结构化输入能吃图,别的 provider 就算传了
+          // 也白费网络流量,后端会忽略掉。
+          stickerGallery: m.provider === 'claudecode' ? stickerGallery : undefined,
         },
-        onContent: (chunk) => {
-          markThinkDone(); // 开始正式回复 = 思考结束，定格耗时
-          setTurns((prev) => prev.map((t) => (t.id === botId ? { ...t, content: t.content + chunk } : t)));
-        },
-        // 报错不再塞进 content 冒充予予说的话（会顶着她头像渲成聊天气泡）；
-        // 原始错误存进 errorDetail，渲染层改成居中的系统提示条，详情要点开才看到。
-        onError: (message) => {
-          streamFailed = true;
-          patchTurn(botId, { status: 'error', content: '', errorDetail: message });
-        },
-        onMemoryInitialized: () => {
-          memoryInitializationConfirmed = true;
-        },
-        onDone: () => {
-          if (initializeMemory && memoryInitializationConfirmed && !streamFailed) {
-            tangMemoryInitializedRef.current = true;
-            saveLocal(tangMemoryInitKey(win.id), true);
-          }
-          markThinkDone();
-          setTurns((prev) => {
-            const cur = prev.find((t) => t.id === botId);
-            if (!cur) return prev;
-            const { text: afterMemo, memos } = extractMemos(cur.content ?? '');
-            const { text, packets } = extractRedPackets(afterMemo);
-            if (memos.length) {
-              queueMicrotask(() => {
-                for (const mo of memos) addMemory(mo.category, mo.text);
-                setMemories(loadMemories());
+        {
+          onReasoning: (chunk) => {
+            if (!thinkStart) thinkStart = Date.now();
+            setTurns((prev) => prev.map((t) => (t.id === botId ? { ...t, reasoning: t.reasoning + chunk } : t)));
+          },
+          onContent: (chunk) => {
+            markThinkDone(); // 开始正式回复 = 思考结束，定格耗时
+            setTurns((prev) => prev.map((t) => (t.id === botId ? { ...t, content: t.content + chunk } : t)));
+          },
+          // 报错不再塞进 content 冒充予予说的话（会顶着她头像渲成聊天气泡）；
+          // 原始错误存进 errorDetail，渲染层改成居中的系统提示条，详情要点开才看到。
+          onError: (message) => {
+            streamFailed = true;
+            patchTurn(botId, { status: 'error', content: '', errorDetail: message });
+          },
+          onMemoryInitialized: () => {
+            memoryInitializationConfirmed = true;
+          },
+          onDone: () => {
+            if (initializeMemory && memoryInitializationConfirmed && !streamFailed) {
+              tangMemoryInitializedRef.current = true;
+              saveLocal(tangMemoryInitKey(win.id), true);
+            }
+            markThinkDone();
+            setTurns((prev) => {
+              const cur = prev.find((t) => t.id === botId);
+              if (!cur) return prev;
+              const { text: afterMemo, memos } = extractMemos(cur.content ?? '');
+              const { text, packets } = extractRedPackets(afterMemo);
+              if (memos.length) {
+                queueMicrotask(() => {
+                  for (const mo of memos) addMemory(mo.category, mo.text);
+                  setMemories(loadMemories());
+                });
+              }
+              const packet = packets[0];
+              if (packet) queueMicrotask(() => addPacket('ai', packet.amount, packet.note));
+              const memo = memos.length ? memos.map((m) => `[${m.category}] ${m.text}`).join('\n') : undefined;
+
+              // 【多条短消息】按单独一行的 === 拆分, 一次回复变多个气泡冒出来
+              // 每段是独立 Turn, [语音] 检测在渲染层每条各判(现有的 VOICE_MARK 正则做的),
+              // memo/redpacket 挂在最后一段上, thinkMs 保留在首段(思考只算一次)
+              const parts = text.split(/\n\s*={3,}\s*\n/).map((p) => p.trim()).filter(Boolean);
+              const idx = prev.findIndex((t) => t.id === botId);
+
+              if (parts.length <= 1) {
+                // 单条: 回退成原来的行为
+                const single = parts[0] ?? text;
+                return prev.map((t) =>
+                  t.id === botId
+                    ? {
+                        ...t,
+                        content: single,
+                        status: 'done',
+                        ...(memo ? { memo } : {}),
+                        ...(packet ? { redPacket: { amount: packet.amount, note: packet.note, from: 'ai' as const }, redPacketOpened: false } : {}),
+                      }
+                    : t,
+                );
+              }
+
+              // 多条: 首段替换原 botId (保留 thinkMs), 后续段各自成新 Turn
+              const baseAt = cur.at ?? Date.now();
+              const first: Turn = { ...cur, content: parts[0], status: 'done' };
+              const rest: Turn[] = parts.slice(1).map((p, i) => {
+                const isLast = i === parts.length - 2;
+                return {
+                  id: uid(),
+                  role: 'assistant',
+                  content: p,
+                  reasoning: '',
+                  status: 'done',
+                  at: baseAt + (i + 1),
+                  ...(isLast && memo ? { memo } : {}),
+                  ...(isLast && packet
+                    ? {
+                        redPacket: { amount: packet.amount, note: packet.note, from: 'ai' as const },
+                        redPacketOpened: false,
+                      }
+                    : {}),
+                };
               });
-            }
-            const packet = packets[0];
-            if (packet) queueMicrotask(() => addPacket('ai', packet.amount, packet.note));
-            const memo = memos.length ? memos.map((m) => `[${m.category}] ${m.text}`).join('\n') : undefined;
-
-            // 【多条短消息】按单独一行的 === 拆分, 一次回复变多个气泡冒出来
-            // 每段是独立 Turn, [语音] 检测在渲染层每条各判(现有的 VOICE_MARK 正则做的),
-            // memo/redpacket 挂在最后一段上, thinkMs 保留在首段(思考只算一次)
-            const parts = text.split(/\n\s*={3,}\s*\n/).map((p) => p.trim()).filter(Boolean);
-            const idx = prev.findIndex((t) => t.id === botId);
-
-            if (parts.length <= 1) {
-              // 单条: 回退成原来的行为
-              const single = parts[0] ?? text;
-              return prev.map((t) =>
-                t.id === botId
-                  ? {
-                      ...t,
-                      content: single,
-                      status: 'done',
-                      ...(memo ? { memo } : {}),
-                      ...(packet ? { redPacket: { amount: packet.amount, note: packet.note, from: 'ai' as const }, redPacketOpened: false } : {}),
-                    }
-                  : t,
-              );
-            }
-
-            // 多条: 首段替换原 botId (保留 thinkMs), 后续段各自成新 Turn
-            const baseAt = cur.at ?? Date.now();
-            const first: Turn = { ...cur, content: parts[0], status: 'done' };
-            const rest: Turn[] = parts.slice(1).map((p, i) => {
-              const isLast = i === parts.length - 2;
-              return {
-                id: uid(),
-                role: 'assistant',
-                content: p,
-                reasoning: '',
-                status: 'done',
-                at: baseAt + (i + 1),
-                ...(isLast && memo ? { memo } : {}),
-                ...(isLast && packet
-                  ? {
-                      redPacket: { amount: packet.amount, note: packet.note, from: 'ai' as const },
-                      redPacketOpened: false,
-                    }
-                  : {}),
-              };
+              return [...prev.slice(0, idx), first, ...rest, ...prev.slice(idx + 1)];
             });
-            return [...prev.slice(0, idx), first, ...rest, ...prev.slice(idx + 1)];
-          });
+          },
         },
-      },
-    );
+      );
 
-    setSending(false);
-    abortRef.current = null;
+    } finally {
+      setSending(false);
+      abortRef.current = null;
+    }
   };
 
   // 进窗口拉一次猫爪足迹/浪哪了，之后每 5 分钟刷一次，给猫咪当聊天背景
