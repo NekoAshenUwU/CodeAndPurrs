@@ -16,6 +16,10 @@ import { fetchLocationLatest, reverseGeocode } from '../services/locationBridge'
 import { getTimeOfDay } from '../components/ambient/timeOfDay';
 
 const WINDOWS_KEY = 'purr-channel:windows';
+// 多久问一次「有话要带给我吗」。后端那个 runner 每小时才跑一次，
+// 问太密没意义；60 秒是「她切回来最多等一分钟」和「别白发请求」之间的折中。
+// 切回前台时会立刻问一次，所以实际感受比 60 秒快。
+const WAKE_POLL_MS = 60_000;
 const LEGACY_TURNS_KEY = 'purr-channel:turns'; // 旧版单一对话，首次进入迁移成一个窗口
 const turnsKey = (id: string) => `purr-channel:turns:${id}`;
 const tangMemoryInitKey = (id: string) => `purr-channel:tang-memory-initialized:${id}`;
@@ -1370,6 +1374,44 @@ function ChatRoom({
   };
 
   // 让猫咪基于给定历史回一条
+  // ---- 主动唤醒：予予自己开口的话，由【当前这个窗口】来领 ----
+  //
+  // 服务端不记「当前窗口是哪个」——那个状态天生易变（切窗、关页面、换设备）。
+  // 让正在用的这个自己来拿，「当前」就不需要被记住，也就不会记错。
+  // 领取在服务端是原子的：同时开两个标签页也只有先到的那个拿到。
+  useEffect(() => {
+    let alive = true;
+    const ask = async () => {
+      // 页面在后台不去问：她根本看不见，领走了反而白白消耗掉那句话。
+      if (document.visibilityState !== 'visible') return;
+      // 正在回话时不插队，等这轮说完。
+      if (sending) return;
+      try {
+        const r = await fetch(`/api/wake/pending?windowId=${encodeURIComponent(win.id)}`);
+        if (!r.ok) return;
+        const { message } = await r.json();
+        if (!alive || !message?.content) return;
+        scrollToReplyRef.current = true;
+        setTurns((prev) => [...prev, {
+          id: uid(), role: 'assistant', content: String(message.content),
+          reasoning: '', status: 'done', at: Date.now(),
+        }]);
+      } catch {
+        // 网络不好、后端没起、库不在——都当作「他现在没话说」。
+        // 沉默是默认，绝不在聊天里冒出一条错误提示。
+      }
+    };
+    void ask();
+    const timer = window.setInterval(ask, WAKE_POLL_MS);
+    const onVisible = () => { if (document.visibilityState === 'visible') void ask(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [win.id, sending]);
+
   const runAssistant = async (history: ChatMessage[]) => {
     const botId = uid();
     scrollToReplyRef.current = true;

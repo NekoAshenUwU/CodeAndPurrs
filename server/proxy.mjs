@@ -5,7 +5,7 @@
 // 没配 key 也能跑：自动进入 mock 模式，回一段假的流式消息，方便先调 UI。
 
 import http from 'node:http';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { readFileSync, existsSync, writeFileSync, mkdirSync, statSync, renameSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -484,6 +484,67 @@ const CC_WEB_TOOLS = (process.env.CC_WEB_TOOLS ?? 'WebSearch WebFetch')
   .trim()
   .split(/\s+/)
   .filter(Boolean);
+
+
+// ---------- 主动唤醒 · 把予予已经说出口的话领进当前聊天窗 ----------
+//
+// 【不碰 /root/neko_autonomy.py】那个每小时跑一次的脚本已经在决定「什么时候
+// 说、说什么」，说完写进 autonomy_messages 并推 ntfy。我们要的只是让【正在
+// 用的那个聊天窗】也能把这句话领走——所以这里只读它的产物，一个字不改它。
+//
+// 为什么不另写一套：家克就是予予（2026-08-30 棠棠指出）。再写一套等于两个
+// 独立的日限叠加（一天最多 12 条），同一句话还会 ntfy 推一次、聊天窗再来一次。
+//
+// 「只唤醒当前聊的一个窗口」靠 wake_claims 的主键来保证：领取是
+// INSERT OR IGNORE，先到的那个拿到，同时开两个标签页也只有一个会显示。
+const WAKE_DB = process.env.NEKO_AUTONOMY_DB || '/root/data/neko_autonomy.db';
+// 攒太久的话第二天才看到会莫名其妙（半夜那句「早点睡」中午弹出来）。
+// 超过这个钟头数就不再送，只当它过期了。
+const WAKE_MAX_AGE_HOURS = Number(process.env.WAKE_MAX_AGE_HOURS || 2);
+
+function wakeSql(sql) {
+  const r = spawnSync('sqlite3', ['-json', WAKE_DB], { input: sql, encoding: 'utf-8' });
+  if (r.error) throw r.error;
+  if (r.status !== 0) throw new Error(`sqlite3 exited ${r.status}: ${r.stderr}`);
+  const out = (r.stdout || '').trim();
+  return out ? JSON.parse(out) : [];
+}
+
+function wakeEscape(s) {
+  return `'${String(s).replace(/'/g, "''")}'`;
+}
+
+/**
+ * 取一条还没被任何窗口领走的话，并当场标记为已领。
+ * 没有就返回 null——沉默是默认，不硬凑话说。
+ */
+function claimWakeMessage(windowId) {
+  const now = new Date().toISOString();
+  // wake_claims 是新表，只往 neko_autonomy.db 里加，不动它原有的任何一张。
+  wakeSql(
+    `CREATE TABLE IF NOT EXISTS wake_claims (
+       message_id INTEGER PRIMARY KEY,
+       window_id TEXT NOT NULL,
+       claimed_at TEXT NOT NULL);`
+  );
+  const rows = wakeSql(
+    `SELECT m.id, m.content, m.created_at FROM autonomy_messages m
+      LEFT JOIN wake_claims c ON c.message_id = m.id
+      WHERE c.message_id IS NULL
+        AND m.created_at >= datetime('now', '-${WAKE_MAX_AGE_HOURS} hours')
+      ORDER BY m.created_at DESC LIMIT 1;`
+  );
+  if (!rows.length) return null;
+  const row = rows[0];
+  // 领取：主键冲突就说明别的窗口先拿到了，changes() 会是 0。
+  const claimed = wakeSql(
+    `INSERT OR IGNORE INTO wake_claims (message_id, window_id, claimed_at) ` +
+    `VALUES (${Number(row.id)}, ${wakeEscape(windowId || 'unknown')}, ${wakeEscape(now)});` +
+    `SELECT changes() AS n;`
+  );
+  if (!claimed.length || Number(claimed[0].n) !== 1) return null;
+  return { id: row.id, content: row.content, at: row.created_at };
+}
 
 const PORT = Number(process.env.PORT) || 8787;
 
@@ -1439,6 +1500,7 @@ const server = http.createServer(async (req, res) => {
   const requestPath = requestUrl.pathname;
   const isChatSaves = requestPath === '/api/chat-saves' || requestPath.startsWith('/api/chat-saves/');
   const isSpotify = requestPath === '/api/spotify' || requestPath.startsWith('/api/spotify/');
+  const isWakePending = requestPath === '/api/wake/pending';
 
   // ----- 他的歌单：Spotify 登录、点歌和播放 -----
   if (isSpotify) {
@@ -1680,6 +1742,26 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ----- 倾棠予梦：棠予酿记忆映射成花朵数组，60 秒内存缓存 -----
+  // ----- 主动唤醒：当前这个聊天窗来领一句予予主动说的话 -----
+  if (isWakePending) {
+    if (req.method !== 'GET') {
+      res.writeHead(405, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'method not allowed' }));
+      return;
+    }
+    let message = null;
+    try {
+      message = claimWakeMessage(requestUrl.searchParams.get('windowId') || '');
+    } catch (err) {
+      // 库不在、表还没建、sqlite3 没装——都不该让聊天页报错。
+      // 沉默是默认：没有话就是没有话。
+      console.warn('[wake] 领取失败：%s', err?.message || err);
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ message }));
+    return;
+  }
+
   if (isMurmursFlowers) {
     if (req.method !== 'GET') {
       res.writeHead(405, { 'Content-Type': 'application/json' });
