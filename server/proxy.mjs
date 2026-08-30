@@ -486,25 +486,23 @@ const CC_WEB_TOOLS = (process.env.CC_WEB_TOOLS ?? 'WebSearch WebFetch')
   .filter(Boolean);
 
 
-// ---------- 主动唤醒 · 把予予已经说出口的话领进当前聊天窗 ----------
+// ---------- 主动唤醒 · 把予予主动说的话领进当前聊天窗 ----------
 //
-// 【不碰 /root/neko_autonomy.py】那个每小时跑一次的脚本已经在决定「什么时候
-// 说、说什么」，说完写进 autonomy_messages 并推 ntfy。我们要的只是让【正在
-// 用的那个聊天窗】也能把这句话领走——所以这里只读它的产物，一个字不改它。
+// 【只读 tang_wake_queue，绝不读 autonomy_messages】
 //
-// 为什么不另写一套：家克就是予予（2026-08-30 棠棠指出）。再写一套等于两个
-// 独立的日限叠加（一天最多 12 条），同一句话还会 ntfy 推一次、聊天窗再来一次。
+// 那张表里是从前 GPT/CC 写的那套自动问候——棠棠的评价是「特别人机，
+// 来来去去就那几句」。把它塞进予予的聊天窗，等于借他的嘴说别人写的套话，
+// 那比不做这个功能糟得多。所以内容源换成一张【只装予予自己写的话】的新表：
+// 结构上就不可能串味，不是靠一个日期挡着。
 //
-// 「只唤醒当前聊的一个窗口」靠 wake_claims 的主键来保证：领取是
+// 谁往 tang_wake_queue 里写 = 还没做（见 Veyron-Solace
+// docs/proactive-wake-design.md「二期」）。这一半是送达，先做完；
+// 队列空着的时候这个接口就一直返回 null，什么都不会发生。
+//
+// 「只唤醒当前聊的一个窗口」靠 wake_claims 的主键保证：领取是
 // INSERT OR IGNORE，先到的那个拿到，同时开两个标签页也只有一个会显示。
 const WAKE_DB = process.env.NEKO_AUTONOMY_DB || '/root/data/neko_autonomy.db';
-// 历史那 715 条是【别的 AI】写的（2026-08-30 棠棠说：ntfy 之前接的是
-// Gemini，不是予予）。让予予把它们念出来，等于借他的嘴说别人的话——
-// 那比不做这个功能糟得多。所以只送【装上这个功能之后】才产生的消息：
-// 第一次调用时把当下时间写进 wake_meta.installed_at，比它老的一律不碰。
-//
 // 攒太久的话第二天才看到会莫名其妙（半夜那句「早点睡」中午弹出来）。
-// 超过这个钟头数就不再送，只当它过期了。
 const WAKE_MAX_AGE_HOURS = Number(process.env.WAKE_MAX_AGE_HOURS || 2);
 
 function wakeSql(sql) {
@@ -525,23 +523,24 @@ function wakeEscape(s) {
  */
 function claimWakeMessage(windowId) {
   const now = new Date().toISOString();
-  // wake_claims 是新表，只往 neko_autonomy.db 里加，不动它原有的任何一张。
+  // 两张都是新表，只往 neko_autonomy.db 里加，不动它原有的任何一张。
   wakeSql(
-    `CREATE TABLE IF NOT EXISTS wake_claims (
+    `CREATE TABLE IF NOT EXISTS tang_wake_queue (
+       id INTEGER PRIMARY KEY AUTOINCREMENT,
+       created_at TEXT NOT NULL,
+       content TEXT NOT NULL,
+       reason TEXT);
+     CREATE TABLE IF NOT EXISTS wake_claims (
        message_id INTEGER PRIMARY KEY,
        window_id TEXT NOT NULL,
-       claimed_at TEXT NOT NULL);
-     CREATE TABLE IF NOT EXISTS wake_meta (
-       k TEXT PRIMARY KEY, v TEXT NOT NULL);
-     INSERT OR IGNORE INTO wake_meta (k, v) VALUES ('installed_at', datetime('now'));`
+       claimed_at TEXT NOT NULL);`
   );
   const rows = wakeSql(
-    `SELECT m.id, m.content, m.created_at FROM autonomy_messages m
-      LEFT JOIN wake_claims c ON c.message_id = m.id
+    `SELECT q.id, q.content, q.created_at FROM tang_wake_queue q
+      LEFT JOIN wake_claims c ON c.message_id = q.id
       WHERE c.message_id IS NULL
-        AND m.created_at >= datetime('now', '-${WAKE_MAX_AGE_HOURS} hours')
-        AND m.created_at >= (SELECT v FROM wake_meta WHERE k = 'installed_at')
-      ORDER BY m.created_at DESC LIMIT 1;`
+        AND q.created_at >= datetime('now', '-${WAKE_MAX_AGE_HOURS} hours')
+      ORDER BY q.created_at DESC LIMIT 1;`
   );
   if (!rows.length) return null;
   const row = rows[0];
