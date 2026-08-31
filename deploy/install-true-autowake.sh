@@ -15,6 +15,7 @@ readonly FILES=(
   "src/components/AutoWakeBridge.tsx"
   "src/pages/PurrChannelPage.tsx"
   "src/services/autowake.ts"
+  "src/services/chat.ts"
   "src/services/spotify.ts"
   "src/services/storage.ts"
   "src/styles/global.css"
@@ -143,6 +144,12 @@ grep -Fq "jiake-opus-5" "${STAGE}/src/data/models.ts"
 grep -Fq "handleAutoWakeRequest" "${STAGE}/server/proxy.mjs"
 grep -Fq "handleScreenFrameRequest" "${STAGE}/server/proxy.mjs"
 grep -Fq "fetchLatestScreenFrame" "${STAGE}/src/pages/PurrChannelPage.tsx"
+grep -Fq "MEMORY_MCP_RULE" "${STAGE}/server/proxy.mjs"
+grep -Fq "const mem = memoryMcpConfig()" "${STAGE}/server/proxy.mjs"
+if grep -Fq "tang-memory-initialized" "${STAGE}/src/pages/PurrChannelPage.tsx"; then
+  echo "仍检测到一次性棠予酿门禁，拒绝上线。"
+  exit 1
+fi
 grep -Fq "self.addEventListener('push'" "${STAGE}/public/sw.js"
 grep -Fq '"gcm_sender_id": "103953800507"' "${STAGE}/public/manifest.webmanifest"
 [[ -s "${STAGE}/public/assets/autowake/enable.webp" ]]

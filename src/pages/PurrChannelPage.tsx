@@ -25,8 +25,6 @@ import {
 const WINDOWS_KEY = 'purr-channel:windows';
 const LEGACY_TURNS_KEY = 'purr-channel:turns'; // 旧版单一对话，首次进入迁移成一个窗口
 const turnsKey = (id: string) => `purr-channel:turns:${id}`;
-const tangMemoryInitKey = (id: string) => `purr-channel:tang-memory-initialized:${id}`;
-
 const CLOUD_KEY_STORAGE = 'codeandpurrs:purr-channel:cloud-key';
 const SCREEN_WATCH_KEY = 'purr-channel:screen-watch-enabled';
 
@@ -1191,7 +1189,6 @@ function ChatRoom({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const scrollFrameRef = useRef<number | null>(null);
   const scrollToReplyRef = useRef(true);
-  const tangMemoryInitializedRef = useRef(loadLocal<boolean>(tangMemoryInitKey(win.id), false));
   const [nearLatest, setNearLatest] = useState(true);
   const photoFileRef = useRef<HTMLInputElement | null>(null);
   // 离开 CodeAndPurrs 看其它 App 后，回到网页的第一瞬间锁住上一帧。
@@ -1477,8 +1474,6 @@ function ChatRoom({
     if (turns.length && !window.confirm('清空这个窗口的聊天记录？暗格里也会一起删掉哦。')) return;
     setTurns([]);
     clearLocal(turnsKey(win.id));
-    clearLocal(tangMemoryInitKey(win.id));
-    tangMemoryInitializedRef.current = false;
   };
 
   const patchTurn = (id: string, patch: Partial<Turn>) =>
@@ -1565,13 +1560,21 @@ function ChatRoom({
     if (rollingSummary.summary) {
       sys += '\n\n【更早的聊天摘要(自动压缩,可能不完全准确)】\n' + rollingSummary.summary;
     }
+    const chatModel = getModel(provider);
+    const supportsTangMemory = chatModel.provider === 'claudecode' || chatModel.provider === 'anthropic';
+    if (supportsTangMemory) {
+      sys +=
+        '\n\n【长期记忆·棠予酿】你每一轮都可以按需调用棠予酿读写工具。要回忆、核对过去就真的读取；' +
+        '要记住、保存或更新长期重要的新事实、约定、喜好和忌讳就真的写入。普通闲聊不必调用，临时情绪和随口一句不要写，已有内容不要重复写。' +
+        '不要输出 [记忆:分类|内容] 之类的文字标记来冒充写入；工具失败就如实说明，绝不假装成功。';
+    } else {
+      sys +=
+        '\n\n聊天中如果出现值得长期记住的新信息(纪念日、约定、她的喜好/忌讳、重要的事、她的近况),' +
+        '就在回复里用 [记忆:分类|内容] 记下来(例:[记忆:纪念日|2026-06-21 在一起]、[记忆:喜好|喜欢草莓奶]),' +
+        '系统会自动存进记忆罐头。**只记真正重要的事——日常寒暄、心情起伏、随口一句都别记**,记多了反而吵。已经记过的别重复记;标记会自动隐藏,不影响你正常说话。';
+    }
     sys +=
-      '\n\n聊天中如果出现值得长期记住的新信息(纪念日、约定、她的喜好/忌讳、重要的事、她的近况),' +
-      '就在回复里用 [记忆:分类|内容] 记下来(例:[记忆:纪念日|2026-06-21 在一起]、[记忆:喜好|喜欢草莓奶]),' +
-      '系统会自动存进记忆罐头。**只记真正重要的事——日常寒暄、心情起伏、随口一句都别记**,记多了反而吵。已经记过的别重复记;标记会自动隐藏,不影响你正常说话。';
-    sys +=
-      '\n\n【上下文与资料来源】棠予酿只负责新聊天窗口第一次的长期记忆初始化，后续轮次直接依据这个窗口已有的对话继续，' +
-      '不要反复要求翻 memory。手机使用近况只以系统提供的「猫爪足迹」段为准；这一轮没提供就别猜，也不要拿棠予酿代替猫爪足迹。';
+      '\n\n【上下文与资料来源】手机使用近况只以系统提供的「猫爪足迹」段为准；这一轮没提供就别猜，也不要拿棠予酿代替猫爪足迹。';
     sys +=
       '\n\n【你也可以发红包】跟她表现好、说了什么让你感动/开心的话、或者单纯想宠她时,' +
       '可以在回复里单独写一行 [红包:金额|留言](例:[红包:20|今天很乖值得奖励]),系统会把这个红包发给她,存进落予棠。' +
@@ -1719,11 +1722,8 @@ function ChatRoom({
     abortRef.current = controller;
 
     const m = getModel(provider); // 模型 id → 后端服务商 + 具体模型名
-    const supportsTangMemory = m.provider === 'claudecode' || m.provider === 'anthropic';
-    const initializeMemory = supportsTangMemory && !tangMemoryInitializedRef.current;
     let streamFailed = false;
     let rawAssistantContent = '';
-    let memoryInitializationConfirmed = false;
     let thinkStart = 0; // 第一段思考的时刻
     let thinkSet = false;
     const markThinkDone = () => {
@@ -1739,7 +1739,6 @@ function ChatRoom({
         messages: history,
         signal: controller.signal,
         conversationId: win.id,
-        initializeMemory,
         // 只有 claudecode 走 stream-json 结构化输入能吃图,别的 provider 就算传了
         // 也白费网络流量,后端会忽略掉。
         stickerGallery: m.provider === 'claudecode' ? stickerGallery : undefined,
@@ -1761,14 +1760,7 @@ function ChatRoom({
           streamFailed = true;
           patchTurn(botId, { status: 'error', content: '', errorDetail: message });
         },
-        onMemoryInitialized: () => {
-          memoryInitializationConfirmed = true;
-        },
         onDone: () => {
-          if (initializeMemory && memoryInitializationConfirmed && !streamFailed) {
-            tangMemoryInitializedRef.current = true;
-            saveLocal(tangMemoryInitKey(win.id), true);
-          }
           markThinkDone();
           const spotifyQueries = extractSpotifyPlaylistQueries(rawAssistantContent);
           if (spotifyQueries.length && !streamFailed) {
