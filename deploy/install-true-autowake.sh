@@ -232,7 +232,8 @@ if [[ "${tang_before}" != "${tang_after}" || "${playlist_before}" != "${playlist
 fi
 
 success=1
-echo "完成：真后台自动唤醒已部署。"
+echo "完成：真后台自动唤醒 + AI 看屏幕已部署。"
 echo "旧 Telegram/ntfy 唤醒已停用并搬到：${BACKUP}"
 echo "Tang / Playlist MCP / CodeAndPurrs MCP 状态未变。"
 echo "刷新 CodeAndPurrs，点一次『开启自动唤醒』；允许通知后会立刻收到一条后台测试消息。"
+echo "若『看屏幕』提示 viewer key 未配置，请运行 deploy/configure-screen-access.sh。"
