@@ -123,18 +123,31 @@ mcp_before="$(systemctl is-active codeandpurrs-mcp.service 2>/dev/null || true)"
 download_source_file() {
   local relative="$1"
   local destination="$2"
-  local source_url="${SOURCE_BASE}/${relative}"
 
+  if curl \
+    --fail \
+    --silent \
+    --show-error \
+    --location \
+    --retry 2 \
+    --retry-delay 1 \
+    "${SOURCE_BASE}/${relative}" \
+    --output "${destination}"; then
+    return 0
+  fi
+
+  echo "Raw 下载受阻，改走 GitHub API：${relative}"
   if ! curl \
     --fail \
     --silent \
     --show-error \
     --location \
-    --retry 6 \
+    --retry 3 \
     --retry-delay 2 \
-    --retry-max-time 45 \
-    --retry-all-errors \
-    "${source_url}" \
+    --header 'Accept: application/vnd.github.raw+json' \
+    --get \
+    --data-urlencode "ref=${SOURCE_REF}" \
+    "https://api.github.com/repos/NekoAshenUwU/CodeAndPurrs/contents/${relative}" \
     --output "${destination}"; then
     echo "下载失败：${relative}（来源 ${SOURCE_REF}）" >&2
     return 1
