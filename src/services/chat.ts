@@ -75,6 +75,25 @@ export async function streamChat(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
+  let settled = false;
+  let receivedContent = false;
+
+  // error / done 都是终态。服务端为了把 SSE 正常收尾，可能在 error 后继续发 done；
+  // done 不能把刚刚的错误覆盖成一条“已完成但正文为空”的假消息。
+  const fail = (message: string) => {
+    if (settled) return;
+    settled = true;
+    handlers.onError?.(message);
+  };
+  const finish = () => {
+    if (settled) return;
+    if (!receivedContent) {
+      fail('模型没有返回正文，请展开详情查看服务端状态');
+      return;
+    }
+    settled = true;
+    handlers.onDone?.();
+  };
 
   try {
     while (true) {
@@ -98,25 +117,31 @@ export async function streamChat(
           continue;
         }
 
+        // 已经收到终态后继续把连接读完，但不再触发第二个终态回调。
+        if (settled) continue;
+
         switch (event.type) {
           case 'reasoning':
             if (event.text) handlers.onReasoning?.(event.text);
             break;
           case 'content':
-            if (event.text) handlers.onContent?.(event.text);
+            if (event.text) {
+              receivedContent = true;
+              handlers.onContent?.(event.text);
+            }
             break;
           case 'error':
-            handlers.onError?.(event.message ?? '未知错误');
+            fail(event.message ?? '未知错误');
             break;
           case 'done':
-            handlers.onDone?.();
+            finish();
             return;
         }
       }
     }
-    handlers.onDone?.();
+    finish();
   } catch (err) {
     if ((err as Error)?.name === 'AbortError') return;
-    handlers.onError?.(String(err));
+    fail(String(err));
   }
 }

@@ -1761,6 +1761,9 @@ function ChatRoom({
           patchTurn(botId, { status: 'error', content: '', errorDetail: message });
         },
         onDone: () => {
+          // 双保险：error 是终态。即使未来换了流客户端，也不许 done 把错误
+          // 覆盖成一条只有头像和时间戳的空回复。
+          if (streamFailed) return;
           markThinkDone();
           const spotifyQueries = extractSpotifyPlaylistQueries(rawAssistantContent);
           if (spotifyQueries.length && !streamFailed) {
