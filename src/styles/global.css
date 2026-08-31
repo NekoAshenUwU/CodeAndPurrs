@@ -2338,6 +2338,25 @@ a {
 .pending-meme__remove:active {
   transform: scale(0.88);
 }
+.pending-meme__add {
+  display: grid;
+  width: 60px;
+  height: 60px;
+  padding: 6px;
+  place-content: center;
+  gap: 1px;
+  border: 1px dashed rgba(142, 111, 201, 0.5);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(255, 246, 252, 0.9), rgba(235, 230, 255, 0.88));
+  color: #8061b3;
+  cursor: pointer;
+  font-family: var(--round);
+  line-height: 1;
+}
+.pending-meme__add > span { font-size: 1.35rem; }
+.pending-meme__add > small { font-size: 0.68rem; }
+.pending-meme__add:active { transform: scale(0.94); }
+.pending-meme__add:disabled { opacity: 0.5; cursor: default; }
 
 /* 手机屏幕共享只在老婆明确打开时显示；点 × 只停止把画面附给 AI，系统共享在 Bridge 里停。 */
 .screen-watch-chip {

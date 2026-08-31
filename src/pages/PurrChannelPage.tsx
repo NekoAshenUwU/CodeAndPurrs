@@ -1444,6 +1444,8 @@ function ChatRoom({
       setPendingPhotos((prev) => [...prev, ...ids]);
       if (selectedFiles.length > remaining) {
         setNotice(`已加入前 ${remaining} 张 · 一条消息最多 ${MAX_PHOTOS_PER_SEND} 张`);
+      } else {
+        setNotice(`已加入 ${ids.length} 张 · 还能再加 ${remaining - ids.length} 张`);
       }
     } catch (err) {
       setNotice(`图片没有存进去：${String((err as Error)?.message || err)}`);
@@ -2305,6 +2307,19 @@ function ChatRoom({
                 </button>
               </span>
             ))}
+            {pendingPhotos.length > 0 && pendingPhotos.length < MAX_PHOTOS_PER_SEND ? (
+              <button
+                type="button"
+                className="pending-meme__add"
+                onClick={() => photoFileRef.current?.click()}
+                disabled={sending}
+                aria-label={`继续添加图片，还能添加 ${MAX_PHOTOS_PER_SEND - pendingPhotos.length} 张`}
+                title={`继续加图 · 还能加 ${MAX_PHOTOS_PER_SEND - pendingPhotos.length} 张`}
+              >
+                <span aria-hidden="true">＋</span>
+                <small>加图</small>
+              </button>
+            ) : null}
           </div>
         ) : null}
 
