@@ -43,6 +43,20 @@ function decodeApplicationServerKey(value: string): Uint8Array<ArrayBuffer> {
   return out;
 }
 
+function keyBytes(value: ArrayBuffer | null): Uint8Array {
+  return value ? new Uint8Array(value) : new Uint8Array();
+}
+
+function sameApplicationServerKey(subscription: PushSubscription, expected: Uint8Array): boolean {
+  const actual = keyBytes(subscription.options.applicationServerKey);
+  if (actual.length !== expected.length) return false;
+  return actual.every((byte, index) => byte === expected[index]);
+}
+
+function wait(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
 async function json<T>(response: Response): Promise<T> {
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(String(body?.error || `自动唤醒服务返回 ${response.status}`));
@@ -50,8 +64,65 @@ async function json<T>(response: Response): Promise<T> {
 }
 
 async function registration(): Promise<ServiceWorkerRegistration> {
-  await navigator.serviceWorker.register('/sw.js');
+  const reg = await navigator.serviceWorker.register('/sw.js', {
+    scope: '/',
+    updateViaCache: 'none',
+  });
+  await reg.update().catch(() => undefined);
   return navigator.serviceWorker.ready;
+}
+
+async function freshRegistration(): Promise<ServiceWorkerRegistration> {
+  const old = await navigator.serviceWorker.getRegistration('/');
+  if (old) {
+    const oldSubscription = await old.pushManager.getSubscription().catch(() => null);
+    await oldSubscription?.unsubscribe().catch(() => false);
+    await old.unregister();
+  }
+  await wait(400);
+  await navigator.serviceWorker.register('/sw.js', {
+    scope: '/',
+    updateViaCache: 'none',
+  });
+  return navigator.serviceWorker.ready;
+}
+
+function isRecoverablePushError(error: unknown): boolean {
+  const message = String((error as Error)?.message || error).toLowerCase();
+  return message.includes('push service error') ||
+    message.includes('push service not available') ||
+    message.includes('storage error') ||
+    message.includes('sender_id_mismatch') ||
+    message.includes('different applicationserverkey');
+}
+
+async function subscribeWithRecovery(publicKey: string): Promise<PushSubscription> {
+  const applicationServerKey = decodeApplicationServerKey(publicKey);
+  let reg = await registration();
+  let existing = await reg.pushManager.getSubscription();
+  if (existing && !sameApplicationServerKey(existing, applicationServerKey)) {
+    await existing.unsubscribe();
+    existing = null;
+  }
+  if (existing) return existing;
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: applicationServerKey.buffer,
+      });
+    } catch (error) {
+      lastError = error;
+      if (!isRecoverablePushError(error)) throw error;
+      await wait(900 * (attempt + 1));
+      reg = attempt === 0 ? await registration() : await freshRegistration();
+    }
+  }
+  throw new Error(
+    `手机的推送服务连续登记失败。Chrome 与 Google Play 服务需要允许联网和后台运行，再点一次铃铛（${String((lastError as Error)?.message || lastError)}）`,
+  );
 }
 
 async function postSubscription(state: AutoWakeClientState, subscription: PushSubscription): Promise<void> {
@@ -82,14 +153,7 @@ export async function enableAutoWake(state: AutoWakeClientState): Promise<void> 
   const config = await json<{ publicKey: string }>(
     await fetch('/api/autowake/config', { credentials: 'include', cache: 'no-store' }),
   );
-  const reg = await registration();
-  let subscription = await reg.pushManager.getSubscription();
-  if (!subscription) {
-    subscription = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: decodeApplicationServerKey(config.publicKey),
-    });
-  }
+  const subscription = await subscribeWithRecovery(config.publicKey);
   await postSubscription(state, subscription);
 }
 

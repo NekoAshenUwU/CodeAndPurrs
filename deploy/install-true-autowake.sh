@@ -18,6 +18,7 @@ readonly FILES=(
   "src/services/storage.ts"
   "src/styles/global.css"
   "public/sw.js"
+  "public/manifest.webmanifest"
 )
 readonly OLD_UNITS=(
   "codeandpurrs-autonomy.timer"
@@ -138,6 +139,7 @@ grep -Fq "export async function playSpotifyQueries" "${STAGE}/src/services/spoti
 grep -Fq "jiake-opus-5" "${STAGE}/src/data/models.ts"
 grep -Fq "handleAutoWakeRequest" "${STAGE}/server/proxy.mjs"
 grep -Fq "self.addEventListener('push'" "${STAGE}/public/sw.js"
+grep -Fq '"gcm_sender_id": "103953800507"' "${STAGE}/public/manifest.webmanifest"
 
 ln -s "${APP}/node_modules" "${STAGE}/node_modules"
 (
