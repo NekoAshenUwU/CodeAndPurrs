@@ -9,6 +9,9 @@ const chat = readFileSync(new URL('../src/services/chat.ts', import.meta.url), '
 test('Claude Code receives the local Tangyuniang bridge without browser OAuth', () => {
   assert.match(proxy, /tangMemoryBridgeConfig/);
   assert.match(proxy, /type: 'stdio'/);
+  assert.match(proxy, /name: 'tang_memory'/);
+  assert.match(proxy, /mcp__\$\{mem\.name\}__\$\{tool\}/);
+  assert.match(proxy, /'--permission-mode', 'dontAsk'/);
   assert.doesNotMatch(proxy, /mcp_servers|mcp_toolset|authorization_token/);
   assert.doesNotMatch(proxy, /initializeMemory|memory_initialized|MEMORY_MCP_INIT_RULE/);
 });

@@ -747,11 +747,14 @@ async function forwardToTangyuniang(req, res, matched) {
 function tangMemoryBridgeConfig() {
   if (!String(process.env.TANG_INTERNAL_KEY || '').trim()) return null;
   return {
-    name: String(process.env.CC_MEMORY_MCP || '棠予酿').trim() || '棠予酿',
+    // MCP 工具权限规则使用这个稳定的 ASCII 名称。中文展示名留在工具描述里，
+    // 避免 Claude CLI 对 Unicode server name 的 permission rule 匹配出现偏差。
+    name: 'tang_memory',
     command: process.execPath,
     args: [join(dirname(fileURLToPath(import.meta.url)), 'tangMemoryMcp.mjs')],
   };
 }
+const MEMORY_MCP_TOOLS = ['list_memories', 'read_memory', 'hold_memory', 'grow_memory'];
 // 每轮都把本机桥交给 Claude Code，模型可以在真正需要时读或写。
 // “每轮可用”不等于“每轮必调”：普通闲聊不翻库，避免无意义调用和重复写入。
 const MEMORY_MCP_RULE =
@@ -1095,12 +1098,18 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
     '--include-partial-messages',
     '--verbose',
   ];
-  // 本机 stdio MCP 不需要授权页面；桥进程继承 proxy 的 TANG_INTERNAL_KEY，
-  // 再用 --allowedTools 只放开棠予酿，文件/命令/其它 MCP 一律不给。
+  // 本机 stdio MCP 不需要授权页面；桥进程继承 proxy 的 TANG_INTERNAL_KEY。
+  // 非交互网页无法呈现 Claude CLI 的权限弹窗，因此必须把四个工具逐个加入
+  // allowedTools，并用 dontAsk 让所有未列出的能力直接拒绝而不是等待人工确认。
   if (mem) {
     const stdioServer = { type: 'stdio', command: mem.command, args: mem.args };
     const mcpConfig = JSON.stringify({ mcpServers: { [mem.name]: stdioServer } });
-    args.push('--mcp-config', mcpConfig, '--allowedTools', `mcp__${mem.name}`);
+    const allowedMemoryTools = MEMORY_MCP_TOOLS.map((tool) => `mcp__${mem.name}__${tool}`).join(',');
+    args.push(
+      '--mcp-config', mcpConfig,
+      '--allowedTools', allowedMemoryTools,
+      '--permission-mode', 'dontAsk',
+    );
   } else {
     args.push('--tools', '', '--permission-mode', 'dontAsk');
   }
