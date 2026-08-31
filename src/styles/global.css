@@ -6307,7 +6307,7 @@ a {
   bottom: calc(88px + env(safe-area-inset-bottom));
   z-index: 140;
   display: block;
-  width: min(59vw, 272px);
+  width: min(46vw, 212px);
   max-width: calc(100vw - 16px);
   padding: 0;
   border: 0;

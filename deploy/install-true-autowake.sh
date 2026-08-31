@@ -178,8 +178,8 @@ cp -a "${STAGE}/dist" "${APP}/dist"
 pm2 restart codeandpurrs --update-env >/dev/null
 
 for _ in $(seq 1 30); do
-  if curl -fsS --max-time 3 http://127.0.0.1:8787/api/autowake/config >/dev/null \
-    && curl -fsS --max-time 3 http://127.0.0.1:8787/api/spotify/status >/dev/null; then
+  if curl -fsS --max-time 3 http://127.0.0.1:8787/api/autowake/config >/dev/null 2>&1 \
+    && curl -fsS --max-time 3 http://127.0.0.1:8787/api/spotify/status >/dev/null 2>&1; then
     break
   fi
   sleep 1
