@@ -1428,7 +1428,10 @@ function ChatRoom({
     const selectedFiles = files ? Array.from(files) : [];
     if (selectedFiles.length === 0 || sending) return;
     const remaining = MAX_PHOTOS_PER_SEND - pendingPhotos.length;
-    if (remaining <= 0) return;
+    if (remaining <= 0) {
+      setNotice(`一条消息最多放 ${MAX_PHOTOS_PER_SEND} 张图片`);
+      return;
+    }
     // 部分 Android 相册通过 content:// 回传时 File.type 是空字符串；input 已经用
     // accept="image/*" 限定过，空 MIME 也应该接收，不能静默丢掉。
     const list = selectedFiles.filter((f) => !f.type || f.type.startsWith('image/')).slice(0, remaining);
@@ -1439,6 +1442,9 @@ function ChatRoom({
     try {
       const ids = await Promise.all(list.map((f) => addPhoto(f)));
       setPendingPhotos((prev) => [...prev, ...ids]);
+      if (selectedFiles.length > remaining) {
+        setNotice(`已加入前 ${remaining} 张 · 一条消息最多 ${MAX_PHOTOS_PER_SEND} 张`);
+      }
     } catch (err) {
       setNotice(`图片没有存进去：${String((err as Error)?.message || err)}`);
     }
@@ -2340,6 +2346,7 @@ function ChatRoom({
             ref={photoFileRef}
             type="file"
             accept="image/*"
+            multiple
             hidden
             onClick={(event) => { event.currentTarget.value = ''; }}
             onChange={(e) => void pickPhoto(e.target.files)}
