@@ -127,7 +127,6 @@ download_source_file() {
   if curl \
     --fail \
     --silent \
-    --show-error \
     --location \
     --retry 2 \
     --retry-delay 1 \
