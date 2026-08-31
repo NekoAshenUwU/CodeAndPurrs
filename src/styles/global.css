@@ -2342,24 +2342,27 @@ a {
 /* 手机屏幕共享只在老婆明确打开时显示；点 × 只停止把画面附给 AI，系统共享在 Bridge 里停。 */
 .screen-watch-chip {
   position: absolute;
-  right: 14px;
-  bottom: calc(100% - 4px);
+  right: 12px;
+  bottom: calc(100% - 7px);
   z-index: 4;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 34px;
-  padding: 6px 11px;
-  border: 1px solid rgba(255, 255, 255, 0.88);
+  display: block;
+  width: clamp(150px, 43vw, 178px);
+  height: auto;
+  padding: 0;
+  border: 0;
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(245, 218, 255, 0.94), rgba(211, 225, 255, 0.94));
-  color: #624886;
-  font-family: var(--round);
-  font-size: 0.84rem;
-  box-shadow: 0 8px 22px rgba(118, 96, 160, 0.24);
+  background: transparent;
+  filter: drop-shadow(0 7px 12px rgba(102, 74, 151, 0.2));
   cursor: pointer;
-  -webkit-backdrop-filter: blur(12px) saturate(1.3);
-  backdrop-filter: blur(12px) saturate(1.3);
+  transition: transform 0.16s ease, filter 0.16s ease;
+}
+
+.screen-watch-chip img {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
 }
 
 .chat-input.has-pending .screen-watch-chip {

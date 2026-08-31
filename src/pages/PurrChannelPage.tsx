@@ -2251,6 +2251,7 @@ function ChatRoom({
           <button
             type="button"
             className="screen-watch-chip"
+            aria-label={`${screenFrameHeld ? '已锁定刚才画面' : screenCapturedAt ? '正在看屏幕' : '等待屏幕'}，点击关闭`}
             onClick={() => {
               setScreenWatchEnabled(false);
               saveLocal(SCREEN_WATCH_KEY, false);
@@ -2264,9 +2265,7 @@ function ChatRoom({
             }}
             title="关闭后，聊天消息不再附带手机屏幕"
           >
-            <span aria-hidden="true">👁</span>
-            <span>{screenFrameHeld ? '已锁定刚才画面' : screenCapturedAt ? '正在看屏幕' : '等待屏幕'}</span>
-            <span aria-hidden="true">×</span>
+            <img src="/assets/screen/watch-wife-screen.webp" alt="" aria-hidden="true" />
           </button>
         ) : null}
         {/* 待发缩略图:贴纸/相册照片(可 1~3 张)钉在输入区上方,按发送/叉掉才走 */}
