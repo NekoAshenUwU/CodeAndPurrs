@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 48799)
-Total output lines: 6904
-
 /* ===== 自托管字体（子集化，仅保留站内用到的字形）===== */
 @font-face {
   font-family: "ManHuai"; /* 想和你装个满怀 · 中文标语（旧） */
@@ -3008,7 +3005,1226 @@ a {
 /* ===== 星河沙滩 / 周柱 找回的细节（第二轮反馈）===== */
 .paw-page {
   /* 半透明白爪印的形状（mask 用） */
-  --paw-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cellipse%20cx='12'%20cy='15.5'%20rx='5.6'%20ry='4.6'/%3E%3Cellipse%20cx='5.6'%20cy='9.5'%20rx='2.1'%20ry='2.6'/%3E%3Cellipse%20cx='10'%20cy='6'%20rx='2.1'%20ry='2.7'/%3E%3Cellipse%20cx='14.4'%20cy='6'%20rx='2.1…8799 tokens truncated…ex; flex-direction: column; gap: 10px; }
+  --paw-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cellipse%20cx='12'%20cy='15.5'%20rx='5.6'%20ry='4.6'/%3E%3Cellipse%20cx='5.6'%20cy='9.5'%20rx='2.1'%20ry='2.6'/%3E%3Cellipse%20cx='10'%20cy='6'%20rx='2.1'%20ry='2.7'/%3E%3Cellipse%20cx='14.4'%20cy='6'%20rx='2.1'%20ry='2.7'/%3E%3Cellipse%20cx='18.6'%20cy='9.5'%20rx='2.1'%20ry='2.6'/%3E%3C/svg%3E");
+}
+
+/* 时段小球：球面叠半透明白爪印 */
+.paw-river__track { overflow: visible; }
+.paw-step__mark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.6);
+  -webkit-mask: var(--paw-mask) center / contain no-repeat;
+  mask: var(--paw-mask) center / contain no-repeat;
+  pointer-events: none;
+}
+
+/* 气泡：移到时间线右上，自适应换行，不再硬截断 */
+.paw-river__bubble {
+  position: absolute;
+  z-index: 3;
+  top: 18px;
+  right: 2px;
+  max-width: 60%;
+  padding: 6px 11px;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: #6b4350;
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 13px;
+  box-shadow: 0 6px 14px rgba(118, 96, 132, 0.22);
+  white-space: normal;
+  animation: paw-bubble-bob 2.6s ease-in-out infinite;
+}
+.paw-page.is-night .paw-river__bubble { color: #6b4350; }
+
+/* 周柱：柱顶星座连线 + 星点 + 柱身爪印剪影 */
+.paw-trend { position: relative; }
+.paw-trend__sky { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: visible; }
+.paw-trend__line {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.7));
+}
+.paw-trend__starpt { fill: #fff; }
+.paw-trend__paw {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  width: 52%;
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.34);
+  -webkit-mask: var(--paw-mask) center / contain no-repeat;
+  mask: var(--paw-mask) center / contain no-repeat;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paw-river__bubble { animation: none !important; }
+}
+
+/* ===== 第三轮：周柱独立糖豆色 + 星座连线做细做透 ===== */
+.paw-trend__bar,
+.paw-trend__bar.is-weekend {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), var(--bar, #c9c3d8));
+}
+.paw-trend__col.is-today .paw-trend__bar {
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+/* 星座线细而透，只作点缀，不抢戏 */
+.paw-trend__line {
+  stroke: rgba(255, 255, 255, 0.38);
+  stroke-width: 0.8;
+  filter: none;
+}
+.paw-trend__starpt { fill: rgba(255, 255, 255, 0.55); }
+
+/* ===== 顶部圆环「总时长」流光渐变文字（慢、柔、始终可读）===== */
+.paw-ring__time {
+  background-image: linear-gradient(100deg, #9b7bc8 0%, #c79fd6 28%, #f2a9c4 52%, #7fd6cf 78%, #9b7bc8 100%);
+  background-size: 260% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 1px 2px rgba(93, 74, 126, 0.18);
+  animation: paw-time-flow 5.5s ease-in-out infinite;
+}
+@keyframes paw-time-flow {
+  to { background-position: 260% center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .paw-ring__time { animation: none; background-position: 0 center; }
+}
+
+/* ===== 背景兜底色：单一柔色，绝不出现多段渐变的横带接缝 ===== */
+.paw-page {
+  background: #f3dcec;
+}
+.paw-page.is-night {
+  background: #2f2850;
+}
+
+/* 底部四排统计文案用龙珠体（子集化字体，仅 3.9KB） */
+.paw-chip {
+  font-family: "LongZhuPaw", var(--round);
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+}
+
+/* ===== 第六轮：真·进度环(目标12h, 果冻管状) + 比昨天药丸日夜配色/龙珠体 ===== */
+.paw-ring { width: min(74vw, 286px); height: min(74vw, 286px); transform: rotate(-90deg); }
+.paw-ring__track { fill: none; stroke: rgba(255, 255, 255, 0.5); stroke-width: 16; }
+.paw-page.is-night .paw-ring__track { stroke: rgba(255, 255, 255, 0.16); }
+/* 主色管状填充：彩虹 stroke + 同色外发光 */
+.paw-ring__fill {
+  fill: none;
+  stroke: url(#pawRingGrad);
+  stroke-width: 16;
+  stroke-linecap: round;
+  filter: url(#jellyFilter) drop-shadow(0 0 8px rgba(190, 182, 222, 0.45));
+  stroke-dashoffset: var(--ring-off);
+  animation: paw-ring-grow 1s ease forwards;
+}
+/* 顶部细白高光 stroke：模拟管壁反光，做出 Q 弹立体 */
+.paw-ring__hi {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dashoffset: var(--ring-off);
+  animation: paw-ring-grow 1s ease forwards;
+}
+.paw-ring.is-full .paw-ring__fill {
+  filter: url(#jellyFilter) drop-shadow(0 0 14px rgba(230, 158, 190, 0.7));
+}
+@keyframes paw-ring-grow {
+  from { stroke-dashoffset: var(--ring-c); }
+  to { stroke-dashoffset: var(--ring-off); }
+}
+
+/* 比昨天药丸：龙珠体 + 墨紫字 + 日夜主题底色（取消红绿区分） */
+.paw-delta,
+.paw-delta.is-less,
+.paw-delta.is-more {
+  font-family: "LongZhuPaw", var(--round);
+  color: #4a3b6b;
+  background: #f8d8e3; /* 白天 樱花粉 */
+}
+.paw-page.is-night .paw-delta,
+.paw-page.is-night .paw-delta.is-less,
+.paw-page.is-night .paw-delta.is-more {
+  color: #4a3b6b;
+  background: #e8dcf2; /* 夜间 薰衣草紫 */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paw-ring__fill,
+  .paw-ring__hi { animation: none !important; }
+}
+
+/* ===== 进度环放大 + mascot/数字缩小不遮挡 + 去白高光内圈 ===== */
+.paw-ring { width: min(82vw, 322px); height: min(82vw, 322px); }
+.paw-ring-card .paw-ring__center {
+  width: min(82vw, 322px);
+  height: min(82vw, 322px);
+}
+.paw-ring__cat { width: 48%; margin-bottom: 0; }
+.paw-ring__time { font-size: 2.1rem; }
+.paw-ring__hi { display: none; } /* 去掉彩虹里那条白线 */
+
+/* 修正:svg 与 circle 都各转了一次 -90°(共 -180°,从6点起)。取消 svg 旋转,只留 circle 的 → 从12点起 */
+.paw-ring { transform: none; }
+
+/* ===== 进度环：果冻高光 + 一圈 12 爪印（棠棠 2026-06-19 需求）===== */
+/* 顶部一小段柔白反光，营造果冻/管壁湿润感（短，不是一整条线）*/
+.paw-ring__shine {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.6);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 26 9999;
+  stroke-dashoffset: 0;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  filter: blur(0.5px);
+  pointer-events: none;
+}
+/* 一圈 12 个爪印：前方的淡淡薰衣草，走过的亮白踩在彩带上 */
+.paw-pip {
+  fill: rgba(150, 120, 196, 0.32);
+  transition: fill 0.35s ease;
+}
+.paw-pip.is-on {
+  fill: #ffffff;
+  filter: drop-shadow(0 1px 1.5px rgba(120, 90, 150, 0.45));
+}
+.paw-page.is-night .paw-pip { fill: rgba(255, 255, 255, 0.22); }
+.paw-page.is-night .paw-pip.is-on { fill: #ffffff; }
+@media (prefers-reduced-motion: reduce) {
+  .paw-pip { transition: none; }
+}
+
+/* ============================================================
+   首页背景"压花"：只压夜晚，白天完全不动。
+   夜晚把热闹星空压成远景氛围，让玻璃门牌 + 中英文名浮出。
+   (见棠棠 2026-06-14 需求：白天不压；夜晚模糊别太重，要看得清背景图)
+   ============================================================ */
+
+/* ① 仅夜晚：背景轻度高斯模糊 → 退成柔焦远景但仍看得清画面。
+   只作用在夜图层，白天底图 .timesky__photo 保持原样清晰。
+   scale 略放大，避免 blur 边缘采样透明露底。 */
+.timesky.is-night .timesky__layer--night {
+  filter: blur(3px);
+  transform: scale(1.05);
+}
+
+/* ② 仅夜晚：整张背景叠半透明深紫蒙层，压暗压花。
+   ::after 在背景层最上、光尘/星点之下，星点仍作氛围浮于其上。 */
+.timesky.is-night::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(60, 40, 90, 0.3);
+  pointer-events: none;
+}
+
+/* ③ 仅夜晚：LITTLE ROOMS 图标区垫极淡磨砂面板，成独立板块。
+   白天不加面板（白天不压）。 */
+.home-page.is-night .rooms-section {
+  position: relative;
+  z-index: 1;
+  padding: 20px 14px 24px;
+  border-radius: 30px;
+  background: rgba(40, 30, 70, 0.26);
+  backdrop-filter: blur(5px) saturate(1.05);
+  -webkit-backdrop-filter: blur(5px) saturate(1.05);
+  border: 1px solid rgba(214, 200, 245, 0.2);
+  box-shadow:
+    0 12px 34px rgba(16, 10, 36, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* ============================================================
+   呼噜频道 · 输入区玻璃珠按键（参考棠棠给的 4 枚 VisionOS 玻璃图标）
+   + 更多 / 麦克风⇄音波语音键 / ↑ 发送。逻辑沿用，仅换视觉 + 语音两态。
+   ============================================================ */
+.chat-input {
+  position: relative;
+}
+
+/* 液态玻璃按键：磨砂蓝紫体 + 虹彩折射描边 + 底部漏光 + 立体倒角 */
+.chat-glass-btn {
+  position: relative;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 17px;
+  border: 0;
+  background:
+    radial-gradient(56% 46% at 30% 15%, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0) 60%),
+    linear-gradient(155deg, #bcb1f2 0%, #a7aeea 50%, #b2c2ef 100%);
+  box-shadow:
+    0 8px 20px rgba(110, 92, 184, 0.36),
+    0 5px 16px -3px rgba(150, 175, 250, 0.6),
+    inset 0 1.6px 2px rgba(255, 255, 255, 0.95),
+    inset 0 -6px 11px rgba(120, 130, 215, 0.4),
+    inset 0 0 0 1.4px rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(7px) saturate(1.5);
+  backdrop-filter: blur(7px) saturate(1.5);
+  transition: transform 0.16s ease, box-shadow 0.2s ease;
+}
+/* 虹彩折射描边（只留边框的彩色光环：紫→蓝→青） */
+.chat-glass-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.6px;
+  background: linear-gradient(
+    155deg,
+    rgba(216, 184, 255, 0.95) 0%,
+    rgba(170, 200, 255, 0.8) 36%,
+    rgba(182, 242, 255, 0.95) 60%,
+    rgba(214, 184, 255, 0.9) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.chat-glass-btn:active {
+  transform: scale(0.92);
+}
+.chat-glass-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.chat-glass-btn svg {
+  position: relative;
+  z-index: 1;
+  width: 23px;
+  height: 23px;
+}
+
+/* 内圆盘：发送 / 录音中音波 坐在上面 —— 蓝→紫→青马卡龙渐变发光球 */
+.cg-send::before,
+.cg-voice.is-rec::before {
+  content: "";
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 33% 25%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0) 42%),
+    linear-gradient(140deg, #93cdff 0%, #a594f1 40%, #c28ff0 60%, #8ad9e6 100%);
+  box-shadow:
+    0 2px 12px rgba(126, 120, 230, 0.5),
+    0 0 14px rgba(150, 190, 250, 0.6),
+    inset 0 1px 2px rgba(255, 255, 255, 0.75),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  z-index: 0;
+}
+.cg-plus.is-open {
+  box-shadow:
+    0 8px 20px rgba(120, 104, 188, 0.3),
+    0 0 18px rgba(184, 174, 252, 0.8),
+    inset 0 1.6px 2px rgba(255, 255, 255, 1),
+    inset 0 -6px 11px rgba(150, 160, 228, 0.32);
+}
+
+/* 发送禁用时收起紫盘，淡一点 */
+.cg-send:disabled::before {
+  opacity: 0.55;
+}
+
+/* 录音中：玻璃座微微发热发亮 */
+.cg-voice.is-rec {
+  box-shadow:
+    0 8px 22px rgba(120, 104, 188, 0.34),
+    0 0 20px rgba(170, 140, 240, 0.7),
+    inset 0 1.6px 2px rgba(255, 255, 255, 1),
+    inset 0 -6px 11px rgba(150, 160, 228, 0.32);
+}
+
+/* 跳动音波：5 根白柱错峰弹跳 */
+.cg-wave {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 2.5px;
+  height: 23px;
+}
+.cg-wave i {
+  width: 3px;
+  height: 28%;
+  border-radius: 2px;
+  background: #fff;
+  animation: cgWave 0.9s ease-in-out infinite;
+}
+.cg-wave i:nth-child(2) {
+  animation-delay: 0.14s;
+}
+.cg-wave i:nth-child(3) {
+  animation-delay: 0.28s;
+}
+.cg-wave i:nth-child(4) {
+  animation-delay: 0.42s;
+}
+.cg-wave i:nth-child(5) {
+  animation-delay: 0.56s;
+}
+@keyframes cgWave {
+  0%,
+  100% {
+    height: 24%;
+  }
+  50% {
+    height: 86%;
+  }
+}
+
+/* + 更多 弹出菜单 */
+.chat-more-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.chat-more__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+.chat-more {
+  position: absolute;
+  bottom: 56px;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 132px;
+  padding: 7px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 14px 32px rgba(118, 96, 160, 0.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  animation: chatMorePop 0.16s ease;
+}
+@keyframes chatMorePop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.chat-more button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 11px;
+  background: none;
+  color: #5d4a7e;
+  font-family: "ShunFeng", var(--round); /* 顺风顺水 */
+  font-size: 1.2rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+.chat-more button:hover {
+  background: rgba(201, 184, 241, 0.2);
+}
+
+/* 小提示药丸 */
+.chat-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 62px;
+  z-index: 30;
+  padding: 8px 15px;
+  border-radius: 999px;
+  background: rgba(74, 59, 107, 0.92);
+  color: #fff;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  box-shadow: 0 8px 22px rgba(40, 28, 70, 0.3);
+  animation: chatMorePop 0.18s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cg-wave i {
+    animation: none;
+    height: 56%;
+  }
+  .chat-more,
+  .chat-toast {
+    animation: none;
+  }
+}
+
+/* ============================================================
+   呼噜频道 · 聊天窗列表（进入频道先看到这屏：开新窗口/重命名/删除）
+   ============================================================ */
+.win-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* 顶栏 fixed 定位,列表得留出 header 高度 + 安全区,不然第一个卡会被顶栏盖住 */
+  padding: calc(60px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
+}
+
+/* 顶栏「开新窗口」玻璃按键（沿用玻璃珠基座，略小以适配顶栏） */
+.cg-newwin {
+  width: 40px;
+  height: 40px;
+}
+
+/* 单个窗口卡：磨砂玻璃，左侧点开、右侧重命名/删除 */
+.win-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 12px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: 0 8px 22px rgba(118, 96, 132, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  backdrop-filter: blur(12px) saturate(1.3);
+}
+
+.win-card__open {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "name when" "preview preview";
+  gap: 2px 8px;
+  padding: 4px 2px;
+  text-align: left;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.win-card__name {
+  grid-area: name;
+  color: var(--ink);
+  font-family: var(--cute);
+  font-size: 1.08rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.win-card__preview {
+  grid-area: preview;
+  color: var(--muted);
+  font-family: var(--chat);
+  font-size: 0.84rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.win-card__when {
+  grid-area: when;
+  color: rgba(124, 120, 146, 0.7);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.win-card__rename {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  color: var(--ink);
+  font-family: var(--cute);
+  font-size: 1.05rem;
+  border: 1px solid rgba(201, 184, 241, 0.8);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  outline: none;
+}
+
+.win-card__actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.win-act {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.66);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+.win-act:active {
+  transform: scale(0.9);
+}
+.win-act svg {
+  width: 19px;
+  height: 19px;
+}
+
+/* ============================================================
+   调频 · SwitchCore（设默认模型 + 关于我/猫咪人设）
+   ============================================================ */
+.switch-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background:
+    linear-gradient(
+      175deg,
+      rgba(248, 219, 231, 0.66) 0%,
+      rgba(247, 232, 255, 0.72) 52%,
+      rgba(255, 245, 206, 0.66) 100%
+    ),
+    url("/rooms/switchcore.webp") center / cover no-repeat fixed;
+}
+
+.switch-saved {
+  font-family: "ShunFengFull", var(--round);
+  font-size: 0.82rem;
+  color: #4e8a6a;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.switch-saved.is-on {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.switch-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 18px 16px calc(28px + env(safe-area-inset-bottom));
+}
+
+.switch-card {
+  padding: 16px 16px 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: 0 10px 26px rgba(118, 96, 132, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  -webkit-backdrop-filter: blur(16px) saturate(1.35);
+  backdrop-filter: blur(16px) saturate(1.35);
+}
+.switch-card__title {
+  margin: 0 0 4px;
+  color: var(--ink);
+  font-family: var(--cute);
+  font-size: 1.16rem;
+  font-weight: 500;
+}
+.switch-card__hint {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-family: "ShunFengFull", var(--round);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  letter-spacing: 0.02em;
+}
+
+.switch-models {
+  display: flex;
+  gap: 10px;
+}
+.switch-model {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 14px;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+.switch-model:active {
+  transform: scale(0.97);
+}
+.switch-model.is-on {
+  background: linear-gradient(135deg, #a98ef0, #6745cf);
+  border-color: transparent;
+  box-shadow: 0 8px 20px rgba(86, 56, 188, 0.32);
+}
+.switch-model__name {
+  color: var(--ink);
+  font-family: var(--round);
+  font-weight: 600;
+  font-size: 1rem;
+}
+.switch-model__note {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+.switch-model.is-on .switch-model__name,
+.switch-model.is-on .switch-model__note {
+  color: #fff;
+}
+
+.switch-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  color: var(--ink);
+  font-family: var(--chat);
+  font-size: 1rem;
+  line-height: 1.55;
+  resize: vertical;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.82);
+  outline: none;
+}
+.switch-textarea:focus {
+  border-color: rgba(201, 184, 241, 0.85);
+  box-shadow: 0 0 0 3px rgba(201, 184, 241, 0.24);
+}
+.switch-count {
+  display: block;
+  margin-top: 5px;
+  text-align: right;
+  color: rgba(124, 120, 146, 0.7);
+  font-size: 0.72rem;
+}
+
+.switch-foot {
+  margin: 4px 0 0;
+  text-align: center;
+  color: var(--muted);
+  font-family: "ShunFengFull", var(--round);
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+}
+
+/* ============================================================
+   模型花名册 · liquid glass 胶囊（参考「星云幻境」雾感渐变）
+   名字用顺风顺水(ShunFeng)。选中=薰衣草紫→粉→薄荷青液态玻璃。
+   ============================================================ */
+.model-pill {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 9px 16px;
+  color: #6b5a8e;
+  /* 跟顶栏 model-chip 同一颗 Quimil 衬线 + text-stroke 加粗, 秀气统一 */
+  font-family: "Quimil", "Marcellus", var(--round);
+  font-size: 0.95rem;
+  font-weight: 700;
+  -webkit-text-stroke: 0.35px currentColor;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  /* 通透磨砂玻璃底 + 左上高光 */
+  background:
+    radial-gradient(75% 60% at 28% 12%, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0) 62%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.2));
+  box-shadow:
+    0 6px 16px rgba(140, 128, 182, 0.24),
+    inset 0 1.6px 1.5px rgba(255, 255, 255, 1),
+    inset 0 -3px 6px rgba(150, 150, 205, 0.18),
+    inset 0 0 0 1.4px rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(13px) saturate(1.6);
+  backdrop-filter: blur(13px) saturate(1.6);
+  transition: transform 0.16s ease, box-shadow 0.22s ease, background 0.22s ease;
+}
+/* 顶部玻璃高光（液态玻璃的湿润反光） */
+.model-pill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 46%);
+  pointer-events: none;
+}
+/* 虹彩折射描边 */
+.model-pill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.3px;
+  background: linear-gradient(
+    150deg,
+    rgba(214, 184, 255, 0.85) 0%,
+    rgba(172, 202, 255, 0.7) 40%,
+    rgba(184, 242, 255, 0.85) 66%,
+    rgba(214, 184, 255, 0.8) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.7;
+  pointer-events: none;
+}
+.model-pill.is-on::after {
+  opacity: 1;
+}
+.model-pill:active {
+  transform: scale(0.95);
+}
+/* 选中：马卡龙虹彩液态玻璃（浅紫→粉→薄荷）+ 厚高光 + 外发光 */
+.model-pill.is-on {
+  color: #463a6b;
+  border-color: rgba(255, 255, 255, 1);
+  background:
+    radial-gradient(70% 55% at 26% 12%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 56%),
+    conic-gradient(
+      from 210deg at 58% 42%,
+      rgba(189, 166, 246, 0.6),
+      rgba(243, 182, 218, 0.55),
+      rgba(174, 230, 238, 0.6),
+      rgba(200, 244, 230, 0.55),
+      rgba(189, 166, 246, 0.6)
+    ),
+    linear-gradient(118deg, #bda6f6 0%, #e3a8ee 26%, #f6b6da 48%, #aee6ee 74%, #c0f4e6 100%);
+  box-shadow:
+    0 10px 26px rgba(168, 146, 222, 0.5),
+    0 0 18px rgba(196, 182, 248, 0.55),
+    inset 0 1.6px 2px rgba(255, 255, 255, 1),
+    inset 0 8px 12px rgba(255, 255, 255, 0.5),
+    inset 0 -6px 11px rgba(150, 162, 218, 0.34),
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.6);
+}
+.model-pill.is-on::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.05) 50%);
+}
+
+/* ---- 聊天顶栏：当前模型胶囊 + 弹出列表 ---- */
+.chat-head__model {
+  position: relative;
+}
+.model-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  color: #6b4a8e;
+  /* Quimil 秀气衬线 + 描边加粗(Quimil Demo 单字重, 靠 -webkit-text-stroke
+     currentColor 描一圈干净假粗, 跟咕噜圆桌药丸/CC 头像徽章一致);
+     这里没有 background-clip:text 渐变, stroke 不会跟渐变打架, 放心用 */
+  font-family: "Quimil", "Marcellus", var(--round);
+  font-size: 1.05rem;
+  font-weight: 800;
+  -webkit-text-stroke: 0.55px currentColor;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: transform 0.16s ease;
+}
+.model-chip:active {
+  transform: scale(0.95);
+}
+.model-chip:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.model-chip__caret {
+  font-size: 0.68rem;
+  opacity: 0.65;
+}
+.model-pop {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  width: 250px;
+  max-height: 62vh;
+  overflow-y: auto;
+  padding: 13px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 16px 38px rgba(118, 96, 160, 0.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+  animation: chatMorePop 0.16s ease;
+}
+.model-pop__group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.model-pop__brand {
+  padding-left: 2px;
+  color: var(--muted);
+  /* 品牌分组标题 Gemini/GPT/Codex/Claude 换日复一日可爱圆(RiFuYiRi 全字库),
+     圆润手写感, 跟秀气衬线 Quimil 的模型药丸拉开层次 */
+  font-family: "RiFuYiRi", var(--round);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.model-pop__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.model-pop .model-pill {
+  padding: 6px 12px;
+  font-size: 0.84rem;
+}
+
+/* ---- 调频页：默认模型按品牌分组 ---- */
+.switch-brand {
+  margin-top: 12px;
+}
+.switch-brand:first-of-type {
+  margin-top: 2px;
+}
+.switch-brand__name {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-family: var(--round);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+}
+.switch-models {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.switch-model-pill {
+  padding: 9px 17px;
+  font-size: 0.98rem;
+}
+
+/* 调频页：每个模型人设的编辑器 */
+.switch-models--edit {
+  margin-bottom: 14px;
+}
+.switch-edit-pill {
+  position: relative;
+}
+.switch-edit-pill__dot {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #7c5fd6;
+  box-shadow: 0 0 5px rgba(124, 95, 214, 0.8);
+}
+.switch-field {
+  display: block;
+  margin-top: 12px;
+}
+.switch-field__label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-family: "ShunFengFull", var(--round);
+  font-size: 0.92rem;
+  letter-spacing: 0.03em;
+}
+.switch-input {
+  width: 100%;
+  padding: 11px 14px;
+  color: var(--ink);
+  font-family: var(--chat);
+  font-size: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  outline: none;
+}
+.switch-input:focus {
+  border-color: rgba(201, 184, 241, 0.85);
+  box-shadow: 0 0 0 3px rgba(201, 184, 241, 0.24);
+}
+
+/* ===== 「浪哪了」定位页 ===== */
+.loc-page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 18px 16px 44px;
+  min-height: 100vh;
+  font-family: var(--hand), cursive;
+  color: #6b4a86;
+  background:
+    url(/rooms/catch-purring-bg.webp) center top / cover fixed,
+    radial-gradient(130% 90% at 50% 0%, #fdeaf4 0%, #efe2fb 45%, #e7ecfd 100%) fixed;
+}
+.loc-head {
+  text-align: center;
+  position: sticky;
+  top: 0;
+  /* Leaflet 自带 UI 内部 z-index 到 400+, sticky 顶栏 z:20 输给它,
+     Leaflet 有时会在顶部渲染磁贴延伸区盖住副标题。拉高 z 让顶栏永远浮在最上 */
+  z-index: 500;
+  padding: calc(10px + env(safe-area-inset-top)) 0 10px;
+  /* 增强底色不透明度, 不给 Leaflet 磁贴透过来的机会 */
+  background: linear-gradient(180deg, rgba(253, 234, 244, 0.96) 0%, rgba(253, 234, 244, 0.9) 100%);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  box-shadow: 0 2px 12px -6px rgba(123, 90, 166, 0.25);
+}
+.loc-head h1 {
+  /* 用 !important 硬盖: 底下有 .loc-head *(0.1.0) 想给 HuaXianZi, 但 .loc-head h1
+     (0.1.1) 元素选择器更具体, 盖不住; 之前老婆看到的手写字体就是这里输的 */
+  font-family: "HuaXianZi", var(--display) !important;
+  font-size: 2rem; margin: 0; letter-spacing: 3px;
+  color: #7b5aa6; text-shadow: 0 2px 0 rgba(255,255,255,0.7);
+}
+.loc-head p {
+  margin: 8px 0 0; font-size: 0.9rem; color: #9a7fc0;
+  font-family: "ShunFengFull", var(--round);
+}
+.loc-back {
+  position: absolute; left: 0; top: 6px;
+  width: 40px; height: 40px; border-radius: 50%;
+  border: none; cursor: pointer; font-size: 1.5rem; color: #7b5aa6;
+  background: linear-gradient(160deg, #ffffff, #f3e6fb);
+  box-shadow: 0 4px 10px -3px rgba(123,90,166,0.4), inset 0 2px 2px rgba(255,255,255,0.9);
+}
+.loc-map {
+  position: relative;
+  z-index: 1; /* 明确定居底层,不参与跟顶栏抢位置 */
+  width: 100%; height: 56vh; min-height: 330px;
+  border-radius: 26px; overflow: hidden; margin: 16px 0;
+  border: 3px solid rgba(255,255,255,0.7);
+  box-shadow: 0 16px 38px -14px rgba(123,90,166,0.55);
+}
+.loc-pin { font-size: 28px; line-height: 38px; text-align: center; filter: drop-shadow(0 2px 3px rgba(123,90,166,0.5)); }
+.loc-bar { display: flex; gap: 14px; align-items: center; justify-content: center; flex-wrap: wrap; }
+/* 渐变果冻药丸 */
+.loc-share {
+  border: none; cursor: pointer;
+  padding: 14px 30px; border-radius: 999px;
+  font-family: var(--hand), cursive; font-size: 1.15rem; letter-spacing: 1px;
+  color: #fff; text-shadow: 0 1px 2px rgba(180,110,160,0.5);
+  background: linear-gradient(135deg, #ffd2ec 0%, #f4a9d6 45%, #c9a7f5 100%);
+  box-shadow:
+    0 10px 22px -8px rgba(220,140,200,0.75),
+    inset 0 3px 4px rgba(255,255,255,0.85),
+    inset 0 -5px 10px rgba(170,90,160,0.25);
+  transition: transform 0.15s ease;
+}
+.loc-share:active { transform: scale(0.96); }
+.loc-share:disabled { opacity: 0.6; }
+.loc-auto {
+  font-family: var(--hand), cursive; font-size: 0.95rem; color: #7b5aa6;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 16px; border-radius: 999px;
+  background: linear-gradient(160deg, rgba(255,255,255,0.92), rgba(245,230,251,0.82));
+  box-shadow: 0 6px 14px -7px rgba(123,90,166,0.5), inset 0 2px 2px rgba(255,255,255,0.9);
+}
+.loc-msg {
+  text-align: center; margin: 14px 0 0; font-size: 1rem;
+  font-family: var(--hand), cursive; color: #8a6cb4;
+  text-shadow: 0 1px 3px rgba(255,255,255,0.9), 0 0 8px rgba(255,255,255,0.7);
+}
+.loc-msg.is-error { color: #e87aa0; }
+.loc-msg.is-ok { color: #5bbf95; }
+.loc-info {
+  margin: 18px auto 0; max-width: 440px;
+  border-radius: 22px; padding: 16px 22px;
+  font-family: var(--hand), cursive; font-size: 1rem; line-height: 2.1; color: #6b4a86;
+  background: linear-gradient(160deg, rgba(255,255,255,0.92), rgba(245,230,251,0.85));
+  box-shadow:
+    0 12px 26px -12px rgba(123,90,166,0.5),
+    inset 0 2px 3px rgba(255,255,255,0.9);
+}
+
+
+/* 予予主动发的语音条：靠左 + 猫咪薰衣草色（区别于用户的粉色语音条） */
+.voice-wrap.is-cat { align-items: flex-start; }
+.voice-wrap.is-cat .voice-bubble {
+  background: linear-gradient(135deg, #ece3ff 0%, #d6c8f7 100%);
+  color: #5a4a86;
+}
+.voice-wrap.is-cat .voice-wrap__text { text-align: left; }
+
+/* ===== 聊天:时间戳 / 消息编辑 / 语音保存 ===== */
+.bubble-time {
+  display: block;
+  font-family: var(--round); /* Fredoka 圆体，带数字 */
+  font-size: 0.78rem;
+  color: #9a8bb0; /* 莫兰迪紫，淡一点 */
+  font-weight: 400; /* 细体，不那么抢眼 */
+  letter-spacing: 0.02em;
+  margin: 4px 4px 0;
+}
+.bubble-row.is-user .bubble-time { text-align: right; }
+.bubble-row.is-bot .bubble-time { text-align: left; }
+
+/* 用户气泡底下的小脚：时间戳 + 编辑版本翻页（< N/M >），右对齐 */
+.bubble-foot {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  margin: 4px 4px 0;
+}
+.bubble-foot .bubble-time { margin: 0; }
+.bubble-versions {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--round);
+  font-size: 0.78rem;
+  color: #9a8bb0;
+  background: rgba(201,167,245,0.12);
+  padding: 2px 6px; border-radius: 999px;
+}
+.bubble-versions__btn {
+  border: none; background: transparent; cursor: pointer;
+  color: #8e6fc9; padding: 0 4px; font-size: 1rem; line-height: 1;
+  border-radius: 999px;
+}
+.bubble-versions__btn:disabled { color: #c8bcd9; cursor: default; }
+.bubble-versions__btn:not(:disabled):hover { background: rgba(155,123,200,0.18); }
+.bubble-versions__num { letter-spacing: 0.04em; }
+
+/* 编辑铅笔：从气泡左侧搬到气泡正下方（跟时间戳/版本切换同一行） */
+.bubble-edit-foot {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  border: none; border-radius: 999px;
+  background: rgba(255,255,255,0.7);
+  box-shadow: 0 2px 6px rgba(118,96,132,0.15);
+  color: var(--iris, #8e6fc9);
+  cursor: pointer;
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+.bubble-edit-foot:active { transform: scale(0.9); }
+.bubble-edit-foot:hover { background: rgba(255,255,255,0.92); }
+
+/* 用户气泡里的「改一下」铅笔 */
+.bubble--user { position: relative; }
+.bubble__text { white-space: pre-wrap; }
+/* 我消息左边那颗固定的编辑按钮：圆形、好戳，不再藏在气泡里 */
+.bubble-edit-side {
+  align-self: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  margin-right: 6px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2px 6px rgba(118, 96, 132, 0.18);
+  color: var(--iris);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.9;
+}
+.bubble-edit-side:active { transform: scale(0.9); }
+
+/* 编辑中：文本框 + 保存/取消 */
+.bubble-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 82%;
+  align-self: flex-end;
+}
+.bubble-edit__area {
+  width: 100%;
+  min-height: 64px;
+  border-radius: 14px;
+  border: 1px solid rgba(155, 123, 200, 0.4);
+  padding: 10px 12px;
+  font: inherit;
+  resize: vertical;
+  background: #fff;
+  color: #4a3a60;
+}
+.bubble-edit__ops { display: flex; gap: 8px; justify-content: flex-end; }
+.bubble-edit__ops button {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  background: rgba(155, 123, 200, 0.18);
+  color: #6b4a86;
+}
+.bubble-edit__ops button.is-primary {
+  background: linear-gradient(135deg, #f4a9d6, #c9a7f5);
+  color: #fff;
+}
+
+/* 予予语音条:Text + Save 一行，英文花体 */
+.voice-wrap__ops { display: flex; gap: 12px; align-items: center; }
+.voice-wrap__ops .voice-wrap__t2t {
+  text-decoration: none;
+  font-family: var(--script), cursive;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: #b56fb0;
+  padding: 4px 12px;
+}
+
+/* ===== 调频:聊天背景设置 ===== */
+.switch-bg { display: flex; gap: 14px; align-items: center; }
+.switch-bg__preview {
+  width: 96px; height: 168px; flex-shrink: 0;
+  border-radius: 16px;
+  background: linear-gradient(160deg, #f8dbe7, #efe2fb) center / cover no-repeat;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.7), 0 8px 18px -8px rgba(123,90,166,0.5);
+  display: grid; place-items: center;
+}
+.switch-bg__preview span { font-size: 0.78rem; color: #9a7fc0; }
+/* 头像预览：正方形圆形 */
+.switch-bg__preview--avatar { width: 96px; height: 96px; border-radius: 999px; }
+.switch-bg__preview--avatar span { font-size: 2rem; }
+.switch-bg__ops { display: flex; flex-direction: column; gap: 10px; }
 .switch-bg__btn {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 11px 20px; border-radius: 999px; border: none; cursor: pointer;
