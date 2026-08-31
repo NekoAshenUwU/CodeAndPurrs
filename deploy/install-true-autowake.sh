@@ -14,6 +14,7 @@ readonly FILES=(
   "src/components/AutoWakeBridge.tsx"
   "src/pages/PurrChannelPage.tsx"
   "src/services/autowake.ts"
+  "src/services/spotify.ts"
   "src/services/storage.ts"
   "src/styles/global.css"
   "public/sw.js"
@@ -133,6 +134,7 @@ curl -fsSL "${SOURCE_BASE}/deploy/codeandpurrs-autowake.timer" -o "${STAGE}/code
 # 三个现有功能是硬性回归护栏：发图、AI 点歌、CC Opus 5，缺一就拒绝上线。
 grep -Fq "pendingPhotos" "${STAGE}/src/pages/PurrChannelPage.tsx"
 grep -Fq "SpotifyMusicCard" "${STAGE}/src/pages/PurrChannelPage.tsx"
+grep -Fq "export async function playSpotifyQueries" "${STAGE}/src/services/spotify.ts"
 grep -Fq "jiake-opus-5" "${STAGE}/src/data/models.ts"
 grep -Fq "handleAutoWakeRequest" "${STAGE}/server/proxy.mjs"
 grep -Fq "self.addEventListener('push'" "${STAGE}/public/sw.js"
