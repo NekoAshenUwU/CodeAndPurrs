@@ -21,6 +21,7 @@ readonly FILES=(
   "public/sw.js"
   "public/manifest.webmanifest"
   "public/assets/autowake/enable.webp"
+  "public/assets/screen/watch-wife-screen.webp"
 )
 readonly OLD_UNITS=(
   "codeandpurrs-autonomy.timer"
@@ -145,6 +146,7 @@ grep -Fq "fetchLatestScreenFrame" "${STAGE}/src/pages/PurrChannelPage.tsx"
 grep -Fq "self.addEventListener('push'" "${STAGE}/public/sw.js"
 grep -Fq '"gcm_sender_id": "103953800507"' "${STAGE}/public/manifest.webmanifest"
 [[ -s "${STAGE}/public/assets/autowake/enable.webp" ]]
+[[ -s "${STAGE}/public/assets/screen/watch-wife-screen.webp" ]]
 
 ln -s "${APP}/node_modules" "${STAGE}/node_modules"
 (
