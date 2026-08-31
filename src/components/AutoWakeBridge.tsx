@@ -230,13 +230,18 @@ export function AutoWakeBridge() {
     <>
       <button
         type="button"
-        className={`autowake-enable is-${status}`}
+        className={`autowake-enable is-${status}${busy ? ' is-busy' : ''}`}
         onClick={() => void enable()}
         disabled={busy}
         aria-label="开启真正的后台自动唤醒"
       >
-        <span aria-hidden="true">{busy ? '…' : '🔔'}</span>
-        <span>{status === 'blocked' ? '允许通知后自动找你' : '开启自动唤醒'}</span>
+        <img
+          src="/assets/autowake/enable.webp"
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+        />
+        {busy ? <span className="autowake-enable__busy" aria-hidden="true">•••</span> : null}
       </button>
       {notice ? <div className="autowake-toast">{notice}</div> : null}
     </>
