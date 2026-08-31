@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -97,12 +98,56 @@ function selectFrame(dataDir, currentTime, after, before) {
   ).at(-1) || null;
 }
 
+function frameStoryKey(frame) {
+  const sceneVersion = Number(frame?.sceneVersion || 0);
+  if (sceneVersion > 0) return `${frame.deviceId}:scene:${sceneVersion}`;
+  return `${frame.deviceId}:sha256:${createHash('sha256').update(String(frame.data || '')).digest('hex')}`;
+}
+
+function publicFrame(frame) {
+  return {
+    deviceId: frame.deviceId,
+    sceneVersion: Number(frame.sceneVersion || 0),
+    capturedAt: frame.capturedAt,
+    receivedAt: frame.receivedAt,
+    dataUrl: `data:${frame.mimeType};base64,${frame.data}`,
+  };
+}
+
+// 自动唤醒和未来的 MCP 共用这条读取链路。只取服务器最近收到的短时帧，
+// 同一个 Android sceneVersion 留最后一张，防止静止页面每 8 秒重复占用视觉 token。
+export function getRecentScreenFrames(options = {}) {
+  const dataDir = options.dataDir || process.env.SCREEN_FRAME_DATA_DIR || DEFAULT_DATA_DIR;
+  const currentTime = Number(options.now ?? Date.now());
+  const durationMs = Math.min(
+    RECENT_FRAME_TTL_MS,
+    Math.max(1_000, Number(options.durationMs || 60_000)),
+  );
+  const maxFrames = Math.min(8, Math.max(1, Math.floor(Number(options.maxFrames || 4))));
+  const afterReceivedAt = currentTime - durationMs;
+  const frames = pruneRecentFrames(dataDir, currentTime)
+    .filter((frame) => Number(frame.receivedAt || 0) >= afterReceivedAt)
+    .sort((a, b) =>
+      Number(a.capturedAt) - Number(b.capturedAt) || Number(a.receivedAt) - Number(b.receivedAt),
+    );
+
+  const newestByScene = new Map();
+  for (const frame of frames) newestByScene.set(frameStoryKey(frame), frame);
+  return [...newestByScene.values()]
+    .sort((a, b) =>
+      Number(a.capturedAt) - Number(b.capturedAt) || Number(a.receivedAt) - Number(b.receivedAt),
+    )
+    .slice(-maxFrames)
+    .map(publicFrame);
+}
+
 function normalizeFrame(body, receivedAt) {
   const schemaVersion = Number(body?.schemaVersion || 0);
   const deviceId = String(body?.deviceId || '').trim();
   const mimeType = String(body?.mimeType || '').trim().toLowerCase();
   const data = String(body?.data || '').replace(/\s+/g, '');
   const capturedAt = Number(body?.capturedAt || receivedAt);
+  const sceneVersion = Math.max(0, Math.floor(Number(body?.sceneVersion || 0)));
   if (schemaVersion !== 1) throw new Error('unsupported schemaVersion');
   if (!deviceId || deviceId.length > 80) throw new Error('invalid deviceId');
   if (!ALLOWED_MIME.has(mimeType)) throw new Error('unsupported image type');
@@ -110,7 +155,7 @@ function normalizeFrame(body, receivedAt) {
   if (!data || !/^[A-Za-z0-9+/]+={0,2}$/.test(data)) throw new Error('invalid image data');
   const bytes = Buffer.from(data, 'base64');
   if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) throw new Error('screen frame image too large');
-  return { schemaVersion, deviceId, mimeType, data, capturedAt, receivedAt };
+  return { schemaVersion, deviceId, mimeType, data, capturedAt, receivedAt, sceneVersion };
 }
 
 function persistFrame(dataDir, frame) {
@@ -208,10 +253,7 @@ export async function handleScreenFrameRequest(req, res, requestUrl, options = {
     }
     json(res, 200, {
       ok: true,
-      deviceId: frame.deviceId,
-      capturedAt: frame.capturedAt,
-      receivedAt: frame.receivedAt,
-      dataUrl: `data:${frame.mimeType};base64,${frame.data}`,
+      ...publicFrame(frame),
     });
     return true;
   }

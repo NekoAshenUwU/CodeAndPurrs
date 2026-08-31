@@ -23,6 +23,12 @@
 - 真聊天后随机等待 30–60 分钟
 - 两次自动消息随机间隔 45–75 分钟
 - 每个马来西亚自然日最多 10 条；工作日受六小时窗口限制，周末更容易达到较高次数
+- 手机屏幕共享仍在运行时，后台会读取最近 60 秒内最多 4 个不同画面，按时间顺序交给支持视觉的模型；没有新画面就纯文字唤醒
+- Android Bridge 用 `sceneVersion` 标记明显换页：静止画面 8 秒保底上传，明显切换最快 2 秒补拍；服务器同一场景只留最后一张进入模型
+
+屏幕轨迹只存在于 `server/screenFrame.mjs` 的两分钟内存队列；磁盘仍只覆盖
+`latest.json`。停止手机共享会同时删除最新帧和短时队列。自动唤醒不会使用超过
+配置窗口的旧图，也不会把截图写进聊天收件箱。
 
 ## 部署
 
@@ -40,5 +46,7 @@ curl -fsS http://127.0.0.1:8787/api/autowake/config
 curl -fsS -X POST 'http://127.0.0.1:8787/api/autowake/run?dry=1'
 tail -n 50 /var/www/codeandpurrs/server/data/autowake/autowake.log
 ```
+
+成功投递日志会包含 `screenFrames=0..4`，可直接确认该轮有没有把屏幕轨迹交给模型。
 
 浏览器第一次开启后会通过 `/api/autowake/test` 走一遍真实后台生成、入箱与 Web Push，十分钟内只允许测试一次。

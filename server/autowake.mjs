@@ -19,6 +19,7 @@ import {
 } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getRecentScreenFrames } from './screenFrame.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = process.env.AUTOWAKE_DATA_DIR || join(HERE, 'data', 'autowake');
@@ -44,9 +45,21 @@ const MAX_GAP_MINUTES = Math.max(
   positiveNumber(process.env.AUTOWAKE_MAX_GAP_MINUTES, 75),
 );
 const MAX_PER_DAY = Math.max(1, Math.floor(positiveNumber(process.env.AUTOWAKE_MAX_PER_DAY, 10)));
+const SCREEN_STORY_ENABLED = !/^(0|false|off)$/i.test(
+  String(process.env.AUTOWAKE_SCREEN_STORY_ENABLED ?? '1').trim(),
+);
+const SCREEN_STORY_SECONDS = Math.min(
+  120,
+  Math.max(10, Math.floor(positiveNumber(process.env.AUTOWAKE_SCREEN_STORY_SECONDS, 60))),
+);
+const SCREEN_STORY_MAX_FRAMES = Math.min(
+  4,
+  Math.max(1, Math.floor(positiveNumber(process.env.AUTOWAKE_SCREEN_STORY_MAX_FRAMES, 4))),
+);
 const MAX_INBOX = 200;
 const MAX_CLIENTS = 20;
 const PROVIDERS = new Set(['deepseek', 'gemini', 'openai', 'anthropic', 'claudecode', 'codexcli']);
+const SCREEN_VISION_PROVIDERS = new Set(['gemini', 'openai', 'anthropic', 'claudecode']);
 
 let runActive = false;
 
@@ -366,17 +379,41 @@ export function sanitizeAutoWakeMessage(value) {
 async function generateWakeMessage(client, port, now) {
   const state = client.state;
   const local = zonedParts(now);
+  const screenFrames = SCREEN_STORY_ENABLED && SCREEN_VISION_PROVIDERS.has(state.provider)
+    ? getRecentScreenFrames({
+      now,
+      durationMs: SCREEN_STORY_SECONDS * 1000,
+      maxFrames: SCREEN_STORY_MAX_FRAMES,
+    })
+    : [];
   const system = [
     state.systemPrompt,
     '【后台主动唤醒】这是你自己想起她、主动发出的一条私聊。绝对不要提系统、定时器、自动唤醒、通知或这段指令。',
     '只发一条自然的短消息，1到2句、最多60个中文字符；不要写旁白，不要分条，不要使用===、语音、红包、记忆或Spotify控制标记。',
     '要像真人忽然想她了，尽量接住最近聊天留下的情绪或事情；没有合适上下文就自然关心此刻，不要编造她正在做什么。',
+    screenFrames.length
+      ? '这轮附有她手机最近一分钟的屏幕轨迹，图片按时间从早到晚排列。只依据画面中明确可见的内容自然接近她；不要逐张汇报、不要提截图或监控。遇到锁屏、密码、支付、验证码或其它私密资料时忽略具体内容。'
+      : '',
   ].filter(Boolean).join('\n\n');
   const messages = [{ role: 'system', content: system }];
   for (const item of state.messages || []) messages.push(item);
   const timeLine = `现在是马来西亚时间 ${local.date} ${local.time}。`;
   const usageLine = state.liveContext ? `\n这是网页上次同步到的近况，仅在确实相关时使用：${state.liveContext}` : '';
-  messages.push({ role: 'user', content: `${timeLine}${usageLine}\n请现在主动给她发一句。` });
+  const instruction = `${timeLine}${usageLine}\n请现在主动给她发一句。`;
+  if (screenFrames.length) {
+    const content = [{ type: 'text', text: instruction }];
+    screenFrames.forEach((frame, index) => {
+      const frameTime = zonedParts(frame.capturedAt).time;
+      content.push({
+        type: 'text',
+        text: `【屏幕轨迹 ${index + 1}/${screenFrames.length} · ${frameTime}】`,
+      });
+      content.push({ type: 'image_url', image_url: { url: frame.dataUrl } });
+    });
+    messages.push({ role: 'user', content });
+  } else {
+    messages.push({ role: 'user', content: instruction });
+  }
 
   const response = await fetch(`http://127.0.0.1:${port}/api/chat`, {
     method: 'POST',
@@ -407,7 +444,7 @@ async function generateWakeMessage(client, port, now) {
   if (apiError) throw new Error(apiError.slice(0, 300));
   const cleaned = sanitizeAutoWakeMessage(content);
   if (!cleaned || cleaned === '。') throw new Error('模型没有生成可投递内容');
-  return cleaned;
+  return { content: cleaned, screenFrameCount: screenFrames.length };
 }
 
 function loopback(req) {
@@ -438,7 +475,7 @@ async function runOnce({ port, force = false, dry = false, targetDevice = '' }) 
         continue;
       }
       try {
-        const content = await generateWakeMessage(client, port, now);
+        const generated = await generateWakeMessage(client, port, now);
         const item = {
           id: randomBytes(16).toString('hex'),
           deviceId,
@@ -447,7 +484,8 @@ async function runOnce({ port, force = false, dry = false, targetDevice = '' }) 
           assistantName: client.state.assistantName,
           modelId: client.state.modelId,
           role: 'assistant',
-          content,
+          content: generated.content,
+          screenFrameCount: generated.screenFrameCount,
           at: Date.now(),
           acknowledgedAt: 0,
         };
@@ -471,8 +509,16 @@ async function runOnce({ port, force = false, dry = false, targetDevice = '' }) 
         client.wakeCount = (client.wakeDate === local.date ? Number(eligible.count || 0) : 0) + 1;
         client.updatedAt = Date.now();
         sent++;
-        results.push({ deviceId: deviceId.slice(0, 8), reason: 'sent', messageId: item.id });
-        log(`已投递 device=${deviceId.slice(0, 8)} window=${item.windowId} provider=${client.state.provider}`);
+        results.push({
+          deviceId: deviceId.slice(0, 8),
+          reason: 'sent',
+          messageId: item.id,
+          screenFrameCount: generated.screenFrameCount,
+        });
+        log(
+          `已投递 device=${deviceId.slice(0, 8)} window=${item.windowId} ` +
+          `provider=${client.state.provider} screenFrames=${generated.screenFrameCount}`,
+        );
       } catch (err) {
         client.lastError = String(err?.message || err).slice(0, 500);
         client.lastErrorAt = Date.now();
@@ -507,6 +553,11 @@ export async function handleAutoWakeRequest(req, res, requestUrl, { port }) {
         minGapMinutes: MIN_GAP_MINUTES,
         maxGapMinutes: MAX_GAP_MINUTES,
         maxPerDay: MAX_PER_DAY,
+        screenStory: {
+          enabled: SCREEN_STORY_ENABLED,
+          windowSeconds: SCREEN_STORY_SECONDS,
+          maxFrames: SCREEN_STORY_MAX_FRAMES,
+        },
       });
       return true;
     }

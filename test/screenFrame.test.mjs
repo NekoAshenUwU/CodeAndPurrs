@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { handleScreenFrameRequest } from '../server/screenFrame.mjs';
+import { getRecentScreenFrames, handleScreenFrameRequest } from '../server/screenFrame.mjs';
 
 const frameBody = {
   schemaVersion: 1,
@@ -31,7 +31,7 @@ async function withServer(run, clock = { now: 1_780_000_000_500 }) {
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
   try {
-    await run(base, clock);
+    await run(base, clock, dataDir);
   } finally {
     await new Promise((resolve) => server.close(resolve));
     rmSync(dataDir, { recursive: true, force: true });
@@ -119,5 +119,40 @@ test('capture window rejects invalid bounds and does not fall back to an unrelat
     const headers = { 'X-Chat-Save-Key': 'viewer-secret' };
     assert.equal((await fetch(`${base}/api/screen/latest?after=200&before=100`, { headers })).status, 400);
     assert.equal((await fetch(`${base}/api/screen/latest?after=1780000001000`, { headers })).status, 404);
+  });
+});
+
+test('recent screen story keeps the latest frame per scene and returns the newest four scenes', async () => {
+  await withServer(async (base, clock, dataDir) => {
+    const frames = [
+      { sceneVersion: 1, label: 1 },
+      { sceneVersion: 2, label: 2 },
+      { sceneVersion: 2, label: 3 },
+      { sceneVersion: 3, label: 4 },
+      { sceneVersion: 4, label: 5 },
+      { sceneVersion: 5, label: 6 },
+    ];
+    let newestSceneTwoAt = 0;
+    for (const item of frames) {
+      clock.now += 5_000;
+      const body = {
+        ...frameBody,
+        sceneVersion: item.sceneVersion,
+        capturedAt: clock.now,
+        data: Buffer.from([0xff, 0xd8, item.label, 0xd9]).toString('base64'),
+      };
+      assert.equal((await ingest(base, 'bridge-secret', body)).status, 200);
+      if (item.sceneVersion === 2) newestSceneTwoAt = body.capturedAt;
+    }
+
+    const story = getRecentScreenFrames({
+      dataDir,
+      now: clock.now,
+      durationMs: 60_000,
+      maxFrames: 4,
+    });
+    assert.deepEqual(story.map((frame) => frame.sceneVersion), [2, 3, 4, 5]);
+    assert.equal(story[0].capturedAt, newestSceneTwoAt);
+    assert.ok(story.every((frame) => frame.dataUrl.startsWith('data:image/jpeg;base64,')));
   });
 });

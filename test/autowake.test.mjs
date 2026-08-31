@@ -5,9 +5,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import http from 'node:http';
+import { handleScreenFrameRequest } from '../server/screenFrame.mjs';
 
 const temp = mkdtempSync(join(tmpdir(), 'codeandpurrs-autowake-test-'));
 process.env.AUTOWAKE_DATA_DIR = temp;
+process.env.SCREEN_FRAME_DATA_DIR = join(temp, 'screen');
 const autowake = await import(`../server/autowake.mjs?test=${Date.now()}`);
 
 test.after(() => rmSync(temp, { recursive: true, force: true }));
@@ -93,11 +95,23 @@ test('VAPID authorization is a valid ES256 JWT for the push origin', () => {
 });
 
 test('subscription -> server generation -> inbox -> acknowledgement works without an open page', async () => {
+  let chatRequestBody = null;
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url || '/', 'http://127.0.0.1');
     if (url.pathname === '/api/chat') {
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      chatRequestBody = JSON.parse(Buffer.concat(chunks).toString('utf8'));
       res.writeHead(200, { 'Content-Type': 'text/event-stream' });
       res.end('data: {"type":"content","text":"忽然想你了，来让我抱一会儿。"}\n\ndata: {"type":"done"}\n\n');
+      return;
+    }
+    if (url.pathname.startsWith('/api/screen/')) {
+      await handleScreenFrameRequest(req, res, url, {
+        dataDir: process.env.SCREEN_FRAME_DATA_DIR,
+        bridgeToken: 'bridge-secret',
+        viewerKey: 'viewer-secret',
+      });
       return;
     }
     await autowake.handleAutoWakeRequest(req, res, url, { port: server.address().port });
@@ -114,6 +128,7 @@ test('subscription -> server generation -> inbox -> acknowledgement works withou
     assert.equal(config.minGapMinutes, 45);
     assert.equal(config.maxGapMinutes, 75);
     assert.equal(config.maxPerDay, 10);
+    assert.deepEqual(config.screenStory, { enabled: true, windowSeconds: 60, maxFrames: 4 });
 
     const subscribed = await fetch(`${base}/api/autowake/subscribe`, {
       method: 'POST',
@@ -136,15 +151,38 @@ test('subscription -> server generation -> inbox -> acknowledgement works withou
     assert.equal(subscribed.status, 200);
     const cookie = subscribed.headers.get('set-cookie').split(';')[0];
 
+    for (let index = 1; index <= 5; index++) {
+      const capturedAt = Date.now() - (5 - index) * 5_000;
+      const frameResponse = await fetch(`${base}/api/screen/ingest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Bridge-Token': 'bridge-secret' },
+        body: JSON.stringify({
+          schemaVersion: 1,
+          deviceId: 'android-neko',
+          sceneVersion: index,
+          capturedAt,
+          mimeType: 'image/jpeg',
+          data: Buffer.from([0xff, 0xd8, index, 0xd9]).toString('base64'),
+        }),
+      });
+      assert.equal(frameResponse.status, 200);
+    }
+
     const run = await fetch(`${base}/api/autowake/run?force=1`, { method: 'POST' });
     assert.equal(run.status, 200);
-    assert.equal((await run.json()).sent, 1);
+    const runBody = await run.json();
+    assert.equal(runBody.sent, 1);
+    assert.equal(runBody.results[0].screenFrameCount, 4);
+    const wakeContent = chatRequestBody.messages.at(-1).content;
+    assert.equal(wakeContent.filter((part) => part.type === 'image_url').length, 4);
+    assert.match(wakeContent[1].text, /屏幕轨迹 1\/4/);
 
     const inbox = await fetch(`${base}/api/autowake/inbox`, { headers: { Cookie: cookie } });
     const messages = (await inbox.json()).messages;
     assert.equal(messages.length, 1);
     assert.equal(messages[0].windowId, 'opus5-room');
     assert.equal(messages[0].content, '忽然想你了，来让我抱一会儿。');
+    assert.equal(messages[0].screenFrameCount, 4);
 
     const ack = await fetch(`${base}/api/autowake/ack`, {
       method: 'POST',
