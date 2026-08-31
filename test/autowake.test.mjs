@@ -40,6 +40,25 @@ test('quiet hours and idle/cooldown guards are enforced', () => {
   assert.equal(autowake.eligibility({ ...client, state: { ...client.state, lastUserAt: threeAMMalaysia - 4 * 60 * 60_000 } }, threeAMMalaysia).reason, 'quiet');
 });
 
+test('old 4-7 hour schedules are clamped to the livelier policy', () => {
+  const lastUserAt = Date.parse('2026-08-31T04:00:00.000Z');
+  const afterChat = {
+    state: { lastUserAt },
+    lastWakeAt: 0,
+    nextWakeAt: lastUserAt + 7 * 60 * 60_000,
+  };
+  autowake.clampLegacyWakeSchedule(afterChat);
+  assert.equal(afterChat.nextWakeAt, lastUserAt + 2 * 60 * 60_000);
+
+  const afterWake = {
+    state: { lastUserAt: lastUserAt - 60_000 },
+    lastWakeAt: lastUserAt,
+    nextWakeAt: lastUserAt + 7 * 60 * 60_000,
+  };
+  autowake.clampLegacyWakeSchedule(afterWake);
+  assert.equal(afterWake.nextWakeAt, lastUserAt + 4 * 60 * 60_000);
+});
+
 test('VAPID authorization is a valid ES256 JWT for the push origin', () => {
   const endpoint = 'https://fcm.googleapis.com/fcm/send/example';
   const { authorization, publicKey } = autowake.createVapidAuthorization(endpoint, Date.parse('2026-08-31T04:00:00Z'));

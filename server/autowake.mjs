@@ -98,6 +98,21 @@ function nextWakeAt(from = Date.now(), afterUser = false) {
   return from + randomBetween(min, max) * 60_000;
 }
 
+export function clampLegacyWakeSchedule(client) {
+  if (!client || !Number(client.nextWakeAt || 0)) return client;
+  const lastUserAt = Number(client.state?.lastUserAt || 0);
+  const lastWakeAt = Number(client.lastWakeAt || 0);
+  const anchor = Math.max(lastUserAt, lastWakeAt);
+  if (!anchor) return client;
+  const afterUser = lastUserAt >= lastWakeAt;
+  const maxMinutes = afterUser
+    ? Math.max(MIN_IDLE_MINUTES + 60, Math.min(MIN_GAP_MINUTES, 180))
+    : MAX_GAP_MINUTES;
+  const latestAllowed = anchor + maxMinutes * 60_000;
+  if (client.nextWakeAt > latestAllowed) client.nextWakeAt = latestAllowed;
+  return client;
+}
+
 function parseCookies(req) {
   return String(req.headers.cookie || '')
     .split(';')
@@ -148,7 +163,9 @@ function readBody(req, max = 400_000) {
 
 function loadClients() {
   const data = readJSONFile(CLIENTS_FILE, { version: 1, clients: {} });
-  return data && typeof data.clients === 'object' ? data : { version: 1, clients: {} };
+  const normalized = data && typeof data.clients === 'object' ? data : { version: 1, clients: {} };
+  for (const client of Object.values(normalized.clients || {})) clampLegacyWakeSchedule(client);
+  return normalized;
 }
 
 function saveClients(data) {
