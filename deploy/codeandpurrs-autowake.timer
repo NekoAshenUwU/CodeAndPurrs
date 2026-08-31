@@ -1,0 +1,13 @@
+[Unit]
+Description=Check CodeAndPurrs automatic wake-up every 20 minutes
+
+[Timer]
+OnBootSec=7min
+OnUnitActiveSec=20min
+RandomizedDelaySec=3min
+AccuracySec=1min
+Persistent=true
+Unit=codeandpurrs-autowake.service
+
+[Install]
+WantedBy=timers.target

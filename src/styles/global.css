@@ -6300,6 +6300,50 @@ a {
   .chat-head__restore { min-width: 44px; padding: 0 8px; }
 }
 
+/* ---------- 真后台自动唤醒：只在尚未授权时出现的一次性开关 ---------- */
+.autowake-enable {
+  position: fixed;
+  right: 14px;
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  z-index: 140;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 0 14px;
+  color: #684982;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(250, 226, 247, 0.96), rgba(213, 228, 255, 0.95));
+  box-shadow: 0 10px 30px rgba(91, 67, 139, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  font-family: "HuaXianZi", var(--round);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+.autowake-enable:active { transform: scale(0.96); }
+.autowake-enable:disabled { opacity: 0.72; }
+.autowake-enable.is-blocked { color: #9a5364; }
+.autowake-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(142px + env(safe-area-inset-bottom));
+  z-index: 160;
+  width: max-content;
+  max-width: min(88vw, 420px);
+  padding: 10px 14px;
+  color: #624b75;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  background: rgba(255, 250, 255, 0.94);
+  box-shadow: 0 10px 28px rgba(73, 54, 112, 0.22);
+  transform: translateX(-50%);
+  font-family: var(--round);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
 /* ========================================================================== */
 /* 他的歌单 · His Playlist                                                    */
 /* ========================================================================== */

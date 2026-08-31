@@ -1,0 +1,14 @@
+[Unit]
+Description=CodeAndPurrs true background auto-wake
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/bin/curl --fail --silent --show-error --max-time 180 --request POST http://127.0.0.1:8787/api/autowake/run
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+TimeoutStartSec=190

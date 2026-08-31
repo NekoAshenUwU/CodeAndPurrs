@@ -10,6 +10,7 @@ import { randomBytes } from 'node:crypto';
 import { readFileSync, existsSync, writeFileSync, mkdirSync, statSync, renameSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { handleAutoWakeRequest } from './autowake.mjs';
 
 // 主动加载 .env(不依赖 node CLI flag)——pm2 fork 模式不会真正 spawn 新 node,
 // 而是从父进程 require 脚本,导致 --env-file-if-exists 这类 CLI flag 被无视,
@@ -1432,6 +1433,13 @@ const server = http.createServer(async (req, res) => {
   const requestPath = requestUrl.pathname;
   const isChatSaves = requestPath === '/api/chat-saves' || requestPath.startsWith('/api/chat-saves/');
   const isSpotify = requestPath === '/api/spotify' || requestPath.startsWith('/api/spotify/');
+
+  // ----- 真后台自动唤醒：订阅、收件箱、VPS 本机定时触发 -----
+  // 生成发生在服务器定时器，不依赖网页打开；浏览器只负责领取已经生成的消息。
+  if (requestPath === '/api/autowake' || requestPath.startsWith('/api/autowake/')) {
+    await handleAutoWakeRequest(req, res, requestUrl, { port: PORT });
+    return;
+  }
 
   // ----- 他的歌单：Spotify 登录、点歌和播放 -----
   if (isSpotify) {

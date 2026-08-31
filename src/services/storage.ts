@@ -16,6 +16,11 @@ export function loadLocal<T>(key: string, fallback: T): T {
 export function saveLocal<T>(key: string, value: T): void {
   try {
     localStorage.setItem(PREFIX + key, JSON.stringify(value));
+    // storage 事件不会在同一个标签页触发；给自动唤醒桥一条轻量信号，
+    // 让它在真聊天结束后及时同步最新窗口，而不是等下一分钟轮询。
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('codeandpurrs:storage', { detail: { key } }));
+    }
   } catch {
     // 存满了或隐私模式，忽略，不让它把页面搞崩
   }

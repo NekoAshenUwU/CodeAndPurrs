@@ -1075,6 +1075,20 @@ function ChatRoom({
       voice: t.voice ? { duration: t.voice.duration } : undefined,
     })),
   );
+  // Service Worker 收到真后台推送后，AutoWakeBridge 会把消息落进这个窗口的
+  // localStorage，再发同页事件。聊天室只合并新增 id，绝不覆盖正在流式的回复。
+  useEffect(() => {
+    const receiveAutoWake = () => {
+      const stored = loadLocal<Turn[]>(turnsKey(win.id), []);
+      setTurns((current) => {
+        const ids = new Set(current.map((turn) => turn.id));
+        const added = stored.filter((turn) => !ids.has(turn.id));
+        return added.length ? [...current, ...added].sort((a, b) => Number(a.at || 0) - Number(b.at || 0)) : current;
+      });
+    };
+    window.addEventListener('codeandpurrs:autowake-delivered', receiveAutoWake);
+    return () => window.removeEventListener('codeandpurrs:autowake-delivered', receiveAutoWake);
+  }, [win.id]);
   // 滚动摘要：HISTORY_MAX 窗口之外的老消息不再直接丢，异步压成摘要兜底（见下方 compressOldHistory）
   const [rollingSummary, setRollingSummary] = useState<RollingSummary>(() => loadRollingSummary(win.id));
   const summarizingRef = useRef(false);
@@ -2299,8 +2313,16 @@ function initWindows(): WindowMeta[] {
 
 export function PurrChannelPage() {
   const [windows, setWindows] = useState<WindowMeta[]>(initWindows);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(() =>
+    new URLSearchParams(window.location.search).get('autowakeWindow'),
+  );
   const [restoring, setRestoring] = useState(false);
+
+  useEffect(() => {
+    const refreshAutoWakeWindows = () => setWindows(loadLocal<WindowMeta[]>(WINDOWS_KEY, []));
+    window.addEventListener('codeandpurrs:autowake-delivered', refreshAutoWakeWindows);
+    return () => window.removeEventListener('codeandpurrs:autowake-delivered', refreshAutoWakeWindows);
+  }, []);
 
   useEffect(() => {
     saveLocal(WINDOWS_KEY, windows);
