@@ -1561,7 +1561,7 @@ function ChatRoom({
       sys += '\n\n【更早的聊天摘要(自动压缩,可能不完全准确)】\n' + rollingSummary.summary;
     }
     const chatModel = getModel(provider);
-    const supportsTangMemory = chatModel.provider === 'claudecode' || chatModel.provider === 'anthropic';
+    const supportsTangMemory = chatModel.provider === 'claudecode';
     if (supportsTangMemory) {
       sys +=
         '\n\n【长期记忆·棠予酿】你每一轮都可以按需调用棠予酿读写工具。要回忆、核对过去就真的读取；' +

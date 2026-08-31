@@ -11,6 +11,7 @@ readonly FILES=(
   "server/autowake.mjs"
   "server/screenFrame.mjs"
   "server/proxy.mjs"
+  "server/tangMemoryMcp.mjs"
   "src/App.tsx"
   "src/components/AutoWakeBridge.tsx"
   "src/pages/PurrChannelPage.tsx"
@@ -145,7 +146,12 @@ grep -Fq "handleAutoWakeRequest" "${STAGE}/server/proxy.mjs"
 grep -Fq "handleScreenFrameRequest" "${STAGE}/server/proxy.mjs"
 grep -Fq "fetchLatestScreenFrame" "${STAGE}/src/pages/PurrChannelPage.tsx"
 grep -Fq "MEMORY_MCP_RULE" "${STAGE}/server/proxy.mjs"
-grep -Fq "const mem = memoryMcpConfig()" "${STAGE}/server/proxy.mjs"
+grep -Fq "tangMemoryBridgeConfig" "${STAGE}/server/proxy.mjs"
+grep -Fq "TANG_INTERNAL_KEY" "${STAGE}/server/tangMemoryMcp.mjs"
+if grep -Fq "type: 'http', url: mem.url" "${STAGE}/server/proxy.mjs"; then
+  echo "仍检测到公网棠予酿 OAuth MCP，拒绝上线。"
+  exit 1
+fi
 if grep -Fq "tang-memory-initialized" "${STAGE}/src/pages/PurrChannelPage.tsx"; then
   echo "仍检测到一次性棠予酿门禁，拒绝上线。"
   exit 1
@@ -161,6 +167,7 @@ ln -s "${APP}/node_modules" "${STAGE}/node_modules"
   node --check server/autowake.mjs
   node --check server/screenFrame.mjs
   node --check server/proxy.mjs
+  node --check server/tangMemoryMcp.mjs
   node --check public/sw.js
   npm run build
 )

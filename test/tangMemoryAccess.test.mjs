@@ -6,9 +6,10 @@ const proxy = readFileSync(new URL('../server/proxy.mjs', import.meta.url), 'utf
 const page = readFileSync(new URL('../src/pages/PurrChannelPage.tsx', import.meta.url), 'utf8');
 const chat = readFileSync(new URL('../src/services/chat.ts', import.meta.url), 'utf8');
 
-test('Claude and Claude Code receive Tangyuniang MCP on every turn', () => {
-  const alwaysOnBindings = proxy.match(/const mem = memoryMcpConfig\(\);/g) || [];
-  assert.equal(alwaysOnBindings.length, 2);
+test('Claude Code receives the local Tangyuniang bridge without browser OAuth', () => {
+  assert.match(proxy, /tangMemoryBridgeConfig/);
+  assert.match(proxy, /type: 'stdio'/);
+  assert.doesNotMatch(proxy, /mcp_servers|mcp_toolset|authorization_token/);
   assert.doesNotMatch(proxy, /initializeMemory|memory_initialized|MEMORY_MCP_INIT_RULE/);
 });
 

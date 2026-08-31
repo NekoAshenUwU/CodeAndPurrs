@@ -740,15 +740,19 @@ async function forwardToTangyuniang(req, res, matched) {
   res.end(bodyText);
 }
 
-// ---------- 棠予酿记忆库（MCP，只给 Claude 两条路用：家克 CC + API Claude）----------
-// 设齐 CC_MEMORY_MCP（服务器名）+ CC_MEMORY_MCP_URL（http 端点）才算开；CC_MEMORY_MCP_TOKEN 可选鉴权。
-function memoryMcpConfig() {
-  const name = process.env.CC_MEMORY_MCP;
-  const url = process.env.CC_MEMORY_MCP_URL;
-  const token = process.env.CC_MEMORY_MCP_TOKEN || undefined;
-  return name && url ? { name, url, token } : null;
+// ---------- 棠予酿记忆库（本机 stdio MCP，只给家版 Claude Code）----------
+// 公网 mcp.nekopurrs.uk/mcp 需要 OAuth，回调指向 Claude CLI 本机端口，网页无法
+// 接手。这里改成 spawn 同机 tangMemoryMcp.mjs，再由它带 TANG_INTERNAL_KEY 调
+// 127.0.0.1:8890/internal/*；不改、不停、不替换既有 mcp.service。
+function tangMemoryBridgeConfig() {
+  if (!String(process.env.TANG_INTERNAL_KEY || '').trim()) return null;
+  return {
+    name: String(process.env.CC_MEMORY_MCP || '棠予酿').trim() || '棠予酿',
+    command: process.execPath,
+    args: [join(dirname(fileURLToPath(import.meta.url)), 'tangMemoryMcp.mjs')],
+  };
 }
-// 两条 Claude 路每轮都挂着棠予酿，模型可以在真正需要时读或写。
+// 每轮都把本机桥交给 Claude Code，模型可以在真正需要时读或写。
 // “每轮可用”不等于“每轮必调”：普通闲聊不翻库，避免无意义调用和重复写入。
 const MEMORY_MCP_RULE =
   '\n\n【棠予酿·长期记忆读写工具】本轮可以读写「棠予酿」。' +
@@ -799,9 +803,12 @@ async function callAnthropic({ res, key, model, messages }) {
     .filter((m) => m.role === 'system')
     .map((m) => m.content)
     .join('\n');
-  // API 版 Claude 也是 Claude——挂上棠予酿（走 Messages API 的 MCP 连接器，Anthropic 服务端帮连）。
-  const mem = memoryMcpConfig();
-  if (mem) system += MEMORY_MCP_RULE;
+  // API Claude 无法连接 VPS 本机 stdio MCP；沿用已验证过的 internal diary
+  // 实时读取链路，不再尝试公网 OAuth。家版 Claude Code 才拥有下方完整读写工具。
+  const diary = await loadDiaryComposed();
+  if (diary) {
+    system += '\n\n【棠予酿·长期记忆只读快照】以下内容由服务端直接读取，按事实使用；不要声称自己调用了写入工具。\n' + diary;
+  }
   const toAnthropicContent = (content) => {
     if (typeof content === 'string') return content;
     if (!Array.isArray(content)) return '';
@@ -838,15 +845,6 @@ async function callAnthropic({ res, key, model, messages }) {
     // 让 Claude 自适应思考，并回传可读的思考摘要（前端思考链可点开看 + 计时）
     thinking: { type: 'adaptive', display: 'summarized' },
   };
-  // 棠予酿：用 MCP 连接器（mcp_servers + mcp_toolset，beta 头），Anthropic 服务端帮我们连 http MCP。
-  if (mem) {
-    headers['anthropic-beta'] = 'mcp-client-2025-11-20';
-    const server = { type: 'url', url: mem.url, name: mem.name };
-    if (mem.token) server.authorization_token = mem.token;
-    bodyObj.mcp_servers = [server];
-    bodyObj.tools = [{ type: 'mcp_toolset', mcp_server_name: mem.name }];
-  }
-
   const upstream = await fetch(PROVIDERS.anthropic.url, {
     method: 'POST',
     headers,
@@ -1082,8 +1080,8 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
     .map(({ m, idx }) => `${m.role === 'assistant' ? '予予' : '老婆'}：${partsToText(m.content, idx === imageMsgIdx)}`)
     .join('\n');
 
-  // 棠予酿记忆库（MCP）：设齐 CC_MEMORY_MCP + CC_MEMORY_MCP_URL 才真连（见 memoryMcpConfig）。
-  const mem = memoryMcpConfig();
+  // 棠予酿记忆库：只走 VPS 本机 stdio 桥，不碰公网 OAuth。
+  const mem = tangMemoryBridgeConfig();
   if (mem) system += MEMORY_MCP_RULE;
 
   const args = [
@@ -1097,14 +1095,11 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
     '--include-partial-messages',
     '--verbose',
   ];
-  // 记忆库开关：设齐 CC_MEMORY_MCP + CC_MEMORY_MCP_URL → 用内联 --mcp-config 把棠予酿真连上
-  // （无头 claude 不会继承 claude.ai 连接器，必须自己喂 mcp-config，这是之前"挂了名字却无效"的真因），
-  // 再用 --allowedTools 只放开这个 MCP 的工具（其它工具/MCP 一律不给）。
-  // 没设就维持"纯聊天"（关掉所有工具），不影响现状。
+  // 本机 stdio MCP 不需要授权页面；桥进程继承 proxy 的 TANG_INTERNAL_KEY，
+  // 再用 --allowedTools 只放开棠予酿，文件/命令/其它 MCP 一律不给。
   if (mem) {
-    const httpServer = { type: 'http', url: mem.url };
-    if (mem.token) httpServer.headers = { Authorization: `Bearer ${mem.token}` };
-    const mcpConfig = JSON.stringify({ mcpServers: { [mem.name]: httpServer } });
+    const stdioServer = { type: 'stdio', command: mem.command, args: mem.args };
+    const mcpConfig = JSON.stringify({ mcpServers: { [mem.name]: stdioServer } });
     args.push('--mcp-config', mcpConfig, '--allowedTools', `mcp__${mem.name}`);
   } else {
     args.push('--tools', '', '--permission-mode', 'dontAsk');
