@@ -9,6 +9,7 @@ readonly STAGE="$(mktemp -d /tmp/codeandpurrs-true-autowake.XXXXXX)"
 readonly BACKUP="/root/backups/codeandpurrs-before-true-autowake-${STAMP}"
 readonly FILES=(
   "server/autowake.mjs"
+  "server/screenFrame.mjs"
   "server/proxy.mjs"
   "src/App.tsx"
   "src/components/AutoWakeBridge.tsx"
@@ -139,6 +140,8 @@ grep -Fq "SpotifyMusicCard" "${STAGE}/src/pages/PurrChannelPage.tsx"
 grep -Fq "export async function playSpotifyQueries" "${STAGE}/src/services/spotify.ts"
 grep -Fq "jiake-opus-5" "${STAGE}/src/data/models.ts"
 grep -Fq "handleAutoWakeRequest" "${STAGE}/server/proxy.mjs"
+grep -Fq "handleScreenFrameRequest" "${STAGE}/server/proxy.mjs"
+grep -Fq "fetchLatestScreenFrame" "${STAGE}/src/pages/PurrChannelPage.tsx"
 grep -Fq "self.addEventListener('push'" "${STAGE}/public/sw.js"
 grep -Fq '"gcm_sender_id": "103953800507"' "${STAGE}/public/manifest.webmanifest"
 [[ -s "${STAGE}/public/assets/autowake/enable.webp" ]]
@@ -147,6 +150,7 @@ ln -s "${APP}/node_modules" "${STAGE}/node_modules"
 (
   cd "${STAGE}"
   node --check server/autowake.mjs
+  node --check server/screenFrame.mjs
   node --check server/proxy.mjs
   node --check public/sw.js
   npm run build

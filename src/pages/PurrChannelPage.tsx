@@ -28,6 +28,7 @@ const turnsKey = (id: string) => `purr-channel:turns:${id}`;
 const tangMemoryInitKey = (id: string) => `purr-channel:tang-memory-initialized:${id}`;
 
 const CLOUD_KEY_STORAGE = 'codeandpurrs:purr-channel:cloud-key';
+const SCREEN_WATCH_KEY = 'purr-channel:screen-watch-enabled';
 
 type CloudSave = {
   version: number;
@@ -44,7 +45,7 @@ function getCloudKey(): string | null {
   } catch {
     // 隐私模式读不到就让老婆本次输入，不让页面崩掉
   }
-  if (!key) key = window.prompt('输入呼噜频道存档密码')?.trim() ?? '';
+  if (!key) key = window.prompt('输入呼噜频道私密密码（存档 / 看屏幕）')?.trim() ?? '';
   if (!key) return null;
   try {
     localStorage.setItem(CLOUD_KEY_STORAGE, key);
@@ -52,6 +53,52 @@ function getCloudKey(): string | null {
     // 存不下也没关系，本次请求仍然能用
   }
   return key;
+}
+
+type ScreenFrame = {
+  deviceId: string;
+  capturedAt: number;
+  receivedAt: number;
+  dataUrl: string;
+};
+
+async function fetchLatestScreenFrame(): Promise<ScreenFrame | null> {
+  const key = getCloudKey();
+  if (!key) throw new Error('没有输入私密密码');
+  const response = await fetch('/api/screen/latest', {
+    headers: { 'X-Chat-Save-Key': key },
+    cache: 'no-store',
+  });
+  if (response.status === 404) return null;
+  if (response.status === 401) {
+    try {
+      localStorage.removeItem(CLOUD_KEY_STORAGE);
+    } catch {
+      // 忽略
+    }
+    throw new Error('私密密码不正确');
+  }
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(String(body?.error || `屏幕服务返回 ${response.status}`));
+  }
+  return response.json();
+}
+
+function appendScreenFrame(history: ChatMessage[], frame: ScreenFrame): ChatMessage[] {
+  const next = history.map((message) => ({ ...message }));
+  for (let i = next.length - 1; i >= 0; i--) {
+    if (next[i].role !== 'user') continue;
+    const existing = next[i].content;
+    const parts = typeof existing === 'string'
+      ? [{ type: 'text' as const, text: existing || '（请看我刚刚共享的手机屏幕）' }]
+      : [...existing];
+    parts.push({ type: 'text', text: '\n【这是老婆刚授权共享的手机屏幕最新画面。只根据画面中真实可见的内容回答，不要猜屏幕外的信息。】' });
+    parts.push({ type: 'image_url', image_url: { url: frame.dataUrl } });
+    next[i] = { ...next[i], content: parts };
+    break;
+  }
+  return next;
 }
 
 async function cloudRequest(path: string, init: RequestInit = {}): Promise<Response> {
@@ -1014,6 +1061,7 @@ function IconTrash() {
 
 const MORE_ITEMS = [
   { key: 'image', label: '图片' },
+  { key: 'screen', label: '看屏幕' },
   { key: 'redpacket', label: '红包' },
   { key: 'meme', label: '表情包' },
 ];
@@ -1112,6 +1160,8 @@ function ChatRoom({
   // 挑了贴纸/相册照片不立刻发,先钉在输入框上方的"待发"槽,让老婆再打点话一起发过去
   const [pendingMeme, setPendingMeme] = useState<string | null>(null);
   const [pendingPhotos, setPendingPhotos] = useState<string[]>([]);
+  const [screenWatchEnabled, setScreenWatchEnabled] = useState(() => loadLocal<boolean>(SCREEN_WATCH_KEY, false));
+  const [screenCapturedAt, setScreenCapturedAt] = useState<number | null>(null);
   const [redPacketOpen, setRedPacketOpen] = useState(false);
   const [editTurnId, setEditTurnId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
@@ -1135,6 +1185,21 @@ function ChatRoom({
   const tangMemoryInitializedRef = useRef(loadLocal<boolean>(tangMemoryInitKey(win.id), false));
   const [nearLatest, setNearLatest] = useState(true);
   const photoFileRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const syncScreenWatch = (event: StorageEvent) => {
+      if (event.key === `codeandpurrs:${SCREEN_WATCH_KEY}`) {
+        setScreenWatchEnabled(loadLocal<boolean>(SCREEN_WATCH_KEY, false));
+      }
+    };
+    const syncSameTab = () => setScreenWatchEnabled(loadLocal<boolean>(SCREEN_WATCH_KEY, false));
+    window.addEventListener('storage', syncScreenWatch);
+    window.addEventListener('codeandpurrs:storage', syncSameTab);
+    return () => {
+      window.removeEventListener('storage', syncScreenWatch);
+      window.removeEventListener('codeandpurrs:storage', syncSameTab);
+    };
+  }, []);
 
   // 新回复出现时只定位一次。后续 reasoning/content token 只重新测量距离，
   // 绝不继续推动页面；这样正文开始显示时也不会重新“接管”滚动。
@@ -1228,6 +1293,24 @@ function ChatRoom({
     }
     if (key === 'image') {
       photoFileRef.current?.click();
+      return;
+    }
+    if (key === 'screen') {
+      if (screenWatchEnabled) {
+        setScreenWatchEnabled(false);
+        saveLocal(SCREEN_WATCH_KEY, false);
+        setScreenCapturedAt(null);
+        setNotice('已关闭 AI 看屏幕');
+        return;
+      }
+      void fetchLatestScreenFrame()
+        .then((frame) => {
+          setScreenWatchEnabled(true);
+          saveLocal(SCREEN_WATCH_KEY, true);
+          setScreenCapturedAt(frame?.capturedAt ?? null);
+          setNotice(frame ? 'AI 看屏幕已开启' : '已待命 · 去 Bridge 开始共享屏幕');
+        })
+        .catch((err) => setNotice((err as Error).message));
       return;
     }
     if (key === 'redpacket') {
@@ -1699,7 +1782,21 @@ function ChatRoom({
         at: Date.now(),
       });
     }
-    const history = await toMessages([...turns, ...newTurns]);
+    let history = await toMessages([...turns, ...newTurns]);
+    if (screenWatchEnabled) {
+      try {
+        const frame = await fetchLatestScreenFrame();
+        if (frame) {
+          history = appendScreenFrame(history, frame);
+          setScreenCapturedAt(frame.capturedAt);
+        } else {
+          setScreenCapturedAt(null);
+          setNotice('手机屏幕还没开始共享，这条只发了文字/图片');
+        }
+      } catch (err) {
+        setNotice(`屏幕没附上：${(err as Error).message}`);
+      }
+    }
     setTurns((prev) => [...prev, ...newTurns]);
     setInput('');
     setPendingMeme(null);
@@ -2018,7 +2115,24 @@ function ChatRoom({
         </button>
       ) : null}
 
-      <footer className="chat-input">
+      <footer className={`chat-input${pendingMeme || pendingPhotos.length > 0 ? ' has-pending' : ''}`}>
+        {screenWatchEnabled ? (
+          <button
+            type="button"
+            className="screen-watch-chip"
+            onClick={() => {
+              setScreenWatchEnabled(false);
+              saveLocal(SCREEN_WATCH_KEY, false);
+              setScreenCapturedAt(null);
+              setNotice('已关闭 AI 看屏幕');
+            }}
+            title="关闭后，聊天消息不再附带手机屏幕"
+          >
+            <span aria-hidden="true">👁</span>
+            <span>{screenCapturedAt ? '正在看屏幕' : '等待屏幕'}</span>
+            <span aria-hidden="true">×</span>
+          </button>
+        ) : null}
         {/* 待发缩略图:贴纸/相册照片(可 1~3 张)钉在输入区上方,按发送/叉掉才走 */}
         {pendingMeme || pendingPhotos.length > 0 ? (
           <div className="pending-meme">

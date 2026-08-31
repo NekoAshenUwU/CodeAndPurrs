@@ -11,6 +11,7 @@ import { readFileSync, existsSync, writeFileSync, mkdirSync, statSync, renameSyn
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { handleAutoWakeRequest } from './autowake.mjs';
+import { handleScreenFrameRequest } from './screenFrame.mjs';
 
 // 主动加载 .env(不依赖 node CLI flag)——pm2 fork 模式不会真正 spawn 新 node,
 // 而是从父进程 require 脚本,导致 --env-file-if-exists 这类 CLI flag 被无视,
@@ -1438,6 +1439,12 @@ const server = http.createServer(async (req, res) => {
   // 生成发生在服务器定时器，不依赖网页打开；浏览器只负责领取已经生成的消息。
   if (requestPath === '/api/autowake' || requestPath.startsWith('/api/autowake/')) {
     await handleAutoWakeRequest(req, res, requestUrl, { port: PORT });
+    return;
+  }
+
+  // ----- 老婆主动共享的手机屏幕：Android 桥接只覆盖最新一帧，停止/过期即清掉 -----
+  if (requestPath === '/api/screen/ingest' || requestPath === '/api/screen/latest' || requestPath === '/api/screen/stop') {
+    await handleScreenFrameRequest(req, res, requestUrl);
     return;
   }
 
