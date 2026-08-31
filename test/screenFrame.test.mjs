@@ -38,10 +38,10 @@ async function withServer(run, clock = { now: 1_780_000_000_500 }) {
   }
 }
 
-const ingest = (base, token = 'bridge-secret') => fetch(`${base}/api/screen/ingest`, {
+const ingest = (base, token = 'bridge-secret', body = frameBody) => fetch(`${base}/api/screen/ingest`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json', 'X-Bridge-Token': token },
-  body: JSON.stringify(frameBody),
+  body: JSON.stringify(body),
 });
 
 test('screen ingest rejects a wrong bridge token', async () => {
@@ -86,5 +86,38 @@ test('stale frames expire and stop removes the latest frame', async () => {
       headers: { 'X-Chat-Save-Key': 'viewer-secret' },
     });
     assert.equal(empty.status, 404);
+  });
+});
+
+test('capture window returns the last external frame even after the browser uploads again', async () => {
+  await withServer(async (base, clock) => {
+    const targetFrame = { ...frameBody, capturedAt: clock.now + 1, deviceId: 'target-app' };
+    assert.equal((await ingest(base, 'bridge-secret', targetFrame)).status, 200);
+
+    clock.now += 8_000;
+    const browserFrame = { ...frameBody, capturedAt: clock.now, deviceId: 'codeandpurrs-browser' };
+    assert.equal((await ingest(base, 'bridge-secret', browserFrame)).status, 200);
+
+    const bounded = await fetch(
+      `${base}/api/screen/latest?after=${targetFrame.capturedAt - 1}&before=${browserFrame.capturedAt - 1}`,
+      { headers: { 'X-Chat-Save-Key': 'viewer-secret' } },
+    );
+    const boundedBody = await bounded.json();
+    assert.equal(bounded.status, 200);
+    assert.equal(boundedBody.deviceId, 'target-app');
+
+    const newest = await fetch(`${base}/api/screen/latest`, {
+      headers: { 'X-Chat-Save-Key': 'viewer-secret' },
+    });
+    assert.equal((await newest.json()).deviceId, 'codeandpurrs-browser');
+  });
+});
+
+test('capture window rejects invalid bounds and does not fall back to an unrelated frame', async () => {
+  await withServer(async (base) => {
+    assert.equal((await ingest(base)).status, 200);
+    const headers = { 'X-Chat-Save-Key': 'viewer-secret' };
+    assert.equal((await fetch(`${base}/api/screen/latest?after=200&before=100`, { headers })).status, 400);
+    assert.equal((await fetch(`${base}/api/screen/latest?after=1780000001000`, { headers })).status, 404);
   });
 });

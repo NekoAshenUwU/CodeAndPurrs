@@ -5,7 +5,10 @@ import { fileURLToPath } from 'node:url';
 const DEFAULT_DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), 'data', 'screen');
 const MAX_JSON_BYTES = 2_000_000;
 const MAX_IMAGE_BYTES = 1_250_000;
+const RECENT_FRAME_TTL_MS = 120_000;
+const MAX_RECENT_FRAMES = 18;
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const recentFramesByDir = new Map();
 
 function json(res, status, body) {
   res.writeHead(status, {
@@ -41,6 +44,57 @@ function latestFile(dataDir) {
 
 function removeLatest(dataDir) {
   rmSync(latestFile(dataDir), { force: true });
+}
+
+function pruneRecentFrames(dataDir, currentTime) {
+  const frames = recentFramesByDir.get(dataDir) || [];
+  const fresh = frames
+    .filter((frame) => Number.isFinite(frame.receivedAt) && currentTime - frame.receivedAt <= RECENT_FRAME_TTL_MS)
+    .slice(-MAX_RECENT_FRAMES);
+  if (fresh.length) recentFramesByDir.set(dataDir, fresh);
+  else recentFramesByDir.delete(dataDir);
+  return fresh;
+}
+
+function rememberFrame(dataDir, frame) {
+  const frames = pruneRecentFrames(dataDir, frame.receivedAt);
+  recentFramesByDir.set(dataDir, [...frames, frame].slice(-MAX_RECENT_FRAMES));
+}
+
+function clearRecentFrames(dataDir) {
+  recentFramesByDir.delete(dataDir);
+}
+
+function queryTimestamp(requestUrl, key) {
+  const raw = requestUrl.searchParams.get(key);
+  if (raw === null || raw === '') return null;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) throw new Error(`invalid ${key}`);
+  return value;
+}
+
+function frameMatchesWindow(frame, after, before) {
+  const capturedAt = Number(frame?.capturedAt);
+  if (!Number.isFinite(capturedAt)) return false;
+  if (after !== null && capturedAt < after) return false;
+  if (before !== null && capturedAt > before) return false;
+  return true;
+}
+
+function selectFrame(dataDir, currentTime, after, before) {
+  const candidates = pruneRecentFrames(dataDir, currentTime).filter((frame) =>
+    frameMatchesWindow(frame, after, before),
+  );
+  const persisted = loadFrame(dataDir);
+  if (persisted && frameMatchesWindow(persisted, after, before)) {
+    const duplicate = candidates.some((frame) =>
+      frame.receivedAt === persisted.receivedAt && frame.capturedAt === persisted.capturedAt,
+    );
+    if (!duplicate) candidates.push(persisted);
+  }
+  return candidates.sort((a, b) =>
+    Number(a.capturedAt) - Number(b.capturedAt) || Number(a.receivedAt) - Number(b.receivedAt),
+  ).at(-1) || null;
 }
 
 function normalizeFrame(body, receivedAt) {
@@ -101,6 +155,7 @@ export async function handleScreenFrameRequest(req, res, requestUrl, options = {
       const body = await readJson(req);
       const frame = normalizeFrame(body, now());
       persistFrame(dataDir, frame);
+      rememberFrame(dataDir, frame);
       json(res, 200, { ok: true, capturedAt: frame.capturedAt, receivedAt: frame.receivedAt });
     } catch (err) {
       json(res, 400, { error: String(err?.message || err) });
@@ -114,6 +169,7 @@ export async function handleScreenFrameRequest(req, res, requestUrl, options = {
       return true;
     }
     removeLatest(dataDir);
+    clearRecentFrames(dataDir);
     json(res, 200, { ok: true });
     return true;
   }
@@ -127,13 +183,26 @@ export async function handleScreenFrameRequest(req, res, requestUrl, options = {
       json(res, 401, { error: '存档密码不正确' });
       return true;
     }
-    const frame = loadFrame(dataDir);
-    if (!frame) {
-      json(res, 404, { error: '手机还没有共享画面' });
+    let after;
+    let before;
+    try {
+      after = queryTimestamp(requestUrl, 'after');
+      before = queryTimestamp(requestUrl, 'before');
+      if (after !== null && before !== null && after > before) throw new Error('invalid capture window');
+    } catch (err) {
+      json(res, 400, { error: String(err?.message || err) });
       return true;
     }
-    if (!Number.isFinite(frame.receivedAt) || now() - frame.receivedAt > ttlMs) {
-      removeLatest(dataDir);
+    const currentTime = now();
+    const frame = selectFrame(dataDir, currentTime, after, before);
+    if (!frame) {
+      json(res, 404, {
+        error: after !== null || before !== null ? '离开网页期间没有收到手机画面' : '手机还没有共享画面',
+      });
+      return true;
+    }
+    if (!Number.isFinite(frame.receivedAt) || currentTime - frame.receivedAt > ttlMs) {
+      if (after === null && before === null) removeLatest(dataDir);
       json(res, 404, { error: '共享画面已经过期', stale: true });
       return true;
     }

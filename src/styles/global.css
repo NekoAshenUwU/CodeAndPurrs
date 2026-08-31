@@ -4199,6 +4199,10 @@ a {
   background: linear-gradient(135deg, #f4a9d6, #c9a7f5);
   color: #fff;
 }
+.bubble-edit__ops button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
 
 /* 予予语音条:Text + Save 一行，英文花体 */
 .voice-wrap__ops { display: flex; gap: 12px; align-items: center; }

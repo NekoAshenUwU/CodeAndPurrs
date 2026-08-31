@@ -62,10 +62,18 @@ type ScreenFrame = {
   dataUrl: string;
 };
 
-async function fetchLatestScreenFrame(): Promise<ScreenFrame | null> {
+type ScreenFrameQuery = {
+  after?: number;
+  before?: number;
+};
+
+async function fetchLatestScreenFrame(query: ScreenFrameQuery = {}): Promise<ScreenFrame | null> {
   const key = getCloudKey();
   if (!key) throw new Error('没有输入私密密码');
-  const response = await fetch('/api/screen/latest', {
+  const params = new URLSearchParams();
+  if (Number.isFinite(query.after)) params.set('after', String(Math.round(query.after!)));
+  if (Number.isFinite(query.before)) params.set('before', String(Math.round(query.before!)));
+  const response = await fetch(`/api/screen/latest${params.size ? `?${params}` : ''}`, {
     headers: { 'X-Chat-Save-Key': key },
     cache: 'no-store',
   });
@@ -1162,6 +1170,7 @@ function ChatRoom({
   const [pendingPhotos, setPendingPhotos] = useState<string[]>([]);
   const [screenWatchEnabled, setScreenWatchEnabled] = useState(() => loadLocal<boolean>(SCREEN_WATCH_KEY, false));
   const [screenCapturedAt, setScreenCapturedAt] = useState<number | null>(null);
+  const [screenFrameHeld, setScreenFrameHeld] = useState(false);
   const [redPacketOpen, setRedPacketOpen] = useState(false);
   const [editTurnId, setEditTurnId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
@@ -1188,7 +1197,9 @@ function ChatRoom({
   // 离开 CodeAndPurrs 看其它 App 后，回到网页的第一瞬间锁住上一帧。
   // 之后即使老婆打开输入法慢慢打字，也不会把真正想给 AI 看的画面覆盖掉。
   const heldScreenFrameRef = useRef<ScreenFrame | null>(null);
+  const heldScreenFrameExpiresAtRef = useRef(0);
   const screenAwayAtRef = useRef<number | null>(null);
+  const screenReturnedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     const syncScreenWatch = (event: StorageEvent) => {
@@ -1208,16 +1219,26 @@ function ChatRoom({
   useEffect(() => {
     if (!screenWatchEnabled) {
       heldScreenFrameRef.current = null;
+      heldScreenFrameExpiresAtRef.current = 0;
       screenAwayAtRef.current = null;
+      screenReturnedAtRef.current = null;
+      setScreenFrameHeld(false);
       return;
     }
 
     let alive = true;
-    const holdLastExternalFrame = async () => {
+    const holdLastExternalFrame = async (awayAt: number, returnedAt: number) => {
       try {
-        const frame = await fetchLatestScreenFrame();
+        // 切回网页的动画阶段也可能被 Bridge 截到，末端留 450ms 缓冲，
+        // 再让服务端从离开期间的短暂帧队列里挑最后一张目标 App。
+        const frame = await fetchLatestScreenFrame({
+          after: awayAt,
+          before: returnedAt - 450,
+        });
         if (!alive || !frame) return;
         heldScreenFrameRef.current = frame;
+        heldScreenFrameExpiresAtRef.current = Date.now() + 10 * 60_000;
+        setScreenFrameHeld(true);
         setScreenCapturedAt(frame.capturedAt);
         setNotice('已锁定刚才 App 的画面 · 发消息时交给 AI');
       } catch {
@@ -1226,12 +1247,21 @@ function ChatRoom({
     };
 
     const markScreenAway = () => {
-      if (screenAwayAtRef.current === null) screenAwayAtRef.current = Date.now();
+      if (screenAwayAtRef.current !== null) return;
+      screenAwayAtRef.current = Date.now();
+      screenReturnedAtRef.current = null;
+      heldScreenFrameRef.current = null;
+      heldScreenFrameExpiresAtRef.current = 0;
+      setScreenFrameHeld(false);
     };
     const holdScreenOnReturn = () => {
       const awayAt = screenAwayAtRef.current;
       screenAwayAtRef.current = null;
-      if (awayAt && Date.now() - awayAt >= 800) void holdLastExternalFrame();
+      const returnedAt = Date.now();
+      if (awayAt && returnedAt - awayAt >= 800) {
+        screenReturnedAtRef.current = returnedAt;
+        void holdLastExternalFrame(awayAt, returnedAt);
+      }
     };
     const onVisibilityChange = () => {
       if (document.visibilityState === 'hidden') markScreenAway();
@@ -1352,7 +1382,10 @@ function ChatRoom({
         setScreenWatchEnabled(false);
         saveLocal(SCREEN_WATCH_KEY, false);
         heldScreenFrameRef.current = null;
+        heldScreenFrameExpiresAtRef.current = 0;
         screenAwayAtRef.current = null;
+        screenReturnedAtRef.current = null;
+        setScreenFrameHeld(false);
         setScreenCapturedAt(null);
         setNotice('已关闭 AI 看屏幕');
         return;
@@ -1361,7 +1394,10 @@ function ChatRoom({
         .then((frame) => {
           setScreenWatchEnabled(true);
           saveLocal(SCREEN_WATCH_KEY, true);
-          heldScreenFrameRef.current = frame;
+          heldScreenFrameRef.current = null;
+          heldScreenFrameExpiresAtRef.current = 0;
+          screenReturnedAtRef.current = null;
+          setScreenFrameHeld(false);
           setScreenCapturedAt(frame?.capturedAt ?? null);
           setNotice(frame ? 'AI 看屏幕已开启' : '已待命 · 去 Bridge 开始共享屏幕');
         })
@@ -1451,11 +1487,20 @@ function ChatRoom({
   const commitEdit = async () => {
     const v = editText.trim();
     const id = editTurnId;
-    setEditTurnId(null);
-    setEditText('');
-    if (!id || !v || sending) return;
+    if (!id) return;
+    if (!v) {
+      setNotice('编辑内容不能是空的');
+      return;
+    }
+    if (sending) {
+      setNotice('等当前回复结束，就能保存这次编辑');
+      return;
+    }
     const idx = turns.findIndex((t) => t.id === id);
-    if (idx < 0) return;
+    if (idx < 0) {
+      setNotice('这条消息已经不在当前窗口里');
+      return;
+    }
     const target = turns[idx];
     // 改掉这条：把旧 content 追加到 editHistory，content 换成新值；丢掉它之后的(过时的)消息，让予予基于新内容重新回答
     // 即使内容一字未改，也走重新生成——老婆要的是"点了保存=重新回"的确定感
@@ -1467,6 +1512,10 @@ function ChatRoom({
       t.id === id ? { ...t, content: v, editHistory: newHistory } : t,
     );
     setTurns(kept);
+    // 编辑结果先单独落盘。即使随后重新回复失败或页面退到后台，改好的文字也不会回滚。
+    saveLocal(turnsKey(win.id), kept);
+    setEditTurnId(null);
+    setEditText('');
     // 默认显示跳到最新（即新数组里 index = newHistory.length）
     setVersionFor(id, newHistory.length);
     await runAssistant(await toMessages(kept));
@@ -1841,17 +1890,24 @@ function ChatRoom({
     if (screenWatchEnabled) {
       try {
         const heldFrame = heldScreenFrameRef.current;
-        const heldFrameFresh = Boolean(
-          heldFrame && Date.now() - Number(heldFrame.receivedAt || heldFrame.capturedAt) <= 60_000,
+        const heldFrameFresh = Boolean(heldFrame && Date.now() <= heldScreenFrameExpiresAtRef.current);
+        // 刚从其它 App 回来却没锁到目标帧时，不拿当前浏览器/键盘画面冒充。
+        const recentlyReturned = Boolean(
+          screenReturnedAtRef.current && Date.now() - screenReturnedAtRef.current <= 10 * 60_000,
         );
-        const frame = heldFrameFresh ? heldFrame : await fetchLatestScreenFrame();
+        const frame = heldFrameFresh
+          ? heldFrame
+          : recentlyReturned
+            ? null
+            : await fetchLatestScreenFrame();
         if (frame) {
           history = appendScreenFrame(history, frame);
-          heldScreenFrameRef.current = frame;
           setScreenCapturedAt(frame.capturedAt);
         } else {
           setScreenCapturedAt(null);
-          setNotice('手机屏幕还没开始共享，这条只发了文字/图片');
+          setNotice(recentlyReturned
+            ? '刚才 App 的画面还没锁到，这条只发了文字/图片'
+            : '手机屏幕还没开始共享，这条只发了文字/图片');
         }
       } catch (err) {
         setNotice(`屏幕没附上：${(err as Error).message}`);
@@ -2060,11 +2116,22 @@ function ChatRoom({
                       className="bubble-edit__area"
                       value={editText}
                       onChange={(e) => setEditText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                          e.preventDefault();
+                          void commitEdit();
+                        }
+                      }}
                       autoFocus
                     />
                     <div className="bubble-edit__ops">
                       <button type="button" onClick={cancelEdit}>取消</button>
-                      <button type="button" className="is-primary" onClick={commitEdit}>保存</button>
+                      <button
+                        type="button"
+                        className="is-primary"
+                        disabled={sending || !editText.trim()}
+                        onClick={() => void commitEdit()}
+                      >保存并重新回复</button>
                     </div>
                   </div>
                 ) : (
@@ -2097,7 +2164,11 @@ function ChatRoom({
                     <button
                       type="button"
                       className="bubble-edit-foot"
-                      onClick={() => beginEdit(turn)}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        beginEdit(turn);
+                      }}
                       aria-label="编辑这条"
                       title="改一下"
                     >
@@ -2184,14 +2255,17 @@ function ChatRoom({
               setScreenWatchEnabled(false);
               saveLocal(SCREEN_WATCH_KEY, false);
               heldScreenFrameRef.current = null;
+              heldScreenFrameExpiresAtRef.current = 0;
               screenAwayAtRef.current = null;
+              screenReturnedAtRef.current = null;
+              setScreenFrameHeld(false);
               setScreenCapturedAt(null);
               setNotice('已关闭 AI 看屏幕');
             }}
             title="关闭后，聊天消息不再附带手机屏幕"
           >
             <span aria-hidden="true">👁</span>
-            <span>{screenCapturedAt ? '正在看屏幕' : '等待屏幕'}</span>
+            <span>{screenFrameHeld ? '已锁定刚才画面' : screenCapturedAt ? '正在看屏幕' : '等待屏幕'}</span>
             <span aria-hidden="true">×</span>
           </button>
         ) : null}
