@@ -29,15 +29,21 @@ const LOG_FILE = process.env.AUTOWAKE_LOG || join(DATA_DIR, 'autowake.log');
 
 const COOKIE = 'cp_autowake_device';
 const TIME_ZONE = process.env.AUTOWAKE_TIME_ZONE || 'Asia/Kuching';
-const QUIET_START = process.env.AUTOWAKE_QUIET_START || '02:30';
-const QUIET_END = process.env.AUTOWAKE_QUIET_END || '08:30';
-const MIN_IDLE_MINUTES = positiveNumber(process.env.AUTOWAKE_MIN_IDLE_MINUTES, 60);
-const MIN_GAP_MINUTES = positiveNumber(process.env.AUTOWAKE_MIN_GAP_MINUTES, 120);
+const WEEKDAY_START = process.env.AUTOWAKE_WEEKDAY_START || '17:00';
+const WEEKDAY_END = process.env.AUTOWAKE_WEEKDAY_END || '23:00';
+const WEEKEND_START = process.env.AUTOWAKE_WEEKEND_START || '09:00';
+const WEEKEND_END = process.env.AUTOWAKE_WEEKEND_END || '23:00';
+const MIN_IDLE_MINUTES = positiveNumber(process.env.AUTOWAKE_MIN_IDLE_MINUTES, 30);
+const MAX_IDLE_MINUTES = Math.max(
+  MIN_IDLE_MINUTES,
+  positiveNumber(process.env.AUTOWAKE_MAX_IDLE_MINUTES, 60),
+);
+const MIN_GAP_MINUTES = positiveNumber(process.env.AUTOWAKE_MIN_GAP_MINUTES, 45);
 const MAX_GAP_MINUTES = Math.max(
   MIN_GAP_MINUTES,
-  positiveNumber(process.env.AUTOWAKE_MAX_GAP_MINUTES, 240),
+  positiveNumber(process.env.AUTOWAKE_MAX_GAP_MINUTES, 75),
 );
-const MAX_PER_DAY = Math.max(1, Math.floor(positiveNumber(process.env.AUTOWAKE_MAX_PER_DAY, 5)));
+const MAX_PER_DAY = Math.max(1, Math.floor(positiveNumber(process.env.AUTOWAKE_MAX_PER_DAY, 10)));
 const MAX_INBOX = 200;
 const MAX_CLIENTS = 20;
 const PROVIDERS = new Set(['deepseek', 'gemini', 'openai', 'anthropic', 'claudecode', 'codexcli']);
@@ -94,7 +100,7 @@ function randomBetween(min, max) {
 
 function nextWakeAt(from = Date.now(), afterUser = false) {
   const min = afterUser ? MIN_IDLE_MINUTES : MIN_GAP_MINUTES;
-  const max = afterUser ? Math.max(MIN_IDLE_MINUTES + 60, Math.min(MIN_GAP_MINUTES, 180)) : MAX_GAP_MINUTES;
+  const max = afterUser ? MAX_IDLE_MINUTES : MAX_GAP_MINUTES;
   return from + randomBetween(min, max) * 60_000;
 }
 
@@ -106,7 +112,7 @@ export function clampLegacyWakeSchedule(client) {
   if (!anchor) return client;
   const afterUser = lastUserAt >= lastWakeAt;
   const maxMinutes = afterUser
-    ? Math.max(MIN_IDLE_MINUTES + 60, Math.min(MIN_GAP_MINUTES, 180))
+    ? MAX_IDLE_MINUTES
     : MAX_GAP_MINUTES;
   const latestAllowed = anchor + maxMinutes * 60_000;
   if (client.nextWakeAt > latestAllowed) client.nextWakeAt = latestAllowed;
@@ -303,12 +309,14 @@ function zonedParts(now = Date.now()) {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    weekday: 'short',
     hourCycle: 'h23',
   }).formatToParts(new Date(now));
   const get = (type) => parts.find((part) => part.type === type)?.value || '';
   return {
     date: `${get('year')}-${get('month')}-${get('day')}`,
     time: `${get('hour')}:${get('minute')}`,
+    weekday: get('weekday'),
   };
 }
 
@@ -317,17 +325,24 @@ function minutesOfDay(value) {
   return hour * 60 + minute;
 }
 
-export function isQuietTime(time) {
+function timeInWindow(time, startValue, endValue) {
   const current = minutesOfDay(time);
-  const start = minutesOfDay(QUIET_START);
-  const end = minutesOfDay(QUIET_END);
+  const start = minutesOfDay(startValue);
+  const end = minutesOfDay(endValue);
   return start <= end ? current >= start && current < end : current >= start || current < end;
+}
+
+export function isWakeWindow(local) {
+  const weekend = local?.weekday === 'Sat' || local?.weekday === 'Sun';
+  return weekend
+    ? timeInWindow(local?.time, WEEKEND_START, WEEKEND_END)
+    : timeInWindow(local?.time, WEEKDAY_START, WEEKDAY_END);
 }
 
 export function eligibility(client, now = Date.now(), force = false) {
   if (!client?.enabled || !client.subscription || !client.state?.windowId) return { ok: false, reason: 'disabled' };
   const local = zonedParts(now);
-  if (!force && isQuietTime(local.time)) return { ok: false, reason: 'quiet' };
+  if (!force && !isWakeWindow(local)) return { ok: false, reason: 'schedule-blocked' };
   const lastUserAt = Number(client.state.lastUserAt || 0);
   if (!force && (!lastUserAt || now - lastUserAt < MIN_IDLE_MINUTES * 60_000)) return { ok: false, reason: 'recent-chat' };
   if (!force && Number(client.nextWakeAt || 0) > now) return { ok: false, reason: 'not-due' };
@@ -483,8 +498,12 @@ export async function handleAutoWakeRequest(req, res, requestUrl, { port }) {
       json(res, 200, {
         supported: true,
         publicKey: vapid.publicKey,
-        quietHours: `${QUIET_START}-${QUIET_END}`,
+        wakeWindows: {
+          weekdays: `${WEEKDAY_START}-${WEEKDAY_END}`,
+          weekends: `${WEEKEND_START}-${WEEKEND_END}`,
+        },
         minIdleMinutes: MIN_IDLE_MINUTES,
+        maxIdleMinutes: MAX_IDLE_MINUTES,
         minGapMinutes: MIN_GAP_MINUTES,
         maxGapMinutes: MAX_GAP_MINUTES,
         maxPerDay: MAX_PER_DAY,

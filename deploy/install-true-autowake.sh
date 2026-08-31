@@ -180,6 +180,9 @@ grep -Fq "export async function playSpotifyQueries" "${STAGE}/src/services/spoti
 grep -Fq "jiake-opus-5" "${STAGE}/src/data/models.ts"
 grep -Fq "handleAutoWakeRequest" "${STAGE}/server/proxy.mjs"
 grep -Fq "handleScreenFrameRequest" "${STAGE}/server/proxy.mjs"
+grep -Fq "AUTOWAKE_WEEKDAY_START || '17:00'" "${STAGE}/server/autowake.mjs"
+grep -Fq "AUTOWAKE_WEEKEND_START || '09:00'" "${STAGE}/server/autowake.mjs"
+grep -Fq "AUTOWAKE_MAX_PER_DAY, 10" "${STAGE}/server/autowake.mjs"
 grep -Fq "fetchLatestScreenFrame" "${STAGE}/src/pages/PurrChannelPage.tsx"
 grep -Fq "MEMORY_MCP_RULE" "${STAGE}/server/proxy.mjs"
 grep -Fq "tangMemoryBridgeConfig" "${STAGE}/server/proxy.mjs"
@@ -247,11 +250,14 @@ migrate_autowake_default() {
     sed -i "s/^${key}=${old_value}$/${key}=${new_value}/" "${APP}/.env"
   fi
 }
-migrate_autowake_default AUTOWAKE_QUIET_END 09:30 08:30
-migrate_autowake_default AUTOWAKE_MIN_IDLE_MINUTES 90 60
-migrate_autowake_default AUTOWAKE_MIN_GAP_MINUTES 240 120
-migrate_autowake_default AUTOWAKE_MAX_GAP_MINUTES 420 240
-migrate_autowake_default AUTOWAKE_MAX_PER_DAY 3 5
+migrate_autowake_default AUTOWAKE_MIN_IDLE_MINUTES 90 30
+migrate_autowake_default AUTOWAKE_MIN_IDLE_MINUTES 60 30
+migrate_autowake_default AUTOWAKE_MIN_GAP_MINUTES 240 45
+migrate_autowake_default AUTOWAKE_MIN_GAP_MINUTES 120 45
+migrate_autowake_default AUTOWAKE_MAX_GAP_MINUTES 420 75
+migrate_autowake_default AUTOWAKE_MAX_GAP_MINUTES 240 75
+migrate_autowake_default AUTOWAKE_MAX_PER_DAY 3 10
+migrate_autowake_default AUTOWAKE_MAX_PER_DAY 5 10
 
 pm2 restart codeandpurrs --update-env >/dev/null
 
@@ -307,6 +313,7 @@ fi
 
 success=1
 echo "完成：棠予酿本机读写桥（免 OAuth / 免权限弹窗）+ 真后台自动唤醒 + AI 看屏幕已部署。"
+echo "自动唤醒：工作日 17:00–23:00；周六日 09:00–23:00；每天最多 10 次。"
 echo "旧 Telegram/ntfy 唤醒已停用并搬到：${BACKUP}"
 echo "Tang / Playlist MCP / CodeAndPurrs MCP 状态未变。"
 echo "刷新 CodeAndPurrs，点一次『开启自动唤醒』；允许通知后会立刻收到一条后台测试消息。"

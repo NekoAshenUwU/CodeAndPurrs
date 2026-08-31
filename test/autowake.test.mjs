@@ -21,23 +21,32 @@ test('sanitizes hidden control markers before delivery', () => {
   );
 });
 
-test('quiet hours and idle/cooldown guards are enforced', () => {
-  const noonMalaysia = Date.parse('2026-08-31T04:00:00.000Z');
+test('weekday work hours, sleep hours and idle guards are enforced', () => {
+  const sixPMMalaysia = Date.parse('2026-08-31T10:00:00.000Z');
   const client = {
     enabled: true,
     subscription: { endpoint: 'https://example.invalid/push' },
-    state: { windowId: 'room', lastUserAt: noonMalaysia - 2 * 60 * 60_000 },
-    nextWakeAt: noonMalaysia - 1,
+    state: { windowId: 'room', lastUserAt: sixPMMalaysia - 2 * 60 * 60_000 },
+    nextWakeAt: sixPMMalaysia - 1,
     wakeDate: '2026-08-31',
     wakeCount: 0,
   };
-  assert.equal(autowake.eligibility(client, noonMalaysia).ok, true);
+  assert.equal(autowake.eligibility(client, sixPMMalaysia).ok, true);
   assert.equal(
-    autowake.eligibility({ ...client, state: { ...client.state, lastUserAt: noonMalaysia - 30 * 60_000 } }, noonMalaysia).reason,
+    autowake.eligibility({ ...client, state: { ...client.state, lastUserAt: sixPMMalaysia - 15 * 60_000 } }, sixPMMalaysia).reason,
     'recent-chat',
   );
+  const noonMondayMalaysia = Date.parse('2026-08-31T04:00:00.000Z');
+  assert.equal(autowake.eligibility(client, noonMondayMalaysia).reason, 'schedule-blocked');
   const threeAMMalaysia = Date.parse('2026-08-30T19:00:00.000Z');
-  assert.equal(autowake.eligibility({ ...client, state: { ...client.state, lastUserAt: threeAMMalaysia - 4 * 60 * 60_000 } }, threeAMMalaysia).reason, 'quiet');
+  assert.equal(autowake.eligibility({ ...client, state: { ...client.state, lastUserAt: threeAMMalaysia - 4 * 60 * 60_000 } }, threeAMMalaysia).reason, 'schedule-blocked');
+  const noonSaturdayMalaysia = Date.parse('2026-08-29T04:00:00.000Z');
+  assert.equal(autowake.isWakeWindow({ weekday: 'Sat', time: '12:00' }), true);
+  assert.equal(autowake.eligibility({
+    ...client,
+    state: { ...client.state, lastUserAt: noonSaturdayMalaysia - 2 * 60 * 60_000 },
+    nextWakeAt: noonSaturdayMalaysia - 1,
+  }, noonSaturdayMalaysia).ok, true);
 });
 
 test('old 4-7 hour schedules are clamped to the livelier policy', () => {
@@ -48,7 +57,7 @@ test('old 4-7 hour schedules are clamped to the livelier policy', () => {
     nextWakeAt: lastUserAt + 7 * 60 * 60_000,
   };
   autowake.clampLegacyWakeSchedule(afterChat);
-  assert.equal(afterChat.nextWakeAt, lastUserAt + 2 * 60 * 60_000);
+  assert.equal(afterChat.nextWakeAt, lastUserAt + 60 * 60_000);
 
   const afterWake = {
     state: { lastUserAt: lastUserAt - 60_000 },
@@ -56,7 +65,7 @@ test('old 4-7 hour schedules are clamped to the livelier policy', () => {
     nextWakeAt: lastUserAt + 7 * 60 * 60_000,
   };
   autowake.clampLegacyWakeSchedule(afterWake);
-  assert.equal(afterWake.nextWakeAt, lastUserAt + 4 * 60 * 60_000);
+  assert.equal(afterWake.nextWakeAt, lastUserAt + 75 * 60_000);
 });
 
 test('VAPID authorization is a valid ES256 JWT for the push origin', () => {
@@ -99,11 +108,12 @@ test('subscription -> server generation -> inbox -> acknowledgement works withou
     const configResponse = await fetch(`${base}/api/autowake/config`);
     assert.equal(configResponse.status, 200);
     const config = await configResponse.json();
-    assert.equal(config.quietHours, '02:30-08:30');
-    assert.equal(config.minIdleMinutes, 60);
-    assert.equal(config.minGapMinutes, 120);
-    assert.equal(config.maxGapMinutes, 240);
-    assert.equal(config.maxPerDay, 5);
+    assert.deepEqual(config.wakeWindows, { weekdays: '17:00-23:00', weekends: '09:00-23:00' });
+    assert.equal(config.minIdleMinutes, 30);
+    assert.equal(config.maxIdleMinutes, 60);
+    assert.equal(config.minGapMinutes, 45);
+    assert.equal(config.maxGapMinutes, 75);
+    assert.equal(config.maxPerDay, 10);
 
     const subscribed = await fetch(`${base}/api/autowake/subscribe`, {
       method: 'POST',
