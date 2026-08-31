@@ -93,7 +93,7 @@ if [[ "${APP}" != "/var/www/codeandpurrs" ]]; then
   echo "拒绝操作未知目录：${APP}"
   exit 1
 fi
-for command_name in curl node npm pm2 rg systemctl tar; do
+for command_name in curl node npm pm2 grep systemctl tar; do
   command -v "${command_name}" >/dev/null || { echo "缺少命令：${command_name}"; exit 1; }
 done
 [[ -f "${APP}/server/proxy.mjs" && -f "${APP}/src/pages/PurrChannelPage.tsx" && -f "${APP}/src/services/photos.ts" && -d "${APP}/dist" ]] || {
@@ -131,11 +131,11 @@ curl -fsSL "${SOURCE_BASE}/deploy/codeandpurrs-autowake.service" -o "${STAGE}/co
 curl -fsSL "${SOURCE_BASE}/deploy/codeandpurrs-autowake.timer" -o "${STAGE}/codeandpurrs-autowake.timer"
 
 # 三个现有功能是硬性回归护栏：发图、AI 点歌、CC Opus 5，缺一就拒绝上线。
-rg -q "pendingPhotos" "${STAGE}/src/pages/PurrChannelPage.tsx"
-rg -q "SpotifyMusicCard" "${STAGE}/src/pages/PurrChannelPage.tsx"
-rg -q "jiake-opus-5" "${STAGE}/src/data/models.ts"
-rg -q "handleAutoWakeRequest" "${STAGE}/server/proxy.mjs"
-rg -q "self.addEventListener('push'" "${STAGE}/public/sw.js"
+grep -Fq "pendingPhotos" "${STAGE}/src/pages/PurrChannelPage.tsx"
+grep -Fq "SpotifyMusicCard" "${STAGE}/src/pages/PurrChannelPage.tsx"
+grep -Fq "jiake-opus-5" "${STAGE}/src/data/models.ts"
+grep -Fq "handleAutoWakeRequest" "${STAGE}/server/proxy.mjs"
+grep -Fq "self.addEventListener('push'" "${STAGE}/public/sw.js"
 
 ln -s "${APP}/node_modules" "${STAGE}/node_modules"
 (
@@ -180,7 +180,7 @@ for _ in $(seq 1 30); do
 done
 curl -fsS --max-time 5 http://127.0.0.1:8787/api/autowake/config >/dev/null
 curl -fsS --max-time 5 http://127.0.0.1:8787/api/spotify/status >/dev/null
-rg -q "showNotification" "${APP}/dist/sw.js"
+grep -Fq "showNotification" "${APP}/dist/sw.js"
 
 # 新链路健康后才退役旧 Telegram/ntfy 唤醒。所有东西先搬进备份，可恢复。
 mkdir -p "${BACKUP}/old-autonomy-units" "${BACKUP}/old-autonomy-files"
