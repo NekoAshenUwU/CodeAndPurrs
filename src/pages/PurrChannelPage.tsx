@@ -1185,6 +1185,10 @@ function ChatRoom({
   const tangMemoryInitializedRef = useRef(loadLocal<boolean>(tangMemoryInitKey(win.id), false));
   const [nearLatest, setNearLatest] = useState(true);
   const photoFileRef = useRef<HTMLInputElement | null>(null);
+  // 离开 CodeAndPurrs 看其它 App 后，回到网页的第一瞬间锁住上一帧。
+  // 之后即使老婆打开输入法慢慢打字，也不会把真正想给 AI 看的画面覆盖掉。
+  const heldScreenFrameRef = useRef<ScreenFrame | null>(null);
+  const screenAwayAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     const syncScreenWatch = (event: StorageEvent) => {
@@ -1200,6 +1204,54 @@ function ChatRoom({
       window.removeEventListener('codeandpurrs:storage', syncSameTab);
     };
   }, []);
+
+  useEffect(() => {
+    if (!screenWatchEnabled) {
+      heldScreenFrameRef.current = null;
+      screenAwayAtRef.current = null;
+      return;
+    }
+
+    let alive = true;
+    const holdLastExternalFrame = async () => {
+      try {
+        const frame = await fetchLatestScreenFrame();
+        if (!alive || !frame) return;
+        heldScreenFrameRef.current = frame;
+        setScreenCapturedAt(frame.capturedAt);
+        setNotice('已锁定刚才 App 的画面 · 发消息时交给 AI');
+      } catch {
+        // 返回网页时静默抓取；明确错误仍会在发送消息时显示，避免突然弹提示打断输入。
+      }
+    };
+
+    const markScreenAway = () => {
+      if (screenAwayAtRef.current === null) screenAwayAtRef.current = Date.now();
+    };
+    const holdScreenOnReturn = () => {
+      const awayAt = screenAwayAtRef.current;
+      screenAwayAtRef.current = null;
+      if (awayAt && Date.now() - awayAt >= 800) void holdLastExternalFrame();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') markScreenAway();
+      else holdScreenOnReturn();
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('blur', markScreenAway);
+    window.addEventListener('focus', holdScreenOnReturn);
+    window.addEventListener('pagehide', markScreenAway);
+    window.addEventListener('pageshow', holdScreenOnReturn);
+    return () => {
+      alive = false;
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('blur', markScreenAway);
+      window.removeEventListener('focus', holdScreenOnReturn);
+      window.removeEventListener('pagehide', markScreenAway);
+      window.removeEventListener('pageshow', holdScreenOnReturn);
+    };
+  }, [screenWatchEnabled]);
 
   // 新回复出现时只定位一次。后续 reasoning/content token 只重新测量距离，
   // 绝不继续推动页面；这样正文开始显示时也不会重新“接管”滚动。
@@ -1299,6 +1351,8 @@ function ChatRoom({
       if (screenWatchEnabled) {
         setScreenWatchEnabled(false);
         saveLocal(SCREEN_WATCH_KEY, false);
+        heldScreenFrameRef.current = null;
+        screenAwayAtRef.current = null;
         setScreenCapturedAt(null);
         setNotice('已关闭 AI 看屏幕');
         return;
@@ -1307,6 +1361,7 @@ function ChatRoom({
         .then((frame) => {
           setScreenWatchEnabled(true);
           saveLocal(SCREEN_WATCH_KEY, true);
+          heldScreenFrameRef.current = frame;
           setScreenCapturedAt(frame?.capturedAt ?? null);
           setNotice(frame ? 'AI 看屏幕已开启' : '已待命 · 去 Bridge 开始共享屏幕');
         })
@@ -1785,9 +1840,14 @@ function ChatRoom({
     let history = await toMessages([...turns, ...newTurns]);
     if (screenWatchEnabled) {
       try {
-        const frame = await fetchLatestScreenFrame();
+        const heldFrame = heldScreenFrameRef.current;
+        const heldFrameFresh = Boolean(
+          heldFrame && Date.now() - Number(heldFrame.receivedAt || heldFrame.capturedAt) <= 60_000,
+        );
+        const frame = heldFrameFresh ? heldFrame : await fetchLatestScreenFrame();
         if (frame) {
           history = appendScreenFrame(history, frame);
+          heldScreenFrameRef.current = frame;
           setScreenCapturedAt(frame.capturedAt);
         } else {
           setScreenCapturedAt(null);
@@ -2123,6 +2183,8 @@ function ChatRoom({
             onClick={() => {
               setScreenWatchEnabled(false);
               saveLocal(SCREEN_WATCH_KEY, false);
+              heldScreenFrameRef.current = null;
+              screenAwayAtRef.current = null;
               setScreenCapturedAt(null);
               setNotice('已关闭 AI 看屏幕');
             }}
