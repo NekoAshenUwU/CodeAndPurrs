@@ -120,6 +120,27 @@ tang_before="$(systemctl is-active tang-web.service 2>/dev/null || true)"
 playlist_before="$(systemctl is-active playlist-mcp.service 2>/dev/null || true)"
 mcp_before="$(systemctl is-active codeandpurrs-mcp.service 2>/dev/null || true)"
 
+download_source_file() {
+  local relative="$1"
+  local destination="$2"
+  local source_url="${SOURCE_BASE}/${relative}"
+
+  if ! curl \
+    --fail \
+    --silent \
+    --show-error \
+    --location \
+    --retry 6 \
+    --retry-delay 2 \
+    --retry-max-time 45 \
+    --retry-all-errors \
+    "${source_url}" \
+    --output "${destination}"; then
+    echo "下载失败：${relative}（来源 ${SOURCE_REF}）" >&2
+    return 1
+  fi
+}
+
 # 以线上完整树作舞台，保留 .env、server/data 和其它项目；只下载本次审过的文件。
 (
   cd "${APP}"
@@ -131,11 +152,11 @@ mcp_before="$(systemctl is-active codeandpurrs-mcp.service 2>/dev/null || true)"
 
 for relative in "${FILES[@]}"; do
   mkdir -p "${STAGE}/$(dirname "${relative}")"
-  curl -fsSL "${SOURCE_BASE}/${relative}" -o "${STAGE}/${relative}"
+  download_source_file "${relative}" "${STAGE}/${relative}"
 done
 
-curl -fsSL "${SOURCE_BASE}/deploy/codeandpurrs-autowake.service" -o "${STAGE}/codeandpurrs-autowake.service"
-curl -fsSL "${SOURCE_BASE}/deploy/codeandpurrs-autowake.timer" -o "${STAGE}/codeandpurrs-autowake.timer"
+download_source_file "deploy/codeandpurrs-autowake.service" "${STAGE}/codeandpurrs-autowake.service"
+download_source_file "deploy/codeandpurrs-autowake.timer" "${STAGE}/codeandpurrs-autowake.timer"
 
 # 三个现有功能是硬性回归护栏：发图、AI 点歌、CC Opus 5，缺一就拒绝上线。
 grep -Fq "pendingPhotos" "${STAGE}/src/pages/PurrChannelPage.tsx"
