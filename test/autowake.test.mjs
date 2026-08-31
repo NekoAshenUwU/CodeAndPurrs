@@ -77,6 +77,15 @@ test('subscription -> server generation -> inbox -> acknowledgement works withou
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
   try {
+    const configResponse = await fetch(`${base}/api/autowake/config`);
+    assert.equal(configResponse.status, 200);
+    const config = await configResponse.json();
+    assert.equal(config.quietHours, '02:30-08:30');
+    assert.equal(config.minIdleMinutes, 60);
+    assert.equal(config.minGapMinutes, 120);
+    assert.equal(config.maxGapMinutes, 240);
+    assert.equal(config.maxPerDay, 5);
+
     const subscribed = await fetch(`${base}/api/autowake/subscribe`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

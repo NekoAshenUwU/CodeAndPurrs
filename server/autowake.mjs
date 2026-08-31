@@ -30,14 +30,14 @@ const LOG_FILE = process.env.AUTOWAKE_LOG || join(DATA_DIR, 'autowake.log');
 const COOKIE = 'cp_autowake_device';
 const TIME_ZONE = process.env.AUTOWAKE_TIME_ZONE || 'Asia/Kuching';
 const QUIET_START = process.env.AUTOWAKE_QUIET_START || '02:30';
-const QUIET_END = process.env.AUTOWAKE_QUIET_END || '09:30';
-const MIN_IDLE_MINUTES = positiveNumber(process.env.AUTOWAKE_MIN_IDLE_MINUTES, 90);
-const MIN_GAP_MINUTES = positiveNumber(process.env.AUTOWAKE_MIN_GAP_MINUTES, 240);
+const QUIET_END = process.env.AUTOWAKE_QUIET_END || '08:30';
+const MIN_IDLE_MINUTES = positiveNumber(process.env.AUTOWAKE_MIN_IDLE_MINUTES, 60);
+const MIN_GAP_MINUTES = positiveNumber(process.env.AUTOWAKE_MIN_GAP_MINUTES, 120);
 const MAX_GAP_MINUTES = Math.max(
   MIN_GAP_MINUTES,
-  positiveNumber(process.env.AUTOWAKE_MAX_GAP_MINUTES, 420),
+  positiveNumber(process.env.AUTOWAKE_MAX_GAP_MINUTES, 240),
 );
-const MAX_PER_DAY = Math.max(1, Math.floor(positiveNumber(process.env.AUTOWAKE_MAX_PER_DAY, 3)));
+const MAX_PER_DAY = Math.max(1, Math.floor(positiveNumber(process.env.AUTOWAKE_MAX_PER_DAY, 5)));
 const MAX_INBOX = 200;
 const MAX_CLIENTS = 20;
 const PROVIDERS = new Set(['deepseek', 'gemini', 'openai', 'anthropic', 'claudecode', 'codexcli']);
@@ -468,6 +468,8 @@ export async function handleAutoWakeRequest(req, res, requestUrl, { port }) {
         publicKey: vapid.publicKey,
         quietHours: `${QUIET_START}-${QUIET_END}`,
         minIdleMinutes: MIN_IDLE_MINUTES,
+        minGapMinutes: MIN_GAP_MINUTES,
+        maxGapMinutes: MAX_GAP_MINUTES,
         maxPerDay: MAX_PER_DAY,
       });
       return true;

@@ -48,6 +48,9 @@ rollback() {
     if [[ -f "${BACKUP}/source.tgz" ]]; then
       tar -xzf "${BACKUP}/source.tgz" -C "${APP}" || true
     fi
+    if [[ -f "${BACKUP}/.env" ]]; then
+      cp -a "${BACKUP}/.env" "${APP}/.env" || true
+    fi
     if [[ -f "${BACKUP}/new-files.txt" ]]; then
       while IFS= read -r relative; do
         [[ -n "${relative}" ]] && rm -f -- "${APP}/${relative}"
@@ -222,6 +225,9 @@ done
 if [[ "${#existing[@]}" -gt 0 ]]; then
   tar -czf "${BACKUP}/source.tgz" -C "${APP}" "${existing[@]}"
 fi
+if [[ -f "${APP}/.env" ]]; then
+  cp -a "${APP}/.env" "${BACKUP}/.env"
+fi
 mv "${APP}/dist" "${BACKUP}/dist"
 applied=1
 
@@ -230,6 +236,22 @@ for relative in "${FILES[@]}"; do
   cp -a "${STAGE}/${relative}" "${APP}/${relative}"
 done
 cp -a "${STAGE}/dist" "${APP}/dist"
+
+# 只迁移之前发布过的旧默认值；老婆若手动定制过频率，原值保持不动。
+migrate_autowake_default() {
+  local key="$1"
+  local old_value="$2"
+  local new_value="$3"
+  [[ -f "${APP}/.env" ]] || return 0
+  if grep -Fqx "${key}=${old_value}" "${APP}/.env"; then
+    sed -i "s/^${key}=${old_value}$/${key}=${new_value}/" "${APP}/.env"
+  fi
+}
+migrate_autowake_default AUTOWAKE_QUIET_END 09:30 08:30
+migrate_autowake_default AUTOWAKE_MIN_IDLE_MINUTES 90 60
+migrate_autowake_default AUTOWAKE_MIN_GAP_MINUTES 240 120
+migrate_autowake_default AUTOWAKE_MAX_GAP_MINUTES 420 240
+migrate_autowake_default AUTOWAKE_MAX_PER_DAY 3 5
 
 pm2 restart codeandpurrs --update-env >/dev/null
 
