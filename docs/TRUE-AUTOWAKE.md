@@ -53,7 +53,7 @@ tail -n 50 /var/www/codeandpurrs/server/data/autowake/autowake.log
 
 ## GPT App / Claude App 共用 MCP
 
-自动唤醒工具不另开公网端口，而是挂进现有已认证 MCP：
+自动唤醒工具不另开公网入口，而是挂进现有已认证 MCP：
 
 ```text
 https://mcp.nekopurrs.uk/mcp
@@ -66,7 +66,9 @@ curl -fsSL https://raw.githubusercontent.com/NekoAshenUwU/CodeAndPurrs/codex/fro
 ```
 
 安装器会生成 `AUTOWAKE_MCP_INTERNAL_KEY`，将五个工具挂到现有 FastMCP，
-验证本机控制口后才重启公网 MCP；失败会同时恢复 MCP 源码与 `.env`。工具包括：
+把共享 MCP 的本机监听从冲突的 8891 迁到 8894，并只修改
+`mcp.nekopurrs.uk` 对应的 Nginx 上游。8890、8892、8893 都不会动；公网 URL
+与 OAuth 不变。失败会同时恢复 MCP 源码、`.env` 与 Nginx 配置。工具包括：
 
 - 查看自动唤醒状态、时段、上次错误和未读数
 - 开启或停用已登记设备的后台唤醒

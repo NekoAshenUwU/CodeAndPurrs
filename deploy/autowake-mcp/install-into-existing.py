@@ -25,7 +25,10 @@ APP_DIR = Path(os.getenv("CODEANDPURRS_DIR", "/var/www/codeandpurrs"))
 APP_ENV = APP_DIR / ".env"
 BACKUP_ROOT = Path(os.getenv("CODEANDPURRS_BACKUP_DIR", "/root/backups"))
 MCP_SERVICE = os.getenv("CODEANDPURRS_MCP_SERVICE", "codeandpurrs-mcp.service")
-MCP_PORT = int(os.getenv("CODEANDPURRS_MCP_PORT", "8891"))
+MCP_PORT = int(os.getenv("CODEANDPURRS_MCP_PORT", "8894"))
+LEGACY_MCP_PORT = 8891
+MCP_DOMAIN = "mcp.nekopurrs.uk"
+NGINX_ROOTS = (Path("/etc/nginx/sites-enabled"), Path("/etc/nginx/conf.d"))
 PM2_PROCESS = os.getenv("CODEANDPURRS_PM2_PROCESS", "codeandpurrs")
 SOURCE_REF = os.getenv("CODEANDPURRS_AUTOWAKE_REF", "codex/frontend-ai-playlist-20260828")
 TOOL_SOURCE = (
@@ -165,6 +168,9 @@ def restart_mcp_service() -> None:
     if active.stdout.strip() != "active":
         logs = command(["journalctl", "-u", MCP_SERVICE, "-n", "30", "--no-pager"])
         raise RuntimeError(f"MCP 重启失败：{logs.stdout.strip() or started.stderr.strip()}")
+    _pids, listener = port_listener_pids(MCP_PORT)
+    if not listener:
+        raise RuntimeError(f"{MCP_SERVICE} 已启动，但没有监听目标端口 {MCP_PORT}")
 
 
 def find_mcp_instance(source: str) -> str:
@@ -199,6 +205,65 @@ def mount_tools(source: str, instance: str) -> str:
     return source[:index] + block + "\n" + source[index:]
 
 
+def set_public_mcp_port(source: str, instance: str) -> str:
+    pattern = re.compile(
+        rf"(?s)(\b{re.escape(instance)}\.run\s*\(.{{0,800}}?\bport\s*=\s*)(\d+)"
+    )
+    matches = list(pattern.finditer(source))
+    if not matches:
+        raise RuntimeError(f"找不到 {instance}.run(...) 的数字端口，未自动改写")
+    match = matches[-1]
+    current = int(match.group(2))
+    if current == MCP_PORT:
+        return source
+    if current != LEGACY_MCP_PORT:
+        raise RuntimeError(
+            f"现有 MCP 监听端口是 {current}，既不是旧端口 {LEGACY_MCP_PORT}，"
+            f"也不是目标端口 {MCP_PORT}，未自动覆盖"
+        )
+    return source[: match.start(2)] + str(MCP_PORT) + source[match.end(2) :]
+
+
+def nginx_proxy_pattern(port: int) -> re.Pattern[str]:
+    return re.compile(rf"(?P<host>(?:127\.0\.0\.1|localhost)):{port}\b")
+
+
+def find_nginx_configs() -> list[Path]:
+    matched: dict[Path, None] = {}
+    legacy = nginx_proxy_pattern(LEGACY_MCP_PORT)
+    target = nginx_proxy_pattern(MCP_PORT)
+    for root in NGINX_ROOTS:
+        if not root.is_dir():
+            continue
+        for candidate in root.iterdir():
+            if not candidate.is_file():
+                continue
+            try:
+                resolved = candidate.resolve()
+                source = resolved.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            if MCP_DOMAIN in source and (legacy.search(source) or target.search(source)):
+                matched[resolved] = None
+    if not matched:
+        raise RuntimeError(
+            f"找不到 {MCP_DOMAIN} 对应的 Nginx 上游配置，未改动公网入口"
+        )
+    return sorted(matched)
+
+
+def set_nginx_mcp_port(source: str) -> str:
+    legacy = nginx_proxy_pattern(LEGACY_MCP_PORT)
+    updated, count = legacy.subn(lambda match: f"{match.group('host')}:{MCP_PORT}", source)
+    if count:
+        return updated
+    if nginx_proxy_pattern(MCP_PORT).search(source):
+        return source
+    raise RuntimeError(
+        f"Nginx 配置里找不到 {LEGACY_MCP_PORT} 或 {MCP_PORT} 的 MCP 上游"
+    )
+
+
 def ensure_internal_key() -> str:
     source = APP_ENV.read_text(encoding="utf-8") if APP_ENV.exists() else ""
     match = re.search(r"(?m)^AUTOWAKE_MCP_INTERNAL_KEY=(.+)$", source)
@@ -221,7 +286,12 @@ def internal_status(key: str) -> dict:
         return json.loads(response.read().decode("utf-8") or "{}")
 
 
-def restore(backup: Path, env_existed: bool, tool_existed: bool) -> None:
+def restore(
+    backup: Path,
+    env_existed: bool,
+    tool_existed: bool,
+    nginx_backups: list[tuple[Path, Path]],
+) -> None:
     if (backup / "public-mcp-server.py").exists():
         shutil.copy2(backup / "public-mcp-server.py", BASE_SERVER)
     if env_existed and (backup / "codeandpurrs.env").exists():
@@ -232,11 +302,18 @@ def restore(backup: Path, env_existed: bool, tool_existed: bool) -> None:
         shutil.copy2(backup / "autowake-mcp-server.py", TOOL_SERVER)
     elif not tool_existed:
         TOOL_SERVER.unlink(missing_ok=True)
+    for target, saved in nginx_backups:
+        if saved.exists():
+            shutil.copy2(saved, target)
+    if nginx_backups and command(["nginx", "-t"]).returncode == 0:
+        command(["systemctl", "reload", "nginx"])
     command(["pm2", "restart", PM2_PROCESS, "--update-env"])
-    try:
-        restart_mcp_service()
-    except RuntimeError as exc:
-        print(f"警告：文件已回滚，但 MCP 服务未能重启：{exc}", file=sys.stderr)
+    restarted = command(["systemctl", "restart", MCP_SERVICE])
+    if restarted.returncode != 0:
+        print(
+            f"警告：文件已回滚，但原 MCP 服务未能重启：{restarted.stderr.strip()}",
+            file=sys.stderr,
+        )
 
 
 def main() -> int:
@@ -253,6 +330,11 @@ def main() -> int:
     if not service_exists(MCP_SERVICE) or command(["pm2", "describe", PM2_PROCESS]).returncode != 0:
         print("停止：找不到现有 MCP service 或 CodeAndPurrs PM2 进程。", file=sys.stderr)
         return 2
+    try:
+        nginx_targets = find_nginx_configs()
+    except RuntimeError as exc:
+        print(f"停止：{exc}", file=sys.stderr)
+        return 2
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     backup = BACKUP_ROOT / f"codeandpurrs-before-autowake-mcp-{stamp}"
@@ -264,7 +346,12 @@ def main() -> int:
         shutil.copy2(APP_ENV, backup / "codeandpurrs.env")
     if tool_existed:
         shutil.copy2(TOOL_SERVER, backup / "autowake-mcp-server.py")
-    print(f"[1/5] 已备份到 {backup}")
+    nginx_backups: list[tuple[Path, Path]] = []
+    for index, target in enumerate(nginx_targets, start=1):
+        saved = backup / f"nginx-mcp-{index}.conf"
+        shutil.copy2(target, saved)
+        nginx_backups.append((target, saved))
+    print(f"[1/6] 已备份 MCP、环境变量与 Nginx 配置到 {backup}")
 
     try:
         with urllib.request.urlopen(TOOL_SOURCE, timeout=30) as response:
@@ -273,14 +360,19 @@ def main() -> int:
             raise RuntimeError("下载内容缺少自动唤醒工具")
         tool_mode = TOOL_SERVER.stat().st_mode if TOOL_SERVER.exists() else 0o600
         atomic_write(TOOL_SERVER, tool_source, tool_mode)
-        print("[2/5] 自动唤醒 MCP 工具已同步")
+        print("[2/6] 自动唤醒 MCP 工具已同步")
 
         base_source = BASE_SERVER.read_text(encoding="utf-8")
         instance = find_mcp_instance(base_source)
         if not instance:
             raise RuntimeError("现有 server.py 的 MCP 结构不符合预期")
-        atomic_write(BASE_SERVER, mount_tools(base_source, instance), BASE_SERVER.stat().st_mode)
-        print(f"[3/5] 五个工具已挂载到现有 MCP（实例：{instance}）")
+        mounted_source = mount_tools(base_source, instance)
+        migrated_source = set_public_mcp_port(mounted_source, instance)
+        atomic_write(BASE_SERVER, migrated_source, BASE_SERVER.stat().st_mode)
+        print(
+            f"[3/6] 五个工具已挂载到现有 MCP（实例：{instance}），"
+            f"监听端口设为 {MCP_PORT}"
+        )
 
         compiled = command([sys.executable, "-m", "py_compile", str(BASE_SERVER), str(TOOL_SERVER)])
         if compiled.returncode != 0:
@@ -299,12 +391,23 @@ def main() -> int:
                 time.sleep(1)
         if not isinstance(status, dict) or "devices" not in status:
             raise RuntimeError("自动唤醒内网控制口健康检查失败")
-        print(f"[4/5] 内网控制口正常，登记设备 {len(status['devices'])} 个")
+        print(f"[4/6] 内网控制口正常，登记设备 {len(status['devices'])} 个")
 
         restart_mcp_service()
-        print(f"[5/5] {MCP_SERVICE}：active")
+        print(f"[5/6] {MCP_SERVICE}：active，监听 127.0.0.1:{MCP_PORT}")
+
+        for target, _saved in nginx_backups:
+            source = target.read_text(encoding="utf-8")
+            atomic_write(target, set_nginx_mcp_port(source), target.stat().st_mode)
+        nginx_test = command(["nginx", "-t"])
+        if nginx_test.returncode != 0:
+            raise RuntimeError(f"Nginx 配置检查失败：{nginx_test.stderr.strip()}")
+        nginx_reload = command(["systemctl", "reload", "nginx"])
+        if nginx_reload.returncode != 0:
+            raise RuntimeError(f"Nginx 重载失败：{nginx_reload.stderr.strip()}")
+        print(f"[6/6] {MCP_DOMAIN} 已切换到 127.0.0.1:{MCP_PORT}")
     except Exception as exc:
-        restore(backup, env_existed, tool_existed)
+        restore(backup, env_existed, tool_existed, nginx_backups)
         print(f"失败：{exc}\n已经恢复安装前状态。", file=sys.stderr)
         return 1
 

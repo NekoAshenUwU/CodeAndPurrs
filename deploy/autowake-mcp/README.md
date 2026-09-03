@@ -12,6 +12,12 @@ module calls a localhost-only CodeAndPurrs control API using
 `AUTOWAKE_MCP_INTERNAL_KEY`; the key and the screen bridge are never exposed as
 MCP tool arguments or results.
 
+The installer migrates the authenticated shared MCP's local listener from
+`8891` to `8894` and updates only the `mcp.nekopurrs.uk` Nginx upstream. Ports
+`8890` (Tang memory), `8892` (playlist standalone), and `8893` (auto-wake
+standalone) are left untouched. The public URL and OAuth configuration do not
+change.
+
 Tools:
 
 - `get_autowake_status`
@@ -29,10 +35,11 @@ Tools:
 curl -fsSL https://raw.githubusercontent.com/NekoAshenUwU/CodeAndPurrs/codex/frontend-ai-playlist-20260828/deploy/autowake-mcp/install-into-existing.py | python3 -
 ```
 
-The installer backs up both the existing public MCP source and the
-CodeAndPurrs `.env`, generates the localhost bridge key when missing, compiles
-the Python sources, restarts both services, tests the internal status route,
-and restores the backup if a check fails.
+The installer backs up the existing public MCP source, CodeAndPurrs `.env`, and
+the matching Nginx configuration; generates the localhost bridge key when
+missing; compiles the Python sources; verifies port `8894`; restarts both
+services; tests the internal status route; and restores every changed file if
+a check fails.
 
 ## App connection
 
