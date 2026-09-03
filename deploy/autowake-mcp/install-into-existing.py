@@ -28,7 +28,6 @@ MCP_SERVICE = os.getenv("CODEANDPURRS_MCP_SERVICE", "codeandpurrs-mcp.service")
 MCP_PORT = int(os.getenv("CODEANDPURRS_MCP_PORT", "8894"))
 LEGACY_MCP_PORT = 8891
 MCP_DOMAIN = "mcp.nekopurrs.uk"
-NGINX_ROOTS = (Path("/etc/nginx/sites-enabled"), Path("/etc/nginx/conf.d"))
 PM2_PROCESS = os.getenv("CODEANDPURRS_PM2_PROCESS", "codeandpurrs")
 SOURCE_REF = os.getenv("CODEANDPURRS_AUTOWAKE_REF", "codex/frontend-ai-playlist-20260828")
 TOOL_SOURCE = (
@@ -228,26 +227,71 @@ def nginx_proxy_pattern(port: int) -> re.Pattern[str]:
     return re.compile(rf"(?P<host>(?:127\.0\.0\.1|localhost)):{port}\b")
 
 
+def active_nginx_configs() -> dict[Path, str]:
+    rendered = command(["nginx", "-T"])
+    if rendered.returncode != 0:
+        raise RuntimeError(f"无法读取生效中的 Nginx 配置：{rendered.stderr.strip()}")
+    paths = re.findall(r"(?m)^# configuration file (/.+?):\s*$", rendered.stdout)
+    configs: dict[Path, str] = {}
+    for raw_path in paths:
+        try:
+            path = Path(raw_path).resolve()
+            if path.is_file():
+                configs[path] = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+    if not configs:
+        raise RuntimeError("nginx -T 没有列出可读取的生效配置文件")
+    return configs
+
+
 def find_nginx_configs() -> list[Path]:
-    matched: dict[Path, None] = {}
+    configs = active_nginx_configs()
     legacy = nginx_proxy_pattern(LEGACY_MCP_PORT)
     target = nginx_proxy_pattern(MCP_PORT)
-    for root in NGINX_ROOTS:
-        if not root.is_dir():
-            continue
-        for candidate in root.iterdir():
-            if not candidate.is_file():
-                continue
-            try:
-                resolved = candidate.resolve()
-                source = resolved.read_text(encoding="utf-8")
-            except OSError:
-                continue
-            if MCP_DOMAIN in source and (legacy.search(source) or target.search(source)):
-                matched[resolved] = None
+    domain_configs = {
+        path: source for path, source in configs.items() if MCP_DOMAIN in source
+    }
+    if not domain_configs:
+        raise RuntimeError(f"生效中的 Nginx 配置没有 {MCP_DOMAIN}")
+
+    matched: dict[Path, None] = {}
+    for path, source in domain_configs.items():
+        if legacy.search(source) or target.search(source):
+            matched[path] = None
+
+    # Common production layout: the domain vhost proxies to a named upstream,
+    # while 127.0.0.1:8891 lives in another included config file.
+    upstream_names: set[str] = set()
+    for source in domain_configs.values():
+        upstream_names.update(
+            re.findall(r"\bproxy_pass\s+https?://([A-Za-z_][\w.-]*)", source)
+        )
+    for upstream_name in upstream_names:
+        block_pattern = re.compile(
+            rf"(?s)\bupstream\s+{re.escape(upstream_name)}\s*\{{.*?\}}"
+        )
+        for path, source in configs.items():
+            for block in block_pattern.findall(source):
+                if legacy.search(block) or target.search(block):
+                    matched[path] = None
+
+    # Last safe fallback: 8891 is the old dedicated public-MCP port. If it
+    # appears exactly once across active Nginx files, that single occurrence is
+    # unambiguous even when variables hide the proxy_pass relationship.
+    if not matched:
+        occurrences = [
+            path
+            for path, source in configs.items()
+            for _match in legacy.finditer(source)
+        ]
+        if len(occurrences) == 1:
+            matched[occurrences[0]] = None
+
     if not matched:
         raise RuntimeError(
-            f"找不到 {MCP_DOMAIN} 对应的 Nginx 上游配置，未改动公网入口"
+            f"找到了 {MCP_DOMAIN}，但无法唯一定位它使用的 {LEGACY_MCP_PORT} 上游；"
+            "未改动公网入口"
         )
     return sorted(matched)
 
