@@ -259,20 +259,25 @@ def restart_backend(service: str) -> None:
     restarted = command(["systemctl", "restart", service])
     if restarted.returncode != 0:
         raise RuntimeError(f"无法重启 {service}：{restarted.stderr.strip()}")
-    time.sleep(3)
-    active = command(["systemctl", "is-active", service])
-    if active.stdout.strip() != "active":
-        logs = command(["journalctl", "-u", service, "-n", "40", "--no-pager"])
-        raise RuntimeError(
-            f"{service} 重启失败：{logs.stdout.strip() or restarted.stderr.strip()}"
-        )
-    pids, listener = port_listener_pids(BACKEND_PORT)
-    if not pids:
-        logs = command(["journalctl", "-u", service, "-n", "40", "--no-pager"])
-        raise RuntimeError(
-            f"{service} 已启动，但端口 {BACKEND_PORT} 没有监听："
-            f"{listener or logs.stdout.strip()}"
-        )
+    deadline = time.monotonic() + 45
+    last_active = ""
+    last_listener = ""
+    while time.monotonic() < deadline:
+        active = command(["systemctl", "is-active", service])
+        last_active = active.stdout.strip()
+        pids, last_listener = port_listener_pids(BACKEND_PORT)
+        if last_active == "active" and pids:
+            return
+        if last_active in {"failed", "inactive", "deactivating"}:
+            break
+        time.sleep(0.5)
+
+    logs = command(["journalctl", "-u", service, "-n", "40", "--no-pager"])
+    raise RuntimeError(
+        f"{service} 未在 45 秒内恢复端口 {BACKEND_PORT}："
+        f"state={last_active or '<unknown>'} "
+        f"listener={last_listener or '<empty>'}；{logs.stdout.strip()}"
+    )
 
 
 def snapshot(path: Path, backup_dir: Path) -> tuple[Path, Path, bool]:
@@ -365,9 +370,16 @@ def main() -> int:
         key = ensure_internal_key()
         restart_pm2()
         status = internal_status(key)
+        devices = status.get("devices")
+        device_count = len(devices) if isinstance(devices, list) else 0
+        unread_count = (
+            sum(int(item.get("unread", 0)) for item in devices if isinstance(item, dict))
+            if isinstance(devices, list)
+            else 0
+        )
         print(
             "[4/5] CodeAndPurrs 内部接口正常："
-            f"enabled={status.get('enabled')} unread={status.get('unreadCount')}"
+            f"devices={device_count} unread={unread_count}"
         )
 
         restart_backend(service)
