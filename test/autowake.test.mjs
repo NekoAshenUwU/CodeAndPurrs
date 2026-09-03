@@ -159,8 +159,14 @@ test('subscription -> server generation -> inbox -> acknowledgement works withou
     const mcpStatusBody = await mcpStatus.json();
     assert.equal(mcpStatus.status, 200);
     assert.equal(mcpStatusBody.devices.length, 1);
-    assert.equal(mcpStatusBody.devices[0].windowId, 'opus5-room');
     assert.equal(mcpStatusBody.devices[0].device.length, 12);
+    assert.equal(mcpStatusBody.devices[0].windowId, undefined);
+    assert.equal(mcpStatusBody.devices[0].windowName, undefined);
+    assert.equal(mcpStatusBody.devices[0].assistantName, undefined);
+    assert.equal(mcpStatusBody.devices[0].provider, undefined);
+    assert.equal(mcpStatusBody.devices[0].modelId, undefined);
+    assert.equal(mcpStatusBody.devices[0].lastError, undefined);
+    assert.doesNotMatch(JSON.stringify(mcpStatusBody), /claude/i);
 
     const dryRun = await fetch(`${base}/api/autowake/mcp/run`, {
       method: 'POST',
@@ -218,6 +224,10 @@ test('subscription -> server generation -> inbox -> acknowledgement works withou
     assert.equal(deliveries.status, 200);
     assert.equal(deliveriesBody.messages.length, 1);
     assert.equal(deliveriesBody.messages[0].deviceId, undefined);
+    assert.equal(deliveriesBody.messages[0].windowId, undefined);
+    assert.equal(deliveriesBody.messages[0].windowName, undefined);
+    assert.equal(deliveriesBody.messages[0].assistantName, undefined);
+    assert.equal(deliveriesBody.messages[0].modelId, undefined);
     assert.equal(deliveriesBody.messages[0].content, '忽然想你了，来让我抱一会儿。');
 
     const ack = await fetch(`${base}/api/autowake/ack`, {

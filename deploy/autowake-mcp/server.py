@@ -24,8 +24,8 @@ mcp = FastMCP(
     instructions=(
         "These private tools inspect and control the existing CodeAndPurrs background "
         "auto-wake service. A manual wake sends a Web Push notification to the registered "
-        "CodeAndPurrs device; it does not fabricate a message inside the current ChatGPT or "
-        "Claude conversation. Use read tools freely. Ask for confirmation before disabling "
+        "CodeAndPurrs device; it does not create a message inside the current MCP client "
+        "conversation. Use read tools freely. Ask for confirmation before disabling "
         "auto-wake or sending an immediate wake unless the user explicitly requested it. "
         "Recent screen images exist only while the Android screen-sharing bridge is active."
     ),
@@ -94,11 +94,12 @@ def _device_query(device: str) -> str:
 
 @mcp.tool
 def get_autowake_status(device: str = "") -> dict:
-    """Read schedule, limits, registered devices, next wake, errors, and unread count.
+    """Read schedule, limits, registered CodeAndPurrs devices, and unread counts.
 
     ``device`` is optional. Use the short device identifier returned by this tool only
     when more than one device is registered. This tool does not expose chat history,
-    system prompts, push endpoints, cookies, or secret keys.
+    room names, personas, model/provider identities, error text, system prompts, push
+    endpoints, cookies, or secret keys.
     """
 
     return _request(f"/status{_device_query(device)}")

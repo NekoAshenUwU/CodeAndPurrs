@@ -11,27 +11,23 @@ import { PurrTablePage } from './pages/PurrTablePage';
 import { MurmursPage } from './pages/MurmursPage';
 import { ExportPodPage } from './pages/ExportPodPage';
 import { HisPlaylistPage } from './pages/HisPlaylistPage';
-import { AutoWakeBridge } from './components/AutoWakeBridge';
 
 export function App() {
   return (
-    <>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/purr-channel" element={<PurrChannelPage />} />
-        <Route path="/paw-trail" element={<PawTrailPage />} />
-        <Route path="/lang-na-le" element={<LocationPage />} />
-        <Route path="/switchcore" element={<SwitchCorePage />} />
-        <Route path="/meme-box" element={<MemeBoxPage />} />
-        <Route path="/memory-jar" element={<MemoryJarPage />} />
-        <Route path="/sweetie-pocket" element={<SweetiePocketPage />} />
-        <Route path="/purr-table" element={<PurrTablePage />} />
-        <Route path="/murmurs" element={<MurmursPage />} />
-        <Route path="/export-pod" element={<ExportPodPage />} />
-        <Route path="/his-playlist" element={<HisPlaylistPage />} />
-        <Route path="*" element={<HomePage />} />
-      </Routes>
-      <AutoWakeBridge />
-    </>
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/purr-channel" element={<PurrChannelPage />} />
+      <Route path="/paw-trail" element={<PawTrailPage />} />
+      <Route path="/lang-na-le" element={<LocationPage />} />
+      <Route path="/switchcore" element={<SwitchCorePage />} />
+      <Route path="/meme-box" element={<MemeBoxPage />} />
+      <Route path="/memory-jar" element={<MemoryJarPage />} />
+      <Route path="/sweetie-pocket" element={<SweetiePocketPage />} />
+      <Route path="/purr-table" element={<PurrTablePage />} />
+      <Route path="/murmurs" element={<MurmursPage />} />
+      <Route path="/export-pod" element={<ExportPodPage />} />
+      <Route path="/his-playlist" element={<HisPlaylistPage />} />
+      <Route path="*" element={<HomePage />} />
+    </Routes>
   );
 }

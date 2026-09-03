@@ -1,6 +1,6 @@
 # Neko Auto Wake MCP
 
-Private automatic-wake and recent-screen tools shared by ChatGPT and Claude.
+Private automatic-wake and recent-screen tools for supported MCP clients.
 Production mounts these tools into the existing authenticated MCP at:
 
 ```text
@@ -49,17 +49,11 @@ changed file if a check fails. If the live backend cannot be identified
 unambiguously, it stops before modifying any file and prints the process
 diagnostics.
 
-## App connection
+## Client connection
 
-- ChatGPT: enable Developer mode, add the HTTPS URL above as an MCP server,
-  then finish its OAuth flow.
-- Claude: Customize → Connectors → Add custom connector, use the same URL,
-  then connect it.
-
-The connector gives both apps control and screen-reading tools. MCP itself is
-request/response and cannot start a closed ChatGPT or Claude conversation. An
-in-app scheduled task must call these tools if the wake message should appear
-inside that app; `send_codeandpurrs_wake_now` specifically targets the existing
-CodeAndPurrs Web Push subscription.
+Add the HTTPS URL above as an MCP server and finish its OAuth flow. The connector
+provides control and screen-reading tools. MCP itself is request/response and cannot
+start a closed client conversation. `send_codeandpurrs_wake_now` specifically targets
+the existing CodeAndPurrs Web Push subscription.
 
 Ports `8891`, `8892`, and `8893` are not modified by this installer.

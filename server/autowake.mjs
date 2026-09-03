@@ -485,17 +485,12 @@ function mcpClientSummary(deviceId, client, inbox) {
   return {
     device: deviceId.slice(0, 12),
     enabled: Boolean(client?.enabled),
-    windowId: String(client?.state?.windowId || ''),
-    windowName: String(client?.state?.windowName || ''),
-    assistantName: String(client?.state?.assistantName || ''),
-    provider: String(client?.state?.provider || ''),
-    modelId: String(client?.state?.modelId || ''),
     nextWakeAt: Number(client?.nextWakeAt || 0),
     lastWakeAt: Number(client?.lastWakeAt || 0),
     wakeDate: String(client?.wakeDate || ''),
     wakeCount: Number(client?.wakeCount || 0),
     unread,
-    lastError: String(client?.lastError || ''),
+    hasError: Boolean(client?.lastError),
     lastErrorAt: Number(client?.lastErrorAt || 0),
     updatedAt: Number(client?.updatedAt || 0),
   };
@@ -746,7 +741,13 @@ export async function handleAutoWakeRequest(req, res, requestUrl, { port }) {
         .filter((item) => item.deviceId === deviceId && (!unreadOnly || !item.acknowledgedAt))
         .sort((a, b) => Number(b.at || 0) - Number(a.at || 0))
         .slice(0, limit)
-        .map(({ deviceId: _privateDeviceId, ...item }) => item);
+        .map((item) => ({
+          id: String(item.id || ''),
+          role: 'assistant',
+          content: String(item.content || ''),
+          at: Number(item.at || 0),
+          acknowledged: Boolean(item.acknowledgedAt),
+        }));
       json(res, 200, { device: deviceId.slice(0, 12), messages });
       return true;
     }
