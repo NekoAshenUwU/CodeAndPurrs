@@ -12,11 +12,17 @@ module calls a localhost-only CodeAndPurrs control API using
 `AUTOWAKE_MCP_INTERNAL_KEY`; the key and the screen bridge are never exposed as
 MCP tool arguments or results.
 
-The installer migrates the authenticated shared MCP's local listener from
-`8891` to `8894` and updates only the `mcp.nekopurrs.uk` Nginx upstream. Ports
-`8890` (Tang memory), `8892` (playlist standalone), and `8893` (auto-wake
-standalone) are left untouched. The public URL and OAuth configuration do not
-change.
+The live topology is:
+
+- `8890`: the real FastMCP backend
+- `8891`: the `tang-web` OAuth gateway in front of it
+- `8892`: playlist MCP
+- `8893`: usage MCP
+
+The installer discovers the Python source and systemd unit from the process
+currently listening on `8890`, then mounts the auto-wake child MCP into that
+backend. It does not add or migrate a port, and it does not change Nginx,
+OAuth, or the public URL.
 
 Tools:
 
@@ -35,11 +41,13 @@ Tools:
 curl -fsSL https://raw.githubusercontent.com/NekoAshenUwU/CodeAndPurrs/codex/frontend-ai-playlist-20260828/deploy/autowake-mcp/install-into-existing.py | python3 -
 ```
 
-The installer backs up the existing public MCP source, CodeAndPurrs `.env`, and
-the matching Nginx configuration; generates the localhost bridge key when
-missing; compiles the Python sources; verifies port `8894`; restarts both
-services; tests the internal status route; and restores every changed file if
-a check fails.
+The installer backs up the detected FastMCP source, CodeAndPurrs `.env`, and
+the mounted tool module; generates the localhost bridge key when missing;
+compiles the Python sources; restarts only CodeAndPurrs and the detected
+`8890` backend service; tests the internal status route; and restores every
+changed file if a check fails. If the live backend cannot be identified
+unambiguously, it stops before modifying any file and prints the process
+diagnostics.
 
 ## App connection
 
@@ -54,4 +62,4 @@ in-app scheduled task must call these tools if the wake message should appear
 inside that app; `send_codeandpurrs_wake_now` specifically targets the existing
 CodeAndPurrs Web Push subscription.
 
-Do not expose the standalone port `8893` without an authentication layer.
+Ports `8891`, `8892`, and `8893` are not modified by this installer.

@@ -65,10 +65,15 @@ https://mcp.nekopurrs.uk/mcp
 curl -fsSL https://raw.githubusercontent.com/NekoAshenUwU/CodeAndPurrs/codex/frontend-ai-playlist-20260828/deploy/autowake-mcp/install-into-existing.py | python3 -
 ```
 
-安装器会生成 `AUTOWAKE_MCP_INTERNAL_KEY`，将五个工具挂到现有 FastMCP，
-把共享 MCP 的本机监听从冲突的 8891 迁到 8894，并只修改
-`mcp.nekopurrs.uk` 对应的 Nginx 上游。8890、8892、8893 都不会动；公网 URL
-与 OAuth 不变。失败会同时恢复 MCP 源码、`.env` 与 Nginx 配置。工具包括：
+线上真实拓扑是：8890 为 FastMCP 后端，8891 为 `tang-web` OAuth 网关，
+8892 为点歌 MCP，8893 为 Usage MCP。安装器会从正在监听 8890 的进程与
+systemd cgroup 自动识别真实源码和服务，生成 `AUTOWAKE_MCP_INTERNAL_KEY`，
+并把五个工具直接挂进这个 FastMCP。它不会新增或迁移端口，也不会改 Nginx、
+OAuth、8891、8892 或 8893；公网 URL 保持不变。
+
+安装前会备份识别到的 MCP 源码、`.env` 与工具模块。若无法唯一识别 8890
+背后的源码和 systemd 服务，安装器会在修改任何文件之前停止并打印进程诊断；
+其余步骤失败则恢复本轮修改。工具包括：
 
 - 查看自动唤醒状态、时段、上次错误和未读数
 - 开启或停用已登记设备的后台唤醒
