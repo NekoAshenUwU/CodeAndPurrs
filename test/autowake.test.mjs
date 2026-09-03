@@ -10,6 +10,7 @@ import { handleScreenFrameRequest } from '../server/screenFrame.mjs';
 const temp = mkdtempSync(join(tmpdir(), 'codeandpurrs-autowake-test-'));
 process.env.AUTOWAKE_DATA_DIR = temp;
 process.env.SCREEN_FRAME_DATA_DIR = join(temp, 'screen');
+process.env.AUTOWAKE_MCP_INTERNAL_KEY = 'mcp-internal-secret';
 const autowake = await import(`../server/autowake.mjs?test=${Date.now()}`);
 
 test.after(() => rmSync(temp, { recursive: true, force: true }));
@@ -151,6 +152,26 @@ test('subscription -> server generation -> inbox -> acknowledgement works withou
     assert.equal(subscribed.status, 200);
     const cookie = subscribed.headers.get('set-cookie').split(';')[0];
 
+    const deniedMcp = await fetch(`${base}/api/autowake/mcp/status`);
+    assert.equal(deniedMcp.status, 401);
+    const mcpHeaders = { 'X-Autowake-MCP-Key': 'mcp-internal-secret' };
+    const mcpStatus = await fetch(`${base}/api/autowake/mcp/status`, { headers: mcpHeaders });
+    const mcpStatusBody = await mcpStatus.json();
+    assert.equal(mcpStatus.status, 200);
+    assert.equal(mcpStatusBody.devices.length, 1);
+    assert.equal(mcpStatusBody.devices[0].windowId, 'opus5-room');
+    assert.equal(mcpStatusBody.devices[0].device.length, 12);
+
+    const dryRun = await fetch(`${base}/api/autowake/mcp/run`, {
+      method: 'POST',
+      headers: { ...mcpHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dryRun: true }),
+    });
+    const dryRunBody = await dryRun.json();
+    assert.equal(dryRun.status, 200);
+    assert.equal(dryRunBody.checked, 1);
+    assert.equal(dryRunBody.sent, 0);
+
     for (let index = 1; index <= 5; index++) {
       const capturedAt = Date.now() - (5 - index) * 5_000;
       const frameResponse = await fetch(`${base}/api/screen/ingest`, {
@@ -168,6 +189,14 @@ test('subscription -> server generation -> inbox -> acknowledgement works withou
       assert.equal(frameResponse.status, 200);
     }
 
+    const mcpScreen = await fetch(`${base}/api/autowake/mcp/screen?seconds=60&maxFrames=4`, {
+      headers: mcpHeaders,
+    });
+    const mcpScreenBody = await mcpScreen.json();
+    assert.equal(mcpScreen.status, 200);
+    assert.equal(mcpScreenBody.captured, 4);
+    assert.ok(mcpScreenBody.frames.every((frame) => frame.dataUrl.startsWith('data:image/jpeg;base64,')));
+
     const run = await fetch(`${base}/api/autowake/run?force=1`, { method: 'POST' });
     assert.equal(run.status, 200);
     const runBody = await run.json();
@@ -184,6 +213,13 @@ test('subscription -> server generation -> inbox -> acknowledgement works withou
     assert.equal(messages[0].content, '忽然想你了，来让我抱一会儿。');
     assert.equal(messages[0].screenFrameCount, 4);
 
+    const deliveries = await fetch(`${base}/api/autowake/mcp/deliveries?limit=5`, { headers: mcpHeaders });
+    const deliveriesBody = await deliveries.json();
+    assert.equal(deliveries.status, 200);
+    assert.equal(deliveriesBody.messages.length, 1);
+    assert.equal(deliveriesBody.messages[0].deviceId, undefined);
+    assert.equal(deliveriesBody.messages[0].content, '忽然想你了，来让我抱一会儿。');
+
     const ack = await fetch(`${base}/api/autowake/ack`, {
       method: 'POST',
       headers: { Cookie: cookie, 'Content-Type': 'application/json' },
@@ -192,6 +228,14 @@ test('subscription -> server generation -> inbox -> acknowledgement works withou
     assert.equal((await ack.json()).acknowledged, 1);
     const empty = await fetch(`${base}/api/autowake/inbox`, { headers: { Cookie: cookie } });
     assert.deepEqual((await empty.json()).messages, []);
+
+    const disabled = await fetch(`${base}/api/autowake/mcp/enabled`, {
+      method: 'POST',
+      headers: { ...mcpHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: false }),
+    });
+    assert.equal(disabled.status, 200);
+    assert.equal((await disabled.json()).enabled, false);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

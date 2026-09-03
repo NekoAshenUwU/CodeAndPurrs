@@ -8,6 +8,7 @@ import {
   createSign,
   generateKeyPairSync,
   randomBytes,
+  timingSafeEqual,
 } from 'node:crypto';
 import {
   appendFileSync,
@@ -452,6 +453,89 @@ function loopback(req) {
   return address === '127.0.0.1' || address === '::1' || address === '::ffff:127.0.0.1';
 }
 
+function sameSecret(left, right) {
+  const a = Buffer.from(String(left || ''), 'utf8');
+  const b = Buffer.from(String(right || ''), 'utf8');
+  return a.length > 0 && a.length === b.length && timingSafeEqual(a, b);
+}
+
+function hasAutoWakeMcpAccess(req) {
+  const expected = String(process.env.AUTOWAKE_MCP_INTERNAL_KEY || '').trim();
+  const supplied = String(req.headers['x-autowake-mcp-key'] || '').trim();
+  return { configured: Boolean(expected), allowed: sameSecret(expected, supplied) };
+}
+
+function resolveMcpClient(clientsData, deviceRef = '', { enabledOnly = false } = {}) {
+  const ref = String(deviceRef || '').trim().toLowerCase();
+  let entries = Object.entries(clientsData.clients || {});
+  if (enabledOnly) entries = entries.filter(([, client]) => client?.enabled);
+  if (ref) {
+    entries = entries.filter(([deviceId]) => deviceId.toLowerCase().startsWith(ref));
+    if (entries.length > 1) throw new Error('设备编号不够完整，匹配到多个设备');
+  }
+  return entries.sort((a, b) =>
+    Number(b[1]?.updatedAt || 0) - Number(a[1]?.updatedAt || 0),
+  )[0] || null;
+}
+
+function mcpClientSummary(deviceId, client, inbox) {
+  const unread = inbox.messages.filter((item) =>
+    item.deviceId === deviceId && !item.acknowledgedAt,
+  ).length;
+  return {
+    device: deviceId.slice(0, 12),
+    enabled: Boolean(client?.enabled),
+    windowId: String(client?.state?.windowId || ''),
+    windowName: String(client?.state?.windowName || ''),
+    assistantName: String(client?.state?.assistantName || ''),
+    provider: String(client?.state?.provider || ''),
+    modelId: String(client?.state?.modelId || ''),
+    nextWakeAt: Number(client?.nextWakeAt || 0),
+    lastWakeAt: Number(client?.lastWakeAt || 0),
+    wakeDate: String(client?.wakeDate || ''),
+    wakeCount: Number(client?.wakeCount || 0),
+    unread,
+    lastError: String(client?.lastError || ''),
+    lastErrorAt: Number(client?.lastErrorAt || 0),
+    updatedAt: Number(client?.updatedAt || 0),
+  };
+}
+
+function autoWakeMcpStatus(deviceRef = '') {
+  const clientsData = loadClients();
+  const inbox = loadInbox();
+  let entries = Object.entries(clientsData.clients || {});
+  const ref = String(deviceRef || '').trim().toLowerCase();
+  if (ref) entries = entries.filter(([deviceId]) => deviceId.toLowerCase().startsWith(ref));
+  const now = Date.now();
+  const local = zonedParts(now);
+  return {
+    now,
+    timeZone: TIME_ZONE,
+    local,
+    wakeWindowOpen: isWakeWindow(local),
+    wakeWindows: {
+      weekdays: `${WEEKDAY_START}-${WEEKDAY_END}`,
+      weekends: `${WEEKEND_START}-${WEEKEND_END}`,
+    },
+    limits: {
+      minIdleMinutes: MIN_IDLE_MINUTES,
+      maxIdleMinutes: MAX_IDLE_MINUTES,
+      minGapMinutes: MIN_GAP_MINUTES,
+      maxGapMinutes: MAX_GAP_MINUTES,
+      maxPerDay: MAX_PER_DAY,
+    },
+    screenStory: {
+      enabled: SCREEN_STORY_ENABLED,
+      windowSeconds: SCREEN_STORY_SECONDS,
+      maxFrames: SCREEN_STORY_MAX_FRAMES,
+    },
+    devices: entries
+      .sort((a, b) => Number(b[1]?.updatedAt || 0) - Number(a[1]?.updatedAt || 0))
+      .map(([deviceId, client]) => mcpClientSummary(deviceId, client, inbox)),
+  };
+}
+
 async function runOnce({ port, force = false, dry = false, targetDevice = '' }) {
   if (runActive) return { ok: false, busy: true, checked: 0, sent: 0 };
   runActive = true;
@@ -539,6 +623,155 @@ export async function handleAutoWakeRequest(req, res, requestUrl, { port }) {
   if (!(path === '/api/autowake' || path.startsWith('/api/autowake/'))) return false;
 
   try {
+    if (path === '/api/autowake/mcp/status' && req.method === 'GET') {
+      const access = hasAutoWakeMcpAccess(req);
+      if (!access.configured) {
+        json(res, 503, { error: 'AUTOWAKE_MCP_INTERNAL_KEY is not configured' });
+        return true;
+      }
+      if (!access.allowed) {
+        json(res, 401, { error: 'invalid auto-wake MCP key' });
+        return true;
+      }
+      json(res, 200, autoWakeMcpStatus(requestUrl.searchParams.get('device') || ''));
+      return true;
+    }
+
+    if (path === '/api/autowake/mcp/enabled' && req.method === 'POST') {
+      const access = hasAutoWakeMcpAccess(req);
+      if (!access.configured) {
+        json(res, 503, { error: 'AUTOWAKE_MCP_INTERNAL_KEY is not configured' });
+        return true;
+      }
+      if (!access.allowed) {
+        json(res, 401, { error: 'invalid auto-wake MCP key' });
+        return true;
+      }
+      const body = await readBody(req, 50_000);
+      if (typeof body?.enabled !== 'boolean') {
+        json(res, 400, { error: 'enabled must be a boolean' });
+        return true;
+      }
+      const clientsData = loadClients();
+      let selected;
+      try {
+        selected = resolveMcpClient(clientsData, body?.device || '');
+      } catch (err) {
+        json(res, 409, { error: String(err?.message || err) });
+        return true;
+      }
+      if (!selected) {
+        json(res, 404, { error: '没有已登记的自动唤醒设备，请先在 CodeAndPurrs 开启一次' });
+        return true;
+      }
+      const [deviceId, client] = selected;
+      if (body.enabled && !client.subscription) {
+        json(res, 409, { error: '这个设备没有有效的 Web Push 订阅' });
+        return true;
+      }
+      client.enabled = body.enabled;
+      client.disabledReason = body.enabled ? '' : 'mcp-disabled';
+      if (body.enabled) client.nextWakeAt = nextWakeAt(Date.now(), true);
+      client.updatedAt = Date.now();
+      saveClients(clientsData);
+      json(res, 200, {
+        ok: true,
+        device: deviceId.slice(0, 12),
+        enabled: client.enabled,
+        nextWakeAt: Number(client.nextWakeAt || 0),
+      });
+      return true;
+    }
+
+    if (path === '/api/autowake/mcp/run' && req.method === 'POST') {
+      const access = hasAutoWakeMcpAccess(req);
+      if (!access.configured) {
+        json(res, 503, { error: 'AUTOWAKE_MCP_INTERNAL_KEY is not configured' });
+        return true;
+      }
+      if (!access.allowed) {
+        json(res, 401, { error: 'invalid auto-wake MCP key' });
+        return true;
+      }
+      const body = await readBody(req, 50_000);
+      const clientsData = loadClients();
+      let selected;
+      try {
+        selected = resolveMcpClient(clientsData, body?.device || '', { enabledOnly: true });
+      } catch (err) {
+        json(res, 409, { error: String(err?.message || err) });
+        return true;
+      }
+      if (!selected) {
+        json(res, 409, { error: '没有已开启的自动唤醒设备' });
+        return true;
+      }
+      const [deviceId] = selected;
+      const result = await runOnce({
+        port,
+        force: true,
+        dry: body?.dryRun === true,
+        targetDevice: deviceId,
+      });
+      json(res, 200, { ...result, device: deviceId.slice(0, 12) });
+      return true;
+    }
+
+    if (path === '/api/autowake/mcp/deliveries' && req.method === 'GET') {
+      const access = hasAutoWakeMcpAccess(req);
+      if (!access.configured) {
+        json(res, 503, { error: 'AUTOWAKE_MCP_INTERNAL_KEY is not configured' });
+        return true;
+      }
+      if (!access.allowed) {
+        json(res, 401, { error: 'invalid auto-wake MCP key' });
+        return true;
+      }
+      const clientsData = loadClients();
+      let selected;
+      try {
+        selected = resolveMcpClient(clientsData, requestUrl.searchParams.get('device') || '');
+      } catch (err) {
+        json(res, 409, { error: String(err?.message || err) });
+        return true;
+      }
+      if (!selected) {
+        json(res, 200, { messages: [] });
+        return true;
+      }
+      const [deviceId] = selected;
+      const limit = Math.min(50, Math.max(1, Number(requestUrl.searchParams.get('limit')) || 10));
+      const unreadOnly = requestUrl.searchParams.get('unread') === '1';
+      const messages = loadInbox().messages
+        .filter((item) => item.deviceId === deviceId && (!unreadOnly || !item.acknowledgedAt))
+        .sort((a, b) => Number(b.at || 0) - Number(a.at || 0))
+        .slice(0, limit)
+        .map(({ deviceId: _privateDeviceId, ...item }) => item);
+      json(res, 200, { device: deviceId.slice(0, 12), messages });
+      return true;
+    }
+
+    if (path === '/api/autowake/mcp/screen' && req.method === 'GET') {
+      const access = hasAutoWakeMcpAccess(req);
+      if (!access.configured) {
+        json(res, 503, { error: 'AUTOWAKE_MCP_INTERNAL_KEY is not configured' });
+        return true;
+      }
+      if (!access.allowed) {
+        json(res, 401, { error: 'invalid auto-wake MCP key' });
+        return true;
+      }
+      const seconds = Math.min(120, Math.max(10, Number(requestUrl.searchParams.get('seconds')) || 60));
+      const maxFrames = Math.min(4, Math.max(1, Number(requestUrl.searchParams.get('maxFrames')) || 4));
+      const frames = getRecentScreenFrames({ durationMs: seconds * 1000, maxFrames });
+      json(res, 200, {
+        captured: frames.length,
+        frames,
+        privacy: '只返回手机主动共享且仍在两分钟短时队列里的画面',
+      });
+      return true;
+    }
+
     if (path === '/api/autowake/config' && req.method === 'GET') {
       const vapid = loadVapid();
       json(res, 200, {

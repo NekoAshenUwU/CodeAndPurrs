@@ -50,3 +50,35 @@ tail -n 50 /var/www/codeandpurrs/server/data/autowake/autowake.log
 成功投递日志会包含 `screenFrames=0..4`，可直接确认该轮有没有把屏幕轨迹交给模型。
 
 浏览器第一次开启后会通过 `/api/autowake/test` 走一遍真实后台生成、入箱与 Web Push，十分钟内只允许测试一次。
+
+## GPT App / Claude App 共用 MCP
+
+自动唤醒工具不另开公网端口，而是挂进现有已认证 MCP：
+
+```text
+https://mcp.nekopurrs.uk/mcp
+```
+
+先部署本页的 CodeAndPurrs 后端，再运行：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NekoAshenUwU/CodeAndPurrs/codex/frontend-ai-playlist-20260828/deploy/autowake-mcp/install-into-existing.py | python3 -
+```
+
+安装器会生成 `AUTOWAKE_MCP_INTERNAL_KEY`，将五个工具挂到现有 FastMCP，
+验证本机控制口后才重启公网 MCP；失败会同时恢复 MCP 源码与 `.env`。工具包括：
+
+- 查看自动唤醒状态、时段、上次错误和未读数
+- 开启或停用已登记设备的后台唤醒
+- 明确要求时立即生成并推送一条 CodeAndPurrs 唤醒
+- 查看最近的唤醒投递，不会顺手确认或删除
+- 读取手机主动共享的最近 10–120 秒、最多四个不同画面
+
+GPT App 与 Claude App 都连接上面同一个 HTTPS URL，并分别完成各自的 OAuth。
+此前 Claude CLI 出现的 `localhost callback` 属于本机 CLI 登录流程；App 的远程
+Connector 由云端完成回调，不使用 VPS 浏览器去接本机端口。
+
+MCP 是由客户端发起调用的请求/响应协议，自己不能在关闭的 GPT/Claude 对话里
+凭空发一条消息。`send_codeandpurrs_wake_now` 会投递到现有 CodeAndPurrs Web
+Push；若希望消息出现在 GPT 或 Claude App 本身，还需要在那个 App 里创建定时任务，
+让任务按时调用这组 MCP 工具。
