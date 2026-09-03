@@ -8,6 +8,7 @@ import os
 import re
 import secrets
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -24,6 +25,7 @@ APP_DIR = Path(os.getenv("CODEANDPURRS_DIR", "/var/www/codeandpurrs"))
 APP_ENV = APP_DIR / ".env"
 BACKUP_ROOT = Path(os.getenv("CODEANDPURRS_BACKUP_DIR", "/root/backups"))
 MCP_SERVICE = os.getenv("CODEANDPURRS_MCP_SERVICE", "codeandpurrs-mcp.service")
+MCP_PORT = int(os.getenv("CODEANDPURRS_MCP_PORT", "8891"))
 PM2_PROCESS = os.getenv("CODEANDPURRS_PM2_PROCESS", "codeandpurrs")
 SOURCE_REF = os.getenv("CODEANDPURRS_AUTOWAKE_REF", "codex/frontend-ai-playlist-20260828")
 TOOL_SOURCE = (
@@ -74,6 +76,95 @@ def command(args: list[str], check: bool = False) -> subprocess.CompletedProcess
 def service_exists(name: str) -> bool:
     result = command(["systemctl", "show", name, "--property=LoadState", "--value"])
     return result.stdout.strip() not in {"", "not-found"}
+
+
+def port_listener_pids(port: int) -> tuple[list[int], str]:
+    result = command(["ss", "-H", "-ltnp", f"sport = :{port}"])
+    if result.returncode != 0:
+        raise RuntimeError(f"无法检查 MCP 端口 {port}：{result.stderr.strip()}")
+    pids = sorted({int(pid) for pid in re.findall(r"pid=(\d+)", result.stdout)})
+    return pids, result.stdout.strip()
+
+
+def process_command(pid: int) -> str:
+    try:
+        return (Path("/proc") / str(pid) / "cmdline").read_bytes().replace(b"\0", b" ").decode(
+            "utf-8", errors="replace"
+        )
+    except OSError:
+        return ""
+
+
+def wait_for_port_release(timeout: float) -> tuple[list[int], str]:
+    deadline = time.monotonic() + timeout
+    listeners: tuple[list[int], str] = ([], "")
+    while time.monotonic() < deadline:
+        listeners = port_listener_pids(MCP_PORT)
+        if not listeners[0] and not listeners[1]:
+            return listeners
+        time.sleep(0.25)
+    return port_listener_pids(MCP_PORT)
+
+
+def stop_mcp_and_release_port() -> None:
+    stopped = command(["systemctl", "stop", MCP_SERVICE])
+    if stopped.returncode != 0:
+        raise RuntimeError(f"无法停止 {MCP_SERVICE}：{stopped.stderr.strip()}")
+
+    # KillMode=process may leave an old FastMCP/Uvicorn child behind. Asking
+    # systemd to terminate the whole unit cgroup is safe and does not touch the
+    # Tang/playlist services.
+    command(["systemctl", "kill", "--kill-who=all", "--signal=SIGTERM", MCP_SERVICE])
+    pids, details = wait_for_port_release(5)
+    if not pids and not details:
+        return
+
+    expected = str(BASE_SERVER.resolve())
+    stale: list[int] = []
+    foreign: list[str] = []
+    for pid in pids:
+        cmdline = process_command(pid)
+        if expected in cmdline or str(BASE_SERVER) in cmdline:
+            stale.append(pid)
+        else:
+            foreign.append(f"pid={pid} {cmdline or '<unknown>'}")
+    if foreign:
+        raise RuntimeError(
+            f"MCP 端口 {MCP_PORT} 被其他程序占用，未自动终止："
+            + "; ".join(foreign)
+            + (f"；ss={details}" if details else "")
+        )
+
+    for pid in stale:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+    pids, details = wait_for_port_release(5)
+    if pids or details:
+        for pid in pids:
+            cmdline = process_command(pid)
+            if expected not in cmdline and str(BASE_SERVER) not in cmdline:
+                raise RuntimeError(f"MCP 端口 {MCP_PORT} 仍被其他程序占用：{details}")
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        pids, details = wait_for_port_release(3)
+    if pids or details:
+        raise RuntimeError(f"旧 MCP 进程未释放端口 {MCP_PORT}：{details}")
+
+
+def restart_mcp_service() -> None:
+    stop_mcp_and_release_port()
+    started = command(["systemctl", "start", MCP_SERVICE])
+    if started.returncode != 0:
+        raise RuntimeError(f"无法启动 {MCP_SERVICE}：{started.stderr.strip()}")
+    time.sleep(3)
+    active = command(["systemctl", "is-active", MCP_SERVICE])
+    if active.stdout.strip() != "active":
+        logs = command(["journalctl", "-u", MCP_SERVICE, "-n", "30", "--no-pager"])
+        raise RuntimeError(f"MCP 重启失败：{logs.stdout.strip() or started.stderr.strip()}")
 
 
 def find_mcp_instance(source: str) -> str:
@@ -142,7 +233,10 @@ def restore(backup: Path, env_existed: bool, tool_existed: bool) -> None:
     elif not tool_existed:
         TOOL_SERVER.unlink(missing_ok=True)
     command(["pm2", "restart", PM2_PROCESS, "--update-env"])
-    command(["systemctl", "restart", MCP_SERVICE])
+    try:
+        restart_mcp_service()
+    except RuntimeError as exc:
+        print(f"警告：文件已回滚，但 MCP 服务未能重启：{exc}", file=sys.stderr)
 
 
 def main() -> int:
@@ -207,12 +301,7 @@ def main() -> int:
             raise RuntimeError("自动唤醒内网控制口健康检查失败")
         print(f"[4/5] 内网控制口正常，登记设备 {len(status['devices'])} 个")
 
-        restarted_mcp = command(["systemctl", "restart", MCP_SERVICE])
-        time.sleep(3)
-        active = command(["systemctl", "is-active", MCP_SERVICE])
-        if restarted_mcp.returncode != 0 or active.stdout.strip() != "active":
-            logs = command(["journalctl", "-u", MCP_SERVICE, "-n", "30", "--no-pager"])
-            raise RuntimeError(f"MCP 重启失败：{logs.stdout.strip() or restarted_mcp.stderr.strip()}")
+        restart_mcp_service()
         print(f"[5/5] {MCP_SERVICE}：active")
     except Exception as exc:
         restore(backup, env_existed, tool_existed)
