@@ -1,0 +1,28 @@
+[Unit]
+Description=Neko native client wake coordination MCP
+After=network.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+WorkingDirectory=/opt/neko-native-wake
+ExecStart=/opt/neko-native-wake/.venv/bin/python /opt/neko-native-wake/server.py
+Environment=NEKO_NATIVE_WAKE_TRANSPORT=http
+Environment=NEKO_NATIVE_WAKE_PORT=8894
+Environment=NEKO_NATIVE_WAKE_DB=/var/lib/neko-native-wake/wake.sqlite3
+Environment=NEKO_NATIVE_WAKE_AUTH_STORE=/var/lib/neko-native-wake/oauth
+EnvironmentFile=-/etc/neko-native-wake.env
+StateDirectory=neko-native-wake
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

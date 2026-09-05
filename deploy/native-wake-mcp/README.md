@@ -4,15 +4,21 @@
 平台任务先运行，MCP 再判断本轮是否允许联系 Neko，回复由正在运行的客户端生成。
 它不会从 VPS 向普通聊天窗插入消息，也不会控制 CodeAndPurrs Web Push。
 
-## 当前交付状态（2026-09-05）
+## 当前交付状态（2026-09-06）
 
 - 已实现独立开关、时间窗口、每小时限流、每天上限、原子去重和结果登记。
 - 两端默认关闭，只有显式 `set_native_wake_enabled` 才开启。
 - 源码及核心行为测试可在此目录检查。`requirements.txt` 是 MCP 适配层依赖。
-- **尚未部署到 VPS，没有新 HTTPS MCP 接入地址。**
+- 已部署到 VPS 的 `/opt/neko-native-wake`，使用独立虚拟环境和 `neko-native-wake.service`。
+- 当前仅监听 **`127.0.0.1:8894`**，健康检查和实际 HTTP MCP 工具调用已通过；两端开关均关闭。
+- SQLite 独立存放于 `/var/lib/neko-native-wake/wake.sqlite3`，服务使用 systemd 动态用户运行。
+- **公网尚未开放，没有可供客户端连接的新 HTTPS 地址。**
 - **尚未创建或启动依赖此模块的 ChatGPT / Claude 定时任务。**
-- 当前工作环境缺少 FastMCP，MCP 适配层仅完成 Python 编译检查；正式接入前仍需在装好依赖的环境运行下面的协议验收。
+- 在 VPS 的独立 FastMCP 2.14.7 环境通过 10 项策略测试、4 项认证测试、内存协议验收及运行中服务的 HTTP 验收。
+- 独立 GitHub OAuth 实现已完成本机测试；尚未配置真实凭据或完成客户端登录。
+- 本次部署前后，对受保护服务入口、systemd 文件和现有 nginx 站点进行校验：文件校验值未变，8890–8893 的四个主进程号未变。
 - 现有项目工作树、网页、Bridge、Tang、现有端口与服务均不在本模块的修改范围。
+- 公网接入的具体待审方案见 [PUBLIC-ACCESS-PLAN.md](PUBLIC-ACCESS-PLAN.md)。按用户要求，修改网关和认证前须确认。
 
 ## 平台能力
 
@@ -64,7 +70,7 @@ Claude Cowork 的可用性还取决于账户及组织设置，连接成功不等
 
 ```bash
 python3 -m unittest -v test_wake_policy.py
-python3 -m py_compile server.py wake_policy.py test_wake_policy.py smoke_mcp.py
+python3 -m py_compile server.py auth.py wake_policy.py test_wake_policy.py test_auth.py smoke_mcp.py
 ```
 
 在独立虚拟环境安装适配层依赖并验证 MCP 注册和调用：
@@ -72,6 +78,7 @@ python3 -m py_compile server.py wake_policy.py test_wake_policy.py smoke_mcp.py
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
+.venv/bin/python -m unittest -v test_auth.py
 .venv/bin/python smoke_mcp.py
 ```
 
@@ -79,12 +86,12 @@ python3 -m venv .venv
 
 ## 部署边界与剩余步骤
 
-目标 VPS 为 `178.128.127.91`。先实际检查监听端口、Python 环境、MCP/OAuth 拓扑和站点配置，再确定独立部署目录及空闲端口。
-本目录不含会覆盖现有服务或猜测端口的自动安装脚本。
+目标 VPS 为 `178.128.127.91`。已实际核对并选定独立目录及空闲端口 8894。
+本目录不含会覆盖现有项目的一键部署脚本。服务文件只属于新模块。
 
 1. 将本目录部署为独立服务，SQLite 放到专用持久目录；设置 `NEKO_NATIVE_WAKE_DB` 为数据库绝对路径。
 2. 默认使用 STDIO；HTTP 模式须显式设置 `NEKO_NATIVE_WAKE_TRANSPORT=http` 和 `NEKO_NATIVE_WAKE_PORT`。只监听 `127.0.0.1`。
-3. 为这个新服务配置适配两端的 HTTPS/OAuth 入口，并限制为所有者的账户。不要将无认证回环服务直接暴露到公网。当前模块没有自带公网 OAuth 提供器。
+3. 先取得公网改动确认，再配置独立 HTTPS/OAuth 入口。设置 `NEKO_NATIVE_WAKE_AUTH_MODE=github` 并填入 `auth.env.example` 所列变量；默认 private 模式仅供本机验证，禁止直接公开。GitHub 登录只放行指定所有者，客户端每次授权须确认，OAuth 数据加密存放于专用持久目录。
 4. 从这里和 Claude 分别完成 OAuth，调用 `get_native_wake_status`。两端均应成功，且应只返回请求端的记录。
 5. 分别建立原生任务，使用下文对应提示。不要以“已连接 MCP”代替这一步。
 6. 用户授权启用后，各调用一次 `set_native_wake_enabled`；在允许时段手动运行平台任务，确认本端对话实际出现回复。

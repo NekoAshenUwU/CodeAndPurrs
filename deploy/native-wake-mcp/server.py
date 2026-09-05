@@ -9,12 +9,15 @@ from pathlib import Path
 from typing import Literal
 
 from fastmcp import FastMCP
+from starlette.responses import JSONResponse
+from auth import build_auth
 from wake_policy import WakePolicy
 
 
 Client = Literal["chatgpt", "claude"]
 mcp = FastMCP(
     "Neko Native Wake",
+    auth=build_auth(),
     instructions=(
         "This MCP coordinates native scheduled tasks; it cannot wake an app, start "
         "a conversation, or deliver a message. A task on the calling platform must "
@@ -26,6 +29,12 @@ mcp = FastMCP(
         "This server is for one owner only, behind an authenticated private endpoint."
     ),
 )
+
+
+@mcp.custom_route("/healthz", methods=["GET"])
+async def healthz(request):
+    return JSONResponse({"service": "neko-native-wake", "status": "ok",
+                         "auth_mode": os.environ.get("NEKO_NATIVE_WAKE_AUTH_MODE", "private")})
 
 
 @lru_cache(maxsize=1)
@@ -77,7 +86,7 @@ if __name__ == "__main__":
         mcp.run()
     elif transport == "http":
         # Deliberately no default port: select a free port after inspecting the VPS.
-        # Loopback only. Internet access requires a separately verified OAuth gateway.
+        # Loopback only. Public exposure requires github auth and reviewed routing.
         port = int(os.environ["NEKO_NATIVE_WAKE_PORT"])
         if not 1024 <= port <= 65535:
             raise ValueError("NEKO_NATIVE_WAKE_PORT must be between 1024 and 65535")

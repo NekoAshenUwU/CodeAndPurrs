@@ -1,1 +1,1 @@
-fastmcp>=2.14,<3
+fastmcp==2.14.7
