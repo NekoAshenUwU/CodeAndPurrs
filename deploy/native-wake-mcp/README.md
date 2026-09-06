@@ -18,7 +18,7 @@
 - 独立 GitHub OAuth 实现已完成本机测试；尚未配置真实凭据或完成客户端登录。
 - 本次部署前后，对受保护服务入口、systemd 文件和现有 nginx 站点进行校验：文件校验值未变，8890–8893 的四个主进程号未变。
 - 现有项目工作树、网页、Bridge、Tang、现有端口与服务均不在本模块的修改范围。
-- 公网接入的具体待审方案见 [PUBLIC-ACCESS-PLAN.md](PUBLIC-ACCESS-PLAN.md)。按用户要求，修改网关和认证前须确认。
+- 用户已同意独立公网方案；详见 [PUBLIC-ACCESS-PLAN.md](PUBLIC-ACCESS-PLAN.md)。已启用专用 ACME HTTP 入口，其余路径返回 503；DNS、证书与真实 OAuth 仍待账号接入后完成。
 
 ## 平台能力
 
