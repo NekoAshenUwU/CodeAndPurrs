@@ -10,6 +10,9 @@ export type MemeItem = {
   name: string;
   type: string; // MIME，如 image/png
   createdAt: number;
+  // 一句话描述贴纸长什么样。聊天时只发「名字（描述）」不发图，省得每轮重看一遍
+  // 整盒图烧额度；新贴纸由 stickerDescribe 自动看一次图写好存进来。
+  desc?: string;
 };
 
 type MemeRecord = MemeItem & { blob: Blob };
@@ -150,6 +153,28 @@ export async function renameMeme(id: string, name: string): Promise<void> {
       p.onerror = () => reject(p.error ?? new Error('改名失败'));
     };
     g.onerror = () => reject(g.error ?? new Error('改名失败'));
+  });
+}
+
+// 批量写入贴纸描述（id → 描述）；找不到的 id 跳过。
+export async function setMemeDescriptions(descs: Record<string, string>): Promise<void> {
+  const ids = Object.keys(descs);
+  if (!ids.length) return;
+  const db = await openDB();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(STORE, 'readwrite');
+    const store = transaction.objectStore(STORE);
+    for (const id of ids) {
+      const g = store.get(id);
+      g.onsuccess = () => {
+        const rec = g.result as MemeRecord | undefined;
+        if (!rec) return;
+        rec.desc = descs[id];
+        store.put(rec);
+      };
+    }
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error ?? new Error('描述存不进贴纸盒'));
   });
 }
 

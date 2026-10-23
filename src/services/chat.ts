@@ -40,11 +40,13 @@ export type StreamOptions = {
   stickerGallery?: StickerGalleryEntry[];
   thinking?: ThinkingBudget;
   conversationId?: string;
+  // false = 这次不挂棠予酿记忆工具（只对 claudecode 生效），一次性小活儿用。
+  memoryTools?: boolean;
 };
 
 // 发起一次流式对话。后端用 SSE 推回 reasoning / content / error / done 四种事件。
 export async function streamChat(
-  { provider, messages, model, signal, stickerGallery, thinking, conversationId }: StreamOptions,
+  { provider, messages, model, signal, stickerGallery, thinking, conversationId, memoryTools }: StreamOptions,
   handlers: StreamHandlers,
 ): Promise<void> {
   let response: Response;
@@ -59,6 +61,7 @@ export async function streamChat(
         stickerGallery,
         thinking,
         conversationId,
+        memoryTools,
       }),
       signal,
     });
