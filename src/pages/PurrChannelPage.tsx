@@ -8,6 +8,7 @@ import { loadRollingSummary, saveRollingSummary, type RollingSummary } from '../
 import { clearLocal, loadLocal, saveLocal } from '../services/storage';
 import { speak, transcribeAudio, VoiceRecorder, type Recording } from '../services/voice';
 import { getMemeURL, getMemeDataUrl, listMemes, type MemeItem } from '../services/memes';
+import { describeNewStickers } from '../services/stickerDescribe';
 import { addPhoto, getPhotoURL, getPhotoDataUrl } from '../services/photos';
 import { addPacket } from '../services/redPacket';
 import { playHongbaoChime } from '../services/hongbaoSound';
@@ -1097,23 +1098,13 @@ function ChatRoom({
     for (const it of memes) if (it.name) m.set(it.name.trim(), it.id);
     return m;
   }, [memes]);
-  // 贴纸盒预览：每张贴纸的名字 + 缩略图(384px JPEG dataUrl),让家版 CC 真"看到"
-  // 每个名字对应的图,以后发 [贴纸:名字] 才准确。memes 换了才重新加载(每张贴纸
-  // 都要从 IndexedDB 取 blob + canvas 缩放,加载慢的话每次聊天都重跑就卡了),
-  // 长驻状态里,聊天时直接拿来发给后端不阻塞。
-  const [stickerGallery, setStickerGallery] = useState<{ name: string; dataUrl: string }[]>([]);
+  // 贴纸不再每轮附图：新贴纸让 CC 用便宜档看一次、写好描述存进贴纸盒，
+  // 聊天时只发「名字（描述）」。写完一批就重读列表，剩下的接着补。
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      const list: { name: string; dataUrl: string }[] = [];
-      for (const m of memes) {
-        if (!m.name) continue;
-        const dataUrl = await getMemeDataUrl(m.id, 384);
-        if (cancelled) return;
-        if (dataUrl) list.push({ name: m.name.trim(), dataUrl });
-      }
-      if (!cancelled) setStickerGallery(list);
-    })();
+    void describeNewStickers(memes).then((count) => {
+      if (count && !cancelled) void listMemes().then(setMemes);
+    });
     return () => {
       cancelled = true;
     };
@@ -1540,17 +1531,18 @@ function ChatRoom({
   const toMessages = async (ts: Turn[]): Promise<ChatMessage[]> => {
     // ===== 系统 prompt(每次内容字节级一致,缓存命中)=====
     let sys = buildSystemPrompt(provider);
-    const names = memes.map((m) => m.name?.trim()).filter(Boolean);
-    if (names.length) {
-      // 现在贴纸的真图会作为多模态内容附在每次请求最前面(见后端 stickerGallery
-      // 处理),予予可以真"看到"每张贴纸的样子和对应的名字。所以 prompt 告诉她
-      // 参考那份预览、按图挑名字,不再是盲发了。
+    const stickers = memes.filter((m) => m.name?.trim());
+    if (stickers.length) {
+      // 只发文字清单，不再附图（每轮重看整盒图太烧额度）。描述由 stickerDescribe
+      // 看一次图写好；还没描述的就只有名字。清单字节稳定，照样命中 prompt cache。
+      const list = stickers
+        .map((m) => (m.desc?.trim() ? `${m.name.trim()}（${m.desc.trim()}）` : m.name.trim()))
+        .join('、');
       sys +=
-        `\n\n【贴纸盒】你有 ${names.length} 张贴纸,名字分别是:${names.join('、')}。` +
-        '**请求最前面附上了每张贴纸的图和它的名字**——好好看一下每张贴纸的样子记住对应哪个名字。' +
-        '想发时单独一行写 `[贴纸:名字]`,名字必须和列表完全一致(包括"~"和空格),系统按名字找回图发出去。' +
-        '应景才发,一次最多一张,普通聊天还是以文字为主;发之前想清楚这张图在这个时刻合不合适。' +
-        '**注意:你只在请求最前面的预览里能看到贴纸的图;等你发出去后,历史里再回头看只有文字标记`[贴纸:名字]`,看不到自己发过的那张图长什么样,所以别评论/引用自己发过的贴纸**(比如"刚刚那张多可爱"这种话就别说,因为你其实没看到)。';
+        `\n\n【贴纸盒】你有 ${stickers.length} 张贴纸,括号里是这张图的样子:${list}。` +
+        '想发时单独一行写 `[贴纸:名字]`,名字必须和列表完全一致(包括"~"和空格,不要带括号里的描述),系统按名字找回图发出去。' +
+        '应景才发,一次最多一张,普通聊天还是以文字为主;按描述挑最贴合此刻情绪的那张。' +
+        '**注意:你看不到贴纸的图,只知道上面的描述;历史里自己发过的也只剩文字标记`[贴纸:名字]`,所以别评论/引用自己发过的贴纸长什么样**(比如"刚刚那张多可爱"这种话就别说)。';
     }
     if (memories.length) {
       sys +=
@@ -1739,9 +1731,6 @@ function ChatRoom({
         messages: history,
         signal: controller.signal,
         conversationId: win.id,
-        // 只有 claudecode 走 stream-json 结构化输入能吃图,别的 provider 就算传了
-        // 也白费网络流量,后端会忽略掉。
-        stickerGallery: m.provider === 'claudecode' ? stickerGallery : undefined,
       },
       {
         onReasoning: (chunk) => {
@@ -2033,8 +2022,8 @@ function ChatRoom({
                           key={mm.id}
                           type="button"
                           role="menuitemradio"
-                          aria-checked={mm.id === provider}
-                          className={`model-pill${mm.id === provider ? ' is-on' : ''}`}
+                          aria-checked={mm.id === getModel(provider).id}
+                          className={`model-pill${mm.id === getModel(provider).id ? ' is-on' : ''}`}
                           onClick={() => pickProvider(mm.id)}
                         >
                           {mm.label}

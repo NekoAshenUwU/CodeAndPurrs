@@ -30,7 +30,8 @@ export const MODELS: ModelInfo[] = [
   { id: 'jiake-opus-4-6', brand: 'Claude', label: 'CC · Opus 4.6', provider: 'claudecode', model: 'claude-opus-4-6' },
   { id: 'jiake-opus-4-7', brand: 'Claude', label: 'CC · Opus 4.7', provider: 'claudecode', model: 'claude-opus-4-7' },
   { id: 'jiake-opus-4-8', brand: 'Claude', label: 'CC · Opus 4.8', provider: 'claudecode', model: 'claude-opus-4-8' },
-  { id: 'jiake-opus-5', brand: 'Claude', label: 'CC · Opus 5', provider: 'claudecode', model: 'claude-opus-5' },
+  { id: 'jiake-opus-5-5', brand: 'Claude', label: 'CC · Opus 5.5', provider: 'claudecode', model: 'claude-opus-5-5' },
+  // CC · Opus 5 已撤下(2026-10-24)，换成 Opus 5.5；老窗口存的 'jiake-opus-5' 见下方 LEGACY_MODEL_IDS。
   // CC · Fable 5 已下架(2026-07-25)：Fable 5 被移出 Pro 订阅、只能按 API 计费
   // (一条回复几刀)，挂在调频页容易手滑烧钱。哪天回归订阅把这行加回来即可：
   // { id: 'jiake-fable-5', brand: 'Claude', label: 'CC · Fable 5', provider: 'claudecode', model: 'claude-fable-5' },
@@ -43,4 +44,13 @@ export const MODEL_GROUPS: { brand: ModelBrand; models: ModelInfo[] }[] = BRAND_
   models: MODELS.filter((m) => m.brand === brand),
 }));
 
-export const getModel = (id: string): ModelInfo => MODELS.find((m) => m.id === id) ?? MODELS[0];
+// 撤下的模型 id → 接班的 id。窗口/默认里存的是 id，不迁过去的话 getModel 会
+// 悄悄回落到 MODELS[0](DeepSeek)，老窗口一夜之间就换了个人。
+const LEGACY_MODEL_IDS: Record<string, string> = {
+  'jiake-opus-5': 'jiake-opus-5-5',
+};
+
+export const getModel = (id: string): ModelInfo => {
+  const current = LEGACY_MODEL_IDS[id] ?? id;
+  return MODELS.find((m) => m.id === current) ?? MODELS[0];
+};

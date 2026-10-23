@@ -33,7 +33,7 @@ case "$TOKEN" in
   *) echo "⚠️  注意：这串不是 sk-ant-oat 开头，多半不是长效 token(可能是授权 code)。仍然照测，通过就算数。" ;;
 esac
 
-OUT="$(CLAUDE_CODE_OAUTH_TOKEN="$TOKEN" claude --print --model claude-opus-5 "数到三" 2>&1)"
+OUT="$(CLAUDE_CODE_OAUTH_TOKEN="$TOKEN" claude --print --model claude-opus-5-5 "数到三" 2>&1)"
 RC=$?
 echo "$OUT"
 

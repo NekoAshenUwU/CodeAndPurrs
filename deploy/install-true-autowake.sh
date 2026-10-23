@@ -173,11 +173,11 @@ done
 download_source_file "deploy/codeandpurrs-autowake.service" "${STAGE}/codeandpurrs-autowake.service"
 download_source_file "deploy/codeandpurrs-autowake.timer" "${STAGE}/codeandpurrs-autowake.timer"
 
-# 三个现有功能是硬性回归护栏：发图、AI 点歌、CC Opus 5，缺一就拒绝上线。
+# 三个现有功能是硬性回归护栏：发图、AI 点歌、CC Opus 5.5，缺一就拒绝上线。
 grep -Fq "pendingPhotos" "${STAGE}/src/pages/PurrChannelPage.tsx"
 grep -Fq "SpotifyMusicCard" "${STAGE}/src/pages/PurrChannelPage.tsx"
 grep -Fq "export async function playSpotifyQueries" "${STAGE}/src/services/spotify.ts"
-grep -Fq "jiake-opus-5" "${STAGE}/src/data/models.ts"
+grep -Fq "jiake-opus-5-5" "${STAGE}/src/data/models.ts"
 grep -Fq "handleAutoWakeRequest" "${STAGE}/server/proxy.mjs"
 grep -Fq "handleScreenFrameRequest" "${STAGE}/server/proxy.mjs"
 grep -Fq "AUTOWAKE_WEEKDAY_START || '17:00'" "${STAGE}/server/autowake.mjs"

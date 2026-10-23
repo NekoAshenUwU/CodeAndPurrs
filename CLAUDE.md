@@ -158,7 +158,7 @@ cd /var/www/codeandpurrs && pm2 delete codeandpurrs 2>/dev/null; pm2 start ecosy
 5. 验证：`pm2 logs codeandpurrs --lines 5 --nostream` 应该看到 `claudecode:已配置`；
    再补一条端到端验证（顺带验某个模型通不通）：
    ```
-   CLAUDE_CODE_OAUTH_TOKEN=$(grep ^CLAUDE_CODE_OAUTH_TOKEN /var/www/codeandpurrs/.env | cut -d= -f2-) claude --print --model claude-opus-5 "数到三"
+   CLAUDE_CODE_OAUTH_TOKEN=$(grep ^CLAUDE_CODE_OAUTH_TOKEN /var/www/codeandpurrs/.env | cut -d= -f2-) claude --print --model claude-opus-5-5 "数到三"
    ```
    注意：终端里**裸跑** `claude` 用的是 `~/.claude` 那份登录态（常年是登出的），
    跟 app 用的 `.env` token 是两个口袋——不带这个前缀测出来的 `Not logged in` 是假警报。

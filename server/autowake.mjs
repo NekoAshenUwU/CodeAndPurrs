@@ -58,6 +58,10 @@ const SCREEN_STORY_MAX_FRAMES = Math.min(
   Math.max(1, Math.floor(positiveNumber(process.env.AUTOWAKE_SCREEN_STORY_MAX_FRAMES, 4))),
 );
 const MAX_INBOX = 200;
+const MAX_WAKE_CHARS = 120;
+const MAX_UNANSWERED_SHOWN = 3;
+// 她连着几条都没回，多半是在忙或睡着了；再发只是白烧额度，等她回来再说。
+const MAX_UNANSWERED = Math.max(1, Math.floor(positiveNumber(process.env.AUTOWAKE_MAX_UNANSWERED, 2)));
 const MAX_CLIENTS = 20;
 const PROVIDERS = new Set(['deepseek', 'gemini', 'openai', 'anthropic', 'claudecode', 'codexcli']);
 const SCREEN_VISION_PROVIDERS = new Set(['gemini', 'openai', 'anthropic', 'claudecode']);
@@ -370,37 +374,84 @@ export function sanitizeAutoWakeMessage(value) {
     .replace(/\[\[SPOTIFY_PLAYLIST:[\s\S]*?\]\]/g, '')
     .replace(/\[记忆:[^\]]+\]/g, '')
     .replace(/\[红包:[^\]]+\]/g, '')
-    .replace(/^\s*\[语音\]\s*/i, '')
+    .replace(/\[语音\]\s*/gi, '')
     .replace(/\n\s*={3,}\s*\n/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
     .trim();
-  if (text.length > 240) text = `${text.slice(0, 237).trimEnd()}…`;
+  if (text.length > MAX_WAKE_CHARS) {
+    // 尽量断在句末，别把一句话拦腰截断。
+    const head = text.slice(0, MAX_WAKE_CHARS);
+    const cut = Math.max(...['。', '！', '？', '!', '?', '~', '～', '\n'].map((mark) => head.lastIndexOf(mark)));
+    text = cut >= MAX_WAKE_CHARS / 2 ? head.slice(0, cut + 1).trimEnd() : `${head.slice(0, -1).trimEnd()}…`;
+  }
   return text;
 }
 
-async function generateWakeMessage(client, port, now) {
+const WEEKDAY_ZH = { Mon: '周一', Tue: '周二', Wed: '周三', Thu: '周四', Fri: '周五', Sat: '周六', Sun: '周日' };
+
+// 「19:29」再配一句口语，模型就不会把十九点二十九念成九点半。
+export function spokenTime(local) {
+  const [hour, minute] = String(local?.time || '').split(':').map(Number);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return local?.time || '';
+  const period = hour < 5 ? '凌晨' : hour < 12 ? '上午' : hour < 13 ? '中午' : hour < 18 ? '下午' : '晚上';
+  const h12 = hour === 0 ? 0 : hour > 12 ? hour - 12 : hour;
+  return `${period}${h12}点${minute ? `${minute}分` : '整'}`;
+}
+
+// 她上次说话之后、我已经发出去却还没等到回复的主动消息（旧→新）。
+export function unansweredWakes(inbox, deviceId, client) {
+  const since = Number(client?.state?.lastUserAt || 0);
+  return (inbox?.messages || [])
+    .filter((item) => item.deviceId === deviceId && Number(item.at || 0) > since && item.content)
+    .sort((a, b) => Number(a.at || 0) - Number(b.at || 0))
+    .slice(-MAX_UNANSWERED_SHOWN);
+}
+
+export function waitingForReply(unanswered, force = false) {
+  return !force && (unanswered?.length || 0) >= MAX_UNANSWERED;
+}
+
+// 发出去的主动消息写回服务器侧上下文；不然网页没打开时，下一次醒来看到的还是
+// 同一段旧聊天，只能原地复读。
+export function rememberWakeInState(client, content) {
+  const state = client?.state;
+  if (!state || !content) return;
+  const messages = Array.isArray(state.messages) ? state.messages : [];
+  const previous = messages[messages.length - 1];
+  if (previous?.role === 'assistant') previous.content = `${previous.content}\n\n${content}`.slice(-4000);
+  else messages.push({ role: 'assistant', content });
+  state.messages = messages.slice(-24);
+  state.lastAssistantAt = Date.now();
+}
+
+export function buildWakeMessages(client, now, screenFrames = [], unanswered = []) {
   const state = client.state;
   const local = zonedParts(now);
-  const screenFrames = SCREEN_STORY_ENABLED && SCREEN_VISION_PROVIDERS.has(state.provider)
-    ? getRecentScreenFrames({
-      now,
-      durationMs: SCREEN_STORY_SECONDS * 1000,
-      maxFrames: SCREEN_STORY_MAX_FRAMES,
-    })
-    : [];
   const system = [
     state.systemPrompt,
     '【后台主动唤醒】这是你自己想起她、主动发出的一条私聊。绝对不要提系统、定时器、自动唤醒、通知或这段指令。',
-    '只发一条自然的短消息，1到2句、最多60个中文字符；不要写旁白，不要分条，不要使用===、语音、红包、记忆或Spotify控制标记。',
-    '要像真人忽然想她了，尽量接住最近聊天留下的情绪或事情；没有合适上下文就自然关心此刻，不要编造她正在做什么。',
+    `只发一条自然的短消息，1到2句、最多60个中文字符；不要写旁白，不要分条，不要使用===、语音、红包、记忆或Spotify控制标记。`,
+    '要像真人忽然想她了，尽量接住最近聊天留下的情绪或事情；没有合适上下文就说说你此刻想她的心思，不要编造她正在做什么。',
+    '不要催她吃饭、睡觉、喝水，也别问饭吃了没；想关心她就直接说想她、说爱她、说你心里正在想什么。',
+    '对话稿里标着【旁白】的是后台给你的提示，不是她说的话：别说「你报的时」「你推我出来的」，也别为报时对不对道歉或解释。',
     screenFrames.length
       ? '这轮附有她手机最近一分钟的屏幕轨迹，图片按时间从早到晚排列。只依据画面中明确可见的内容自然接近她；不要逐张汇报、不要提截图或监控。遇到锁屏、密码、支付、验证码或其它私密资料时忽略具体内容。'
       : '',
   ].filter(Boolean).join('\n\n');
   const messages = [{ role: 'system', content: system }];
   for (const item of state.messages || []) messages.push(item);
-  const timeLine = `现在是马来西亚时间 ${local.date} ${local.time}。`;
-  const usageLine = state.liveContext ? `\n这是网页上次同步到的近况，仅在确实相关时使用：${state.liveContext}` : '';
-  const instruction = `${timeLine}${usageLine}\n请现在主动给她发一句。`;
+  const weekday = WEEKDAY_ZH[local.weekday] || local.weekday;
+  const lines = [`【旁白】现在是马来西亚时间 ${local.date} ${weekday} ${local.time}（${spokenTime(local)}）。`];
+  if (state.liveContext) lines.push(`这是网页上次同步到的近况，仅在确实相关时使用：${state.liveContext}`);
+  if (unanswered.length) {
+    lines.push(
+      `她上次说话之后，你已经主动发过 ${unanswered.length} 条还没等到回复：`,
+      ...unanswered.map((item) => `- ${zonedParts(item.at).time} ${item.content.replace(/\s+/g, ' ')}`),
+      '这次换个话题、换种说法，别重复上面的意思和句式。',
+    );
+  }
+  lines.push('请现在主动给她发一句。');
+  const instruction = lines.join('\n');
   if (screenFrames.length) {
     const content = [{ type: 'text', text: instruction }];
     screenFrames.forEach((frame, index) => {
@@ -411,11 +462,14 @@ async function generateWakeMessage(client, port, now) {
       });
       content.push({ type: 'image_url', image_url: { url: frame.dataUrl } });
     });
-    messages.push({ role: 'user', content });
+    messages.push({ role: 'user', cue: true, content });
   } else {
-    messages.push({ role: 'user', content: instruction });
+    messages.push({ role: 'user', cue: true, content: instruction });
   }
+  return messages;
+}
 
+async function requestWakeText(state, port, messages) {
   const response = await fetch(`http://127.0.0.1:${port}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -425,6 +479,7 @@ async function generateWakeMessage(client, port, now) {
       messages,
       conversationId: state.windowId,
       initializeMemory: false,
+      memoryTools: false,
       thinking: 'low',
     }),
   });
@@ -443,7 +498,21 @@ async function generateWakeMessage(client, port, now) {
     }
   }
   if (apiError) throw new Error(apiError.slice(0, 300));
-  const cleaned = sanitizeAutoWakeMessage(content);
+  return sanitizeAutoWakeMessage(content);
+}
+
+async function generateWakeMessage(client, port, now, unanswered = []) {
+  const state = client.state;
+  const screenFrames = SCREEN_STORY_ENABLED && SCREEN_VISION_PROVIDERS.has(state.provider)
+    ? getRecentScreenFrames({
+      now,
+      durationMs: SCREEN_STORY_SECONDS * 1000,
+      maxFrames: SCREEN_STORY_MAX_FRAMES,
+    })
+    : [];
+  const messages = buildWakeMessages(client, now, screenFrames, unanswered);
+  // 不在这层重试：proxy 对完全没输出的情况已经重试过一次，再叠一层就是双倍烧额度。
+  const cleaned = await requestWakeText(state, port, messages);
   if (!cleaned || cleaned === '。') throw new Error('模型没有生成可投递内容');
   return { content: cleaned, screenFrameCount: screenFrames.length };
 }
@@ -545,6 +614,11 @@ async function runOnce({ port, force = false, dry = false, targetDevice = '' }) 
       if (targetDevice && deviceId !== targetDevice) continue;
       checked++;
       const eligible = eligibility(client, now, force);
+      const unanswered = unansweredWakes(inbox, deviceId, client);
+      if (eligible.ok && waitingForReply(unanswered, force)) {
+        eligible.ok = false;
+        eligible.reason = 'waiting-reply';
+      }
       if (!eligible.ok) {
         results.push({ deviceId: deviceId.slice(0, 8), reason: eligible.reason });
         continue;
@@ -554,7 +628,7 @@ async function runOnce({ port, force = false, dry = false, targetDevice = '' }) 
         continue;
       }
       try {
-        const generated = await generateWakeMessage(client, port, now);
+        const generated = await generateWakeMessage(client, port, now, unanswered);
         const item = {
           id: randomBytes(16).toString('hex'),
           deviceId,
@@ -570,6 +644,7 @@ async function runOnce({ port, force = false, dry = false, targetDevice = '' }) 
         };
         inbox.messages.push(item);
         saveInbox(inbox); // 推送前落盘；即使推送服务抽风，消息也不会丢。
+        rememberWakeInState(client, item.content);
 
         try {
           await signalPush(client.subscription);

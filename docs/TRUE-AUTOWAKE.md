@@ -36,7 +36,7 @@
 curl -fsSL https://raw.githubusercontent.com/NekoAshenUwU/CodeAndPurrs/codex/frontend-ai-playlist-20260828/deploy/install-true-autowake.sh | bash
 ```
 
-脚本在临时目录构建、验证发图/Spotify/Opus 5 标记，备份线上源码和 dist，健康检查通过后才停用旧 ntfy 单元。它不会操作 `tang-web.service`、`playlist-mcp.service` 或 `codeandpurrs-mcp.service`，并会核对三者前后状态。
+脚本在临时目录构建、验证发图/Spotify/Opus 5.5 标记，备份线上源码和 dist，健康检查通过后才停用旧 ntfy 单元。它不会操作 `tang-web.service`、`playlist-mcp.service` 或 `codeandpurrs-mcp.service`，并会核对三者前后状态。
 
 ## 验证
 
