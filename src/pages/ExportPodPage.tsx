@@ -77,6 +77,11 @@ const MODEL_VISUALS: Array<{ match: RegExp; visual: ModelVisual }> = [
     visual: { key: 'ccp-opus-4.8', label: 'CC-P 4.8', colors: ['#9ad5ff', '#8d8af2', '#bd79d9'], ring: '#c8e6ff' },
   },
   {
+    // 要排在 Opus 5 前面：下面那条的 .*opus.*5 也能匹配 5.5。
+    match: /(?:cc[-_ ]?p|jiake|claude.?code).*opus.*5[-_. ]?5|jiake-opus-5-5/i,
+    visual: { key: 'ccp-opus-5.5', label: 'CC-P 5.5', colors: ['#b9e4ff', '#6f7fe0', '#f2a8c8'], ring: '#dcefff' },
+  },
+  {
     match: /(?:cc[-_ ]?p|jiake|claude.?code).*opus.*5|jiake-opus-5/i,
     visual: { key: 'ccp-opus-5', label: 'CC-P 5', colors: ['#d4b4ff', '#8060d6', '#f0b86d'], ring: '#ebd8ff' },
   },

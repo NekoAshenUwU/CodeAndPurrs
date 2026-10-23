@@ -62,7 +62,7 @@ echo "== 3/4 用 claude --print 试探一下(仅供参考，不阻止写入) =="
 # 端点)，跟 CLI 一点关系都没有。所以这步只做参考，不能作为拒绝写入的
 # 依据——真正判定成败的是最后 pm2 日志里有没有 'claudecode:已配置' +
 # app 能不能聊天。
-CLAUDE_CODE_OAUTH_TOKEN="$TOKEN" timeout 10 claude --print --model claude-opus-5 "数到三" 2>&1 | head -3 || true
+CLAUDE_CODE_OAUTH_TOKEN="$TOKEN" timeout 10 claude --print --model claude-opus-5-5 "数到三" 2>&1 | head -3 || true
 echo "(以上仅供参考，成败以最后一步 pm2 日志为准)"
 
 echo

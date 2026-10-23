@@ -2033,8 +2033,8 @@ function ChatRoom({
                           key={mm.id}
                           type="button"
                           role="menuitemradio"
-                          aria-checked={mm.id === provider}
-                          className={`model-pill${mm.id === provider ? ' is-on' : ''}`}
+                          aria-checked={mm.id === getModel(provider).id}
+                          className={`model-pill${mm.id === getModel(provider).id ? ' is-on' : ''}`}
                           onClick={() => pickProvider(mm.id)}
                         >
                           {mm.label}
