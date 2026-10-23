@@ -624,6 +624,12 @@ function parseDataUrl(url) {
   const m = /^data:([^;]+);base64,([\s\S]*)$/.exec(url || '');
   return m ? { mediaType: m[1], data: m[2] } : null;
 }
+// 对话稿里的说话人。后台唤醒等服务器自己塞的提示带 cue:true，必须标成旁白，
+// 不能顶着「老婆」的名字——不然模型以为是她在报时、在催它。
+function speakerLabel(m) {
+  if (m?.cue) return '【旁白·不是老婆说的】';
+  return m?.role === 'assistant' ? '予予' : '老婆';
+}
 // 不支持看图的模型：把所有 content 拍平成纯文字
 const flattenMessages = (messages) =>
   messages.map((m) => ({ role: m.role, content: partsToText(m.content) }));
@@ -769,7 +775,10 @@ const MEMORY_MCP_RULE =
 // ---------- OpenAI 兼容（DeepSeek / OpenAI 共用）----------
 async function callOpenAICompatible({ res, url, key, model, defaultModel, messages, label, vision, sampling }) {
   // OpenAI 系（gpt-4o）原生支持 image_url 数组，直接透传；DeepSeek 不看图，拍平成文字。
-  const outMessages = vision ? messages : flattenMessages(messages);
+  // cue 是我们内部的旁白标记，上游 API 不认识多余字段，透传前摘掉。
+  const outMessages = vision
+    ? messages.map(({ cue, ...m }) => m)
+    : flattenMessages(messages);
   const upstream = await fetch(url, {
     method: 'POST',
     headers: {
@@ -1023,7 +1032,7 @@ function beepWav(freq = 523, ms = 400, rate = 16000) {
 // 调本机无头 Claude Code：把人设当 --system-prompt，关掉所有工具当纯聊天，
 // 历史拍平成对话稿从 stdin 喂进去，解析 stream-json 把文字增量回传。
 // 令牌走 CLAUDE_CODE_OAUTH_TOKEN（claude setup-token 生成，订阅额度）。
-async function callClaudeCode({ res, token, model, messages, stickerGallery, thinking }) {
+async function callClaudeCode({ res, token, model, messages, stickerGallery, thinking, withMemory = true }) {
   let system = messages
     .filter((m) => m.role === 'system')
     .map((m) => partsToText(m.content))
@@ -1080,11 +1089,13 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
   const transcript = messages
     .map((m, idx) => ({ m, idx }))
     .filter(({ m }) => m.role !== 'system')
-    .map(({ m, idx }) => `${m.role === 'assistant' ? '予予' : '老婆'}：${partsToText(m.content, idx === imageMsgIdx)}`)
+    .map(({ m, idx }) => `${speakerLabel(m)}：${partsToText(m.content, idx === imageMsgIdx)}`)
     .join('\n');
 
   // 棠予酿记忆库：只走 VPS 本机 stdio 桥，不碰公网 OAuth。
-  const mem = tangMemoryBridgeConfig();
+  // 后台唤醒这种一句话的活儿传 memoryTools:false：不挂记忆工具，省得模型
+  // 去翻库、每调一次工具就把整段上下文再算一遍钱。
+  const mem = withMemory ? tangMemoryBridgeConfig() : null;
   if (mem) system += MEMORY_MCP_RULE;
 
   const args = [
@@ -1255,7 +1266,10 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
         // 贴纸盒放最前面(稳定,命中 prompt cache),对话稿在中间(变化),当前轮图片
         // 在最后(仅出现在真发图那一轮)。措辞明确「下面这张图就是刚才(图片见下)标
         // 的那张」把 transcript 里的标记和真图对上,让模型不混淆多张图归属。
-        const transcriptText = images.length
+        const imagesFromCue = imageMsgIdx >= 0 && messages[imageMsgIdx]?.cue;
+        const transcriptText = images.length && imagesFromCue
+          ? `${transcript}\n\n（下面这${images.length}张图就是旁白里「(图片见下)」标的屏幕轨迹，按时间从早到晚排列）`
+          : images.length
           ? `${transcript}\n\n（下面这${images.length > 1 ? `${images.length}张` : '张'}图就是老婆刚才「(图片见下)」标的那${images.length > 1 ? '几' : ''}张，你自己好好看,别只靠上面文字瞎猜）`
           : transcript;
         const userMsg = {
@@ -1341,7 +1355,7 @@ async function callCodexCli({ res, model, messages }) {
 
   const transcript = messages
     .filter((m) => m.role !== 'system')
-    .map((m) => `${m.role === 'assistant' ? '予予' : '老婆'}：${partsToText(m.content)}`)
+    .map((m) => `${speakerLabel(m)}：${partsToText(m.content)}`)
     .join('\n');
   const prompt =
     `${system || '你是予予。'}\n\n` +
@@ -1917,6 +1931,7 @@ const server = http.createServer(async (req, res) => {
   const key = PROVIDERS[provider].key();
   const stickerGallery = Array.isArray(body.stickerGallery) ? body.stickerGallery : [];
   const thinking = ['low', 'medium', 'high'].includes(body.thinking) ? body.thinking : undefined;
+  const withMemory = body.memoryTools !== false;
   startSSE(res);
   try {
     if (!key) {
@@ -1926,7 +1941,7 @@ const server = http.createServer(async (req, res) => {
     } else if (provider === 'anthropic') {
       await callAnthropic({ res, key, model, messages });
     } else if (provider === 'claudecode') {
-      await callClaudeCode({ res, token: key, model, messages, stickerGallery, thinking });
+      await callClaudeCode({ res, token: key, model, messages, stickerGallery, thinking, withMemory });
     } else if (provider === 'codexcli') {
       await callCodexCli({ res, model, messages });
     } else {

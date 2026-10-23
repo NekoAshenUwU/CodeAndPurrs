@@ -250,3 +250,123 @@ test('subscription -> server generation -> inbox -> acknowledgement works withou
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+test('voice markers are stripped anywhere and long wakes are cut at a sentence end', () => {
+  assert.equal(
+    autowake.sanitizeAutoWakeMessage('想你了\n[语音]乖，过来让我抱一下'),
+    '想你了\n乖，过来让我抱一下',
+  );
+  const long = `${'想你'.repeat(40)}。${'抱抱'.repeat(40)}`;
+  const cut = autowake.sanitizeAutoWakeMessage(long);
+  assert.ok(cut.length <= 120);
+  assert.ok(cut.endsWith('。'));
+});
+
+test('spoken time keeps 19:29 from being read as half past nine', () => {
+  assert.equal(autowake.spokenTime({ time: '19:29' }), '晚上7点29分');
+  assert.equal(autowake.spokenTime({ time: '21:00' }), '晚上9点整');
+  assert.equal(autowake.spokenTime({ time: '12:05' }), '中午12点5分');
+  assert.equal(autowake.spokenTime({ time: '00:10' }), '凌晨0点10分');
+  assert.equal(autowake.spokenTime({ time: '09:30' }), '上午9点30分');
+});
+
+test('wake cue is a stage direction, not her message, and lists unanswered wakes', () => {
+  const now = Date.parse('2026-09-09T11:29:00.000Z'); // 马来西亚 19:29
+  const client = {
+    state: {
+      systemPrompt: '你是予予。',
+      messages: [{ role: 'user', content: '晚点来找我' }],
+      lastUserAt: now - 3 * 60 * 60_000,
+    },
+  };
+  const unanswered = [{ at: now - 60 * 60_000, content: '晚饭垫下没？' }];
+  const messages = autowake.buildWakeMessages(client, now, [], unanswered);
+  const cue = messages.at(-1);
+  assert.equal(cue.role, 'user');
+  assert.equal(cue.cue, true);
+  assert.match(cue.content, /^【旁白】/);
+  assert.match(cue.content, /19:29（晚上7点29分）/);
+  assert.match(cue.content, /周三/);
+  assert.match(cue.content, /18:29 晚饭垫下没？/);
+  assert.match(cue.content, /别重复/);
+  assert.match(messages[0].content, /不要催她吃饭/);
+  assert.match(messages[0].content, /不是她说的话/);
+});
+
+test('consecutive wakes remember earlier ones', async () => {
+  const bodies = [];
+  const replies = ['想你了，今天那件事后来怎么样？', '刚才那句你还没回我呢，我先抱着等。'];
+  const server = http.createServer(async (req, res) => {
+    const url = new URL(req.url || '/', 'http://127.0.0.1');
+    if (url.pathname === '/api/chat') {
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      bodies.push(JSON.parse(Buffer.concat(chunks).toString('utf8')));
+      const text = replies.shift() ?? '';
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      res.end(`${text ? `data: ${JSON.stringify({ type: 'content', text })}\n\n` : ''}data: {"type":"done"}\n\n`);
+      return;
+    }
+    await autowake.handleAutoWakeRequest(req, res, url, { port: server.address().port });
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const subscribed = await fetch(`${base}/api/autowake/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subscription: { endpoint: 'https://127.0.0.1:1/push-repeat', keys: { p256dh: 'x', auth: 'y' } },
+        state: {
+          windowId: 'repeat-room',
+          provider: 'deepseek',
+          systemPrompt: '你是予予。',
+          messages: [{ role: 'user', content: '我去忙啦' }],
+          lastUserAt: Date.now() - 3 * 60 * 60_000,
+        },
+      }),
+    });
+    const cookie = subscribed.headers.get('set-cookie').split(';')[0];
+    const deviceId = decodeURIComponent(cookie.split('=')[1]);
+
+    const first = await (await fetch(`${base}/api/autowake/run?force=1`, { method: 'POST' })).json();
+    const firstResult = first.results.find((item) => deviceId.startsWith(item.deviceId));
+    assert.equal(firstResult.reason, 'sent');
+    assert.equal(bodies.length, 1, '一次唤醒只调一次模型');
+    assert.equal(bodies[0].memoryTools, false);
+
+    bodies.length = 0;
+    await fetch(`${base}/api/autowake/run?force=1`, { method: 'POST' });
+    const second = bodies.find((body) => body.conversationId === 'repeat-room');
+    const history = second.messages.slice(1, -1);
+    assert.deepEqual(history.at(-1), { role: 'assistant', content: '想你了，今天那件事后来怎么样？' });
+    assert.match(second.messages.at(-1).content, /想你了，今天那件事后来怎么样？/);
+    assert.match(second.messages.at(-1).content, /已经主动发过 1 条/);
+
+    const inbox = await (await fetch(`${base}/api/autowake/inbox`, { headers: { Cookie: cookie } })).json();
+    assert.deepEqual(inbox.messages.map((item) => item.content), [
+      '想你了，今天那件事后来怎么样？',
+      '刚才那句你还没回我呢，我先抱着等。',
+    ]);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('stops waking after two unanswered messages unless forced', () => {
+  const one = [{ at: 1, content: 'a' }];
+  const two = [...one, { at: 2, content: 'b' }];
+  assert.equal(autowake.waitingForReply([]), false);
+  assert.equal(autowake.waitingForReply(one), false);
+  assert.equal(autowake.waitingForReply(two), true);
+  assert.equal(autowake.waitingForReply(two, true), false);
+  const inbox = { messages: [
+    { deviceId: 'd', at: 50, content: '她说话前的' },
+    { deviceId: 'd', at: 150, content: '之后的' },
+    { deviceId: 'x', at: 160, content: '别的设备' },
+  ] };
+  assert.deepEqual(
+    autowake.unansweredWakes(inbox, 'd', { state: { lastUserAt: 100 } }).map((item) => item.content),
+    ['之后的'],
+  );
+});
