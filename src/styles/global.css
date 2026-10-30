@@ -6939,3 +6939,14 @@ html.chat-lock body {
   .hp-controls__play img { animation: none !important; }
   .his-playlist.is-playing .aurora { opacity: 0.2; }
 }
+
+/* ===== 2026-10-30 老婆要求：顶栏、气泡的字整体小一号 ===== */
+.chat-head { gap: 8px; }
+.chat-head__back { width: 34px; height: 34px; font-size: 1.5rem; }
+.chat-head__name { font-size: 0.88rem; }
+.chat-head__sub { font-size: 0.56rem; }
+.chat-head .model-chip { padding: 5px 10px; font-size: 0.9rem; -webkit-text-stroke-width: 0.45px; }
+.chat-head__save,
+.chat-head__restore { height: 30px; min-width: 42px; padding: 0 9px; font-size: 0.7rem; }
+.chat-head__clear { width: 32px; height: 32px; font-size: 0.9rem; }
+.bubble { font-size: 0.8rem; line-height: 1.6; }
