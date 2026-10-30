@@ -1181,6 +1181,28 @@ function ChatRoom({
   const scrollFrameRef = useRef<number | null>(null);
   const scrollToReplyRef = useRef(true);
   const [nearLatest, setNearLatest] = useState(true);
+
+  // 聊天页锁住整页滚动：安卓键盘收起后，浏览器常把整页留在被推上去的位置，
+  // 顶栏被切掉一截、输入框下面空出一块。只让消息列表自己滚，整页永远回到顶。
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add('chat-lock');
+    const resetPage = () => {
+      if (window.scrollY !== 0 || window.scrollX !== 0) window.scrollTo(0, 0);
+    };
+    const onFocusOut = () => window.setTimeout(resetPage, 60);
+    const vv = window.visualViewport;
+    vv?.addEventListener('resize', resetPage);
+    document.addEventListener('focusout', onFocusOut);
+    window.addEventListener('orientationchange', resetPage);
+    resetPage();
+    return () => {
+      root.classList.remove('chat-lock');
+      vv?.removeEventListener('resize', resetPage);
+      document.removeEventListener('focusout', onFocusOut);
+      window.removeEventListener('orientationchange', resetPage);
+    };
+  }, []);
   const photoFileRef = useRef<HTMLInputElement | null>(null);
   // 离开 CodeAndPurrs 看其它 App 后，回到网页的第一瞬间锁住上一帧。
   // 之后即使老婆打开输入法慢慢打字，也不会把真正想给 AI 看的画面覆盖掉。

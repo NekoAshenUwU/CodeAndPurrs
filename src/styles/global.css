@@ -1482,6 +1482,14 @@ a {
   background: var(--chat-bg-image, url("/rooms/purr-channel.webp")) center / cover no-repeat;
 }
 
+/* 聊天页期间整页不许滚（只滚消息列表），键盘收起后不会把顶栏推出屏幕 */
+html.chat-lock,
+html.chat-lock body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 /* ---------- 顶栏：钉死在视口顶部，调窄一点(老婆要求) ---------- */
 .chat-head {
   position: fixed;
@@ -4166,6 +4174,9 @@ a {
 
 /* 用户气泡里的「改一下」铅笔 */
 .bubble--user { position: relative; }
+/* 气泡外层 .bubble-stack 本身是按内容收缩的，气泡再拿它的 82% 当上限，
+   等于每次都比自己的字窄一截 → 几个字也被挤成两行。上限交给外层就好。 */
+.bubble-stack .bubble--user { max-width: 100%; }
 .bubble__text { white-space: pre-wrap; }
 /* 我消息左边那颗固定的编辑按钮：圆形、好戳，不再藏在气泡里 */
 .bubble-edit-side {
