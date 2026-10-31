@@ -302,6 +302,34 @@ function SpotifyMusicCard({
 }
 
 // 思考链折叠卡片：流式思考时自动展开，思考结束自动收起。
+// 思考流里后端插的「🔧 工具名　✓ / ✗ 没成功」行 → 单独的工具胶囊，跟思考文字分开。
+const TOOL_TRACE_RE = /🔧 ([^\n]*?)(?:\u3000(✓|✗ 没成功))?(?=\n|$)/g;
+function toolChip(key: string, state: string, name: string, done?: string) {
+  return (
+    <span key={key} className={`think-tool ${state}`}>
+      <span className="think-tool__icon" aria-hidden="true">🔧</span>
+      <span className="think-tool__name">{name}</span>
+      <span className="think-tool__state">{done ? (done === '✓' ? '✓ 完成' : '✗ 没成功') : '…'}</span>
+    </span>
+  );
+}
+function renderThinkingWithTools(text: string) {
+  const out: (string | ReturnType<typeof toolChip>)[] = [];
+  let last = 0;
+  let i = 0;
+  for (const m of text.matchAll(TOOL_TRACE_RE)) {
+    const at = m.index ?? 0;
+    const before = text.slice(last, at).replace(/\n+$/, '\n');
+    if (before.trim()) out.push(before);
+    const state = m[2] ? (m[2] === '✓' ? 'is-ok' : 'is-err') : 'is-pending';
+    out.push(toolChip(`tool-${i++}`, state, m[1], m[2]));
+    last = at + m[0].length;
+  }
+  const rest = text.slice(last).replace(/^\n+/, '');
+  if (rest) out.push(rest);
+  return out;
+}
+
 function ThinkingCard({ text, streaming, ms }: { text: string; streaming: boolean; ms?: number }) {
   const [open, setOpen] = useState(streaming);
   const [hasNewReasoning, setHasNewReasoning] = useState(false);
@@ -371,7 +399,7 @@ function ThinkingCard({ text, streaming, ms }: { text: string; streaming: boolea
           className={`think-card__body${streaming ? ' is-streaming' : ''}`}
           onScroll={onReasoningScroll}
         >
-          {text}
+          {renderThinkingWithTools(text)}
         </div>
       ) : null}
       {open && streaming && hasNewReasoning ? (
