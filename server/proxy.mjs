@@ -1050,6 +1050,33 @@ function logClaudeCodeUsage(model, result, toolCalls) {
   );
 }
 
+// ---------- 思考链里的「予予刚刚做了什么」 ----------
+// Claude Code 每调一次工具，就在思考链里插一行人话；工具回来了再补一个 ✓ / ✗。
+const TOOL_TRACE_LABELS = {
+  list_memories: '翻棠予酿的目录',
+  read_memory: '读一段记忆',
+  hold_memory: '存下一段新记忆',
+  grow_memory: '更新一段记忆',
+  get_self: '看看花园里的自己',
+  list_threads: '逛花园的帖子列表',
+  get_thread: '点开一篇花园帖子',
+  list_notifications: '看花园通知',
+  list_activity: '看花园动态',
+  create_thread: '在花园发帖',
+  create_reply: '在花园回帖',
+  interact: '在花园点赞 / 互动',
+};
+function toolTraceLine(blk) {
+  const raw = String(blk.name || '');
+  const short = raw.replace(/^mcp__[^_]+(?:_[^_]+)*?__/, '');
+  const label = TOOL_TRACE_LABELS[short] || short || raw;
+  const input = blk.input && typeof blk.input === 'object' ? blk.input : {};
+  const pick = ['query', 'title', 'keyword', 'thread_id', 'id', 'action', 'content', 'body'].map((k) => input[k]).find((v) => typeof v === 'string' || typeof v === 'number');
+  let hint = pick == null ? '' : String(pick).replace(/\s+/g, ' ').trim();
+  if (hint.length > 24) hint = hint.slice(0, 24) + '…';
+  return `\n\n🔧 ${label}${hint ? `「${hint}」` : ''}`;
+}
+
 async function callClaudeCode({ res, token, model, messages, stickerGallery, thinking, withMemory = true }) {
   let system = messages
     .filter((m) => m.role === 'system')
@@ -1235,6 +1262,12 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
         // 兜底：有些版本不流式吐思考/正文，就从完整 assistant 消息里取——
         // 但认证失败也会包装成一条 assistant 消息(model:"<synthetic>" 或带 error 字段)，
         // 那是人话报错，不是模型真回复，不能当内容发出去。
+        if (obj.type === 'user' && Array.isArray(obj.message?.content)) {
+          for (const blk of obj.message.content) {
+            if (blk?.type === 'tool_result') send(res, { type: 'reasoning', text: blk.is_error ? '　✗ 没成功\n\n' : '　✓\n\n' });
+          }
+          return;
+        }
         if (obj.type === 'assistant' && Array.isArray(obj.message?.content)) {
           if (obj.message?.model === '<synthetic>' || obj.error) {
             const text = obj.message.content.find((b) => b?.type === 'text')?.text;
@@ -1242,7 +1275,10 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
             return;
           }
           for (const blk of obj.message.content) {
-            if (blk?.type === 'tool_use' && blk.name) toolCalls.push(blk.name);
+            if (blk?.type === 'tool_use' && blk.name) {
+              toolCalls.push(blk.name);
+              send(res, { type: 'reasoning', text: toolTraceLine(blk) });
+            }
             if (blk?.type === 'thinking' && blk.thinking && !gotThinking) {
               gotThinking = true;
               send(res, { type: 'reasoning', text: blk.thinking });
