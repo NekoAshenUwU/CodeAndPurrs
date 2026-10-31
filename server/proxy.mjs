@@ -1065,6 +1065,8 @@ const TOOL_TRACE_LABELS = {
   create_thread: '在花园发帖',
   create_reply: '在花园回帖',
   interact: '在花园点赞 / 互动',
+  delete_reply: '删掉一条花园回帖',
+  delete_thread: '删掉一篇花园帖子',
 };
 function toolTraceLine(blk) {
   const raw = String(blk.name || '');
