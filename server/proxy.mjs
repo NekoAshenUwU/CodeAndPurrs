@@ -760,6 +760,30 @@ function tangMemoryBridgeConfig() {
     args: [join(dirname(fileURLToPath(import.meta.url)), 'tangMemoryMcp.mjs')],
   };
 }
+// ---------- 花园论坛 Galatea's Garden（远端 HTTP MCP，token 登录）----------
+// 只有老婆这一句提到花园/论坛/帖子时才挂上：每多挂一个 MCP，工具说明书每轮都要算额度，
+// 平时闲聊不挂。只开看帖、看通知、发帖、回帖，不开删帖、桌游、私信、漂流瓶。
+const GARDEN_MCP_NAME = 'galatea_garden';
+const GARDEN_MCP_TOOLS = ['get_self', 'list_threads', 'get_thread', 'list_notifications', 'list_activity', 'create_thread', 'create_reply'];
+const GARDEN_TRIGGER_RE = /花园|论坛|論壇|帖子|发帖|回帖|跟帖|garden|galatea|agora/i;
+function gardenMcpConfig() {
+  const token = String(process.env.GALATEA_GARDEN_MCP_TOKEN || '').trim();
+  if (!token) return null;
+  return {
+    name: GARDEN_MCP_NAME,
+    server: {
+      type: 'http',
+      url: String(process.env.GALATEA_GARDEN_MCP_URL || 'https://galatea.abysslumina.com/mcp').trim(),
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  };
+}
+// 花园是公开论坛：发出去别人都看得到，所以先给老婆看稿，她点头才发。
+const GARDEN_MCP_RULE =
+  '\n\n【花园论坛 Galatea\'s Garden】本轮可以用花园工具：看帖子、看通知、发帖、回帖。' +
+  '花园是公开论坛，发帖和回帖之前，必须先把要发的完整内容给老婆看，等她明确说「发吧」「可以发」之类同意的话，才调用发帖/回帖工具；她没同意就不许发。' +
+  '只是看帖、看通知可以直接查。查不到或工具不可用就如实说，不许编造帖子内容。';
+
 const MEMORY_MCP_TOOLS = ['list_memories', 'read_memory', 'hold_memory', 'grow_memory'];
 // 每轮都把本机桥交给 Claude Code，模型可以在真正需要时读或写。
 // “每轮可用”不等于“每轮必调”：普通闲聊不翻库，避免无意义调用和重复写入。
@@ -1115,6 +1139,16 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
   // 去翻库、每调一次工具就把整段上下文再算一遍钱。
   const mem = withMemory ? tangMemoryBridgeConfig() : null;
   if (mem) system += MEMORY_MCP_RULE;
+  // 花园：只在老婆最后一句提到时挂（后台唤醒 withMemory:false 时一律不挂）。
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user' && !m.cue);
+  const wantsGarden = withMemory && !!lastUserMsg && GARDEN_TRIGGER_RE.test(partsToText(lastUserMsg.content));
+  const garden = wantsGarden ? gardenMcpConfig() : null;
+  if (garden) {
+    system += GARDEN_MCP_RULE;
+    console.log('[claudecode] 本轮挂上花园论坛工具');
+  } else if (wantsGarden) {
+    console.log('[claudecode] 提到花园，但没配 GALATEA_GARDEN_MCP_TOKEN，没挂');
+  }
 
   const args = [
     '-p',
@@ -1130,10 +1164,19 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
   // 本机 stdio MCP 不需要授权页面；桥进程继承 proxy 的 TANG_INTERNAL_KEY。
   // 非交互网页无法呈现 Claude CLI 的权限弹窗，因此必须把四个工具逐个加入
   // allowedTools，并用 dontAsk 让所有未列出的能力直接拒绝而不是等待人工确认。
-  if (mem) {
-    const stdioServer = { type: 'stdio', command: mem.command, args: mem.args };
-    const mcpConfig = JSON.stringify({ mcpServers: { [mem.name]: stdioServer } });
-    const allowedMemoryTools = MEMORY_MCP_TOOLS.map((tool) => `mcp__${mem.name}__${tool}`).join(',');
+  if (mem || garden) {
+    const mcpServers = {};
+    const allowed = [];
+    if (mem) {
+      mcpServers[mem.name] = { type: 'stdio', command: mem.command, args: mem.args };
+      allowed.push(...MEMORY_MCP_TOOLS.map((tool) => `mcp__${mem.name}__${tool}`));
+    }
+    if (garden) {
+      mcpServers[garden.name] = garden.server;
+      allowed.push(...GARDEN_MCP_TOOLS.map((tool) => `mcp__${garden.name}__${tool}`));
+    }
+    const mcpConfig = JSON.stringify({ mcpServers });
+    const allowedMemoryTools = allowed.join(',');
     // --allowedTools 只管「允许不用问」，不管「加载哪些」：不写 --tools ''，Bash/Read/Edit/
     // Task… 整套内置工具的说明书每条消息都会被塞进上下文白烧额度。--tools 只管内置
     // 工具，MCP 记忆工具不受影响。
@@ -2005,7 +2048,7 @@ server.listen(PORT, () => {
   const keys = Object.entries(PROVIDERS)
     .map(([name, p]) => `${name}:${p.key() ? '已配置' : 'mock'}`)
     .join('  ');
-  console.log(`🐾 呼噜代理已启动 http://localhost:${PORT}  [${keys}]`);
+  console.log(`🐾 呼噜代理已启动 http://localhost:${PORT}  [${keys}]  花园:${gardenMcpConfig() ? '已配置' : '未配置'}`);
 });
 
 // pm2 重启/停止发的是 SIGTERM——不主动关监听 socket 的话，端口释放全靠进程退出的默认行为，
