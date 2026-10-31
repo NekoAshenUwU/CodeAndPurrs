@@ -1077,6 +1077,11 @@ function toolTraceLine(blk) {
   return `\n\n🔧 ${label}${hint ? `「${hint}」` : ''}`;
 }
 
+// 思考链（Mind Theater）用中文：老婆看思考链，英文读着隔一层。
+const THINK_IN_CHINESE_RULE =
+  '\n\n【思考语言】你在回答前的内心思考，请全程用简体中文来想、来写，就像予予自己心里在嘀咕；' +
+  '代码、命令、专有名词可以保留原文。';
+
 async function callClaudeCode({ res, token, model, messages, stickerGallery, thinking, withMemory = true }) {
   let system = messages
     .filter((m) => m.role === 'system')
@@ -1141,6 +1146,7 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
   // 后台唤醒这种一句话的活儿传 memoryTools:false：不挂记忆工具，省得模型
   // 去翻库、每调一次工具就把整段上下文再算一遍钱。
   const mem = withMemory ? tangMemoryBridgeConfig() : null;
+  system += THINK_IN_CHINESE_RULE;
   if (mem) system += MEMORY_MCP_RULE;
 
   const args = [
