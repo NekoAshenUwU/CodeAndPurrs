@@ -28,7 +28,7 @@ function toolChip(key: string, state: string, name: string, done?: string) {
     <span key={key} className={\`think-tool \${state}\`}>
       <span className="think-tool__icon" aria-hidden="true">🔧</span>
       <span className="think-tool__name">{name}</span>
-      <span className="think-tool__state">{done ? (done === '✓' ? '✓ 完成' : '✗ 没成功') : '…'}</span>
+      <span className="think-tool__state">{done ? (done === '✓' ? '✓' : '✗ 没成功') : '…'}</span>
     </span>
   );
 }
