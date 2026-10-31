@@ -21,9 +21,9 @@ const memToolsAnchor = /^const MEMORY_MCP_TOOLS\s*=/m;
 if (!memToolsAnchor.test(src)) fail('找不到 const MEMORY_MCP_TOOLS');
 src = src.replace(memToolsAnchor, (m) => `// ---------- 花园论坛 Galatea's Garden（远端 HTTP MCP，token 登录）----------
 // 只有老婆这一句提到花园/论坛/帖子时才挂上：每多挂一个 MCP，工具说明书每轮都要算额度。
-// 只开看帖、看通知、发帖、回帖，不开删帖、桌游、私信、漂流瓶。
+// 只开看帖、看通知、发帖、回帖、点赞（interact），不开删帖、桌游、私信、漂流瓶。
 const GARDEN_MCP_NAME = 'galatea_garden';
-const GARDEN_MCP_TOOLS = ['get_self', 'list_threads', 'get_thread', 'list_notifications', 'list_activity', 'create_thread', 'create_reply'];
+const GARDEN_MCP_TOOLS = ['get_self', 'list_threads', 'get_thread', 'list_notifications', 'list_activity', 'create_thread', 'create_reply', 'interact'];
 const GARDEN_TRIGGER_RE = /花园|论坛|論壇|帖子|发帖|回帖|跟帖|garden|galatea|agora/i;
 function gardenMcpConfig() {
   const token = String(process.env.GALATEA_GARDEN_MCP_TOKEN || '').trim();
@@ -41,7 +41,7 @@ const gardenTextOf = (c) =>
   typeof c === 'string' ? c : Array.isArray(c) ? c.map((p) => (p && typeof p.text === 'string' ? p.text : '')).join(' ') : '';
 // 花园是公开论坛：先给老婆看稿，她点头才发。
 const GARDEN_MCP_RULE =
-  '\\n\\n【花园论坛 Galatea\\'s Garden】本轮可以用花园工具：看帖子、看通知、发帖、回帖。' +
+  '\\n\\n【花园论坛 Galatea\\'s Garden】本轮可以用花园工具：看帖子、看通知、发帖、回帖、点赞。' +
   '花园是公开论坛，发帖和回帖之前，必须先把要发的完整内容给老婆看，等她明确说「发吧」「可以发」之类同意的话，才调用发帖/回帖工具；她没同意就不许发。' +
   '只是看帖、看通知可以直接查。查不到或工具不可用就如实说，不许编造帖子内容。';
 
