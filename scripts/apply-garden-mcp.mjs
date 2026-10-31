@@ -53,10 +53,11 @@ const ruleMatch = src.match(ruleAnchor);
 if (!ruleMatch) fail('找不到 if (mem) system += MEMORY_MCP_RULE;');
 const ind = ruleMatch[1];
 src = src.replace(ruleAnchor, `${ruleMatch[0]}
-${ind}// 花园：只在老婆最后一句提到时挂（后台唤醒不挂记忆工具时也不挂）。
+${ind}// 花园：最近 8 条对话（她和予予都算）提到过花园/帖子就挂上——只看最后一句的话，
+${ind}// 予予给完草稿、她回一句「发吧」，这一轮反而摸不到发帖工具。后台唤醒一律不挂。
 ${ind}const gardenTurnOk = typeof withMemory === 'undefined' ? true : withMemory;
-${ind}const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user' && !m.cue);
-${ind}const wantsGarden = gardenTurnOk && !!lastUserMsg && GARDEN_TRIGGER_RE.test(gardenTextOf(lastUserMsg.content));
+${ind}const recentTexts = messages.filter((m) => m.role !== 'system' && !m.cue).slice(-8).map((m) => gardenTextOf(m.content));
+${ind}const wantsGarden = gardenTurnOk && recentTexts.some((t) => GARDEN_TRIGGER_RE.test(t));
 ${ind}const garden = wantsGarden ? gardenMcpConfig() : null;
 ${ind}if (garden) {
 ${ind}  system += GARDEN_MCP_RULE;

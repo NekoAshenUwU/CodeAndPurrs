@@ -1139,9 +1139,10 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
   // 去翻库、每调一次工具就把整段上下文再算一遍钱。
   const mem = withMemory ? tangMemoryBridgeConfig() : null;
   if (mem) system += MEMORY_MCP_RULE;
-  // 花园：只在老婆最后一句提到时挂（后台唤醒 withMemory:false 时一律不挂）。
-  const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user' && !m.cue);
-  const wantsGarden = withMemory && !!lastUserMsg && GARDEN_TRIGGER_RE.test(partsToText(lastUserMsg.content));
+  // 花园：最近 8 条对话（她和予予都算）提到过花园/帖子就挂上——只看最后一句的话，
+  // 予予给完草稿、她回一句「发吧」，这一轮反而摸不到发帖工具。后台唤醒一律不挂。
+  const recentTexts = messages.filter((m) => m.role !== 'system' && !m.cue).slice(-8).map((m) => partsToText(m.content));
+  const wantsGarden = withMemory && recentTexts.some((t) => GARDEN_TRIGGER_RE.test(t));
   const garden = wantsGarden ? gardenMcpConfig() : null;
   if (garden) {
     system += GARDEN_MCP_RULE;
