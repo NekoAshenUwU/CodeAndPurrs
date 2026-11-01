@@ -6945,9 +6945,9 @@ a {
 .bubble--user::after {
   left: -6px;
   top: -12px;
-  width: 50px;
-  height: 30px;
-  background-image: url("/ears/ears-cat.png");
+  width: 54px;
+  height: 35px;
+  background-image: url("/ears/ears-cat-v2.png");
   transform: rotate(-26deg);
 }
 .bubble--bot::after {
