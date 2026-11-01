@@ -4,7 +4,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
 const CSS = 'src/styles/global.css';
-const MARK = 'bubble-ears-v1';
+const MARK = 'bubble-ears-v2';
 for (const f of ['public/ears/ears-cat.png', 'public/ears/ears-leopard.png']) {
   if (!existsSync(f)) {
     console.error(`没改任何东西：缺图片 ${f}`);
@@ -31,16 +31,16 @@ css += `
   background-repeat: no-repeat;
 }
 .bubble--user::after {
-  right: -17px;
-  top: -19px;
+  right: -6px;
+  top: -12px;
   width: 50px;
   height: 30px;
   background-image: url("/ears/ears-cat.png");
   transform: rotate(36deg);
 }
 .bubble--bot::after {
-  left: -17px;
-  top: -16px;
+  left: -6px;
+  top: -10px;
   width: 52px;
   height: 26px;
   background-image: url("/ears/ears-leopard.png");
