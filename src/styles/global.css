@@ -6930,7 +6930,7 @@ a {
 }
 
 
-/* ===== bubble-ears-v2：气泡戴耳朵（老婆 = 猫耳，予予 = 雪豹耳），斜跨在气泡的上圆角 ===== */
+/* ===== bubble-ears-v3：气泡戴耳朵（老婆 = 猫耳，予予 = 雪豹耳），斜跨在气泡的上圆角 ===== */
 .bubble-row { padding-top: 10px; }
 .bubble--user::after,
 .bubble--bot::after {
@@ -6943,8 +6943,8 @@ a {
   background-repeat: no-repeat;
 }
 .bubble--user::after {
-  right: -6px;
-  top: -12px;
+  right: -9px;
+  top: -13px;
   width: 50px;
   height: 30px;
   background-image: url("/ears/ears-cat.png");
