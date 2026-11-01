@@ -7062,3 +7062,14 @@ a {
 }
 .think-card__body .think-tool.is-ok .think-tool__state { background: none; color: #8cc3ae; }
 .think-card__body .think-tool.is-err .think-tool__state { background: none; color: #d08aa4; }
+
+
+/* ===== think-tool-style-v5：玫瑰粉 + 淡白光，蓝紫底上也不费眼 ===== */
+.think-card__body .think-tool {
+  font-family: "ShunFengFull", var(--round);
+  color: #b4528a;
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.75), 0 0 1px rgba(255, 255, 255, 0.9);
+}
+.think-card__body .think-tool::before { color: #d48cb4; }
+.think-card__body .think-tool.is-ok .think-tool__state { color: #4f9c82; }
+.think-card__body .think-tool.is-err .think-tool__state { color: #c0577c; }

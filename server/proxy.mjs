@@ -1244,6 +1244,12 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
       let apiError = null;
       const toolCalls = [];
 
+      // 同一个工具调用 / 结果可能被吐两次，按 id 只显示一次
+
+      const seenToolUseIds = new Set();
+
+      const seenToolResultIds = new Set();
+
       const handleLine = (line) => {
         const s = line.trim();
         if (!s) return;
@@ -1272,7 +1278,10 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
         // 那是人话报错，不是模型真回复，不能当内容发出去。
         if (obj.type === 'user' && Array.isArray(obj.message?.content)) {
           for (const blk of obj.message.content) {
-            if (blk?.type === 'tool_result') send(res, { type: 'reasoning', text: blk.is_error ? '　✗ 没成功\n\n' : '　✓\n\n' });
+            if (blk?.type === 'tool_result' && !seenToolResultIds.has(blk.tool_use_id)) {
+              seenToolResultIds.add(blk.tool_use_id);
+              send(res, { type: 'reasoning', text: blk.is_error ? '　✗ 没成功\n\n' : '　✓\n\n' });
+            }
           }
           return;
         }
@@ -1285,7 +1294,10 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
           for (const blk of obj.message.content) {
             if (blk?.type === 'tool_use' && blk.name) {
               toolCalls.push(blk.name);
-              send(res, { type: 'reasoning', text: toolTraceLine(blk) });
+              if (!seenToolUseIds.has(blk.id)) {
+                seenToolUseIds.add(blk.id);
+                send(res, { type: 'reasoning', text: toolTraceLine(blk) });
+              }
             }
             if (blk?.type === 'thinking' && blk.thinking && !gotThinking) {
               gotThinking = true;
