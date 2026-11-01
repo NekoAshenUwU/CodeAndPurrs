@@ -6951,3 +6951,32 @@ a {
 .think-card__body .think-tool .think-tool__state { color: #ffd6ea; }
 .bubble-time { color: #e4dbf7; text-shadow: 0 0 4px rgba(60, 40, 110, 0.6); }
 /* ===== night-text-end ===== */
+
+
+/* ===== night-text-start-2：Mind Theater 标题 + 「＋」菜单 ===== */
+.think-card__brand {
+  background: linear-gradient(135deg, #ffffff 0%, #ffe1f0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 0.4px #ffffff;
+  filter: drop-shadow(0 0 4px rgba(255, 170, 215, 0.95)) drop-shadow(0 0 10px rgba(255, 150, 205, 0.5));
+}
+.think-card__label,
+.think-card__chevron {
+  color: #ffffff;
+  text-shadow: 0 0 5px rgba(255, 170, 215, 0.95), 0 0 12px rgba(255, 150, 205, 0.5);
+}
+.chat-more {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: linear-gradient(160deg, rgba(92, 70, 160, 0.62), rgba(54, 44, 110, 0.7));
+  box-shadow: 0 14px 32px rgba(10, 6, 40, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.chat-more button {
+  color: #ffffff;
+  font-family: "GongZhuFull", "ShunFeng", var(--round);
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 5px rgba(255, 170, 215, 0.95), 0 0 12px rgba(255, 150, 205, 0.45);
+}
+.chat-more button:hover { background: rgba(255, 255, 255, 0.12); }
+/* ===== night-text-end ===== */
