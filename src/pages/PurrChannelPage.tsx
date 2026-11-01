@@ -1600,8 +1600,9 @@ function ChatRoom({
     const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
     const shouldAttachLive = liveCtx && Date.now() - lastCtxAttachRef.current > THREE_HOURS_MS;
     if (shouldAttachLive) lastCtxAttachRef.current = Date.now();
-    const dynamic = buildTimeContext() + (shouldAttachLive ? liveCtx : '');
-
+    // 窗口内其它消息只附「猫爪足迹」那一行（~100 tokens），不然予予这 3 小时里都看不到她的手机
+    const pawLineOnly = liveCtx.match(/\n\n【猫爪足迹[^\n]*/)?.[0] ?? '';
+    const dynamic = buildTimeContext() + (shouldAttachLive ? liveCtx : pawLineOnly);
     for (let i = 0; i < slice.length; i++) {
       const t = slice[i];
       if (t.meme) {
