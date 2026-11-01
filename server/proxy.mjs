@@ -1174,7 +1174,8 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
     }
     if (garden) {
       mcpServers[garden.name] = garden.server;
-      allowed.push(...GARDEN_MCP_TOOLS.map((tool) => `mcp__${garden.name}__${tool}`));
+      // 整个花园服务器放行（mcp__<server> 这条规则涵盖它所有工具）
+      allowed.push(`mcp__${garden.name}`);
     }
     const mcpConfig = JSON.stringify({ mcpServers });
     const allowedMemoryTools = allowed.join(',');

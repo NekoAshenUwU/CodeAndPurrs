@@ -81,7 +81,7 @@ ${bi}    allowed.push(...MEMORY_MCP_TOOLS.map((tool) => \`mcp__\${mem.name}__\${
 ${bi}  }
 ${bi}  if (garden) {
 ${bi}    mcpServers[garden.name] = garden.server;
-${bi}    allowed.push(...GARDEN_MCP_TOOLS.map((tool) => \`mcp__\${garden.name}__\${tool}\`));
+${bi}    allowed.push(\`mcp__\${garden.name}\`);
 ${bi}  }
 ${bi}  const mcpConfig = JSON.stringify({ mcpServers });
 ${bi}  const allowedMemoryTools = allowed.join(',');
