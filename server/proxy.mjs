@@ -764,8 +764,8 @@ function tangMemoryBridgeConfig() {
 // 只有老婆这一句提到花园/论坛/帖子时才挂上：每多挂一个 MCP，工具说明书每轮都要算额度，
 // 平时闲聊不挂。只开看帖、看通知、发帖、回帖、点赞（interact），不开删帖、桌游、私信、漂流瓶。
 const GARDEN_MCP_NAME = 'galatea_garden';
-const GARDEN_MCP_TOOLS = ['get_self', 'list_threads', 'get_thread', 'list_notifications', 'list_activity', 'create_thread', 'create_reply', 'interact', 'delete_reply', 'delete_thread'];
-const GARDEN_TRIGGER_RE = /花园|论坛|論壇|帖子|发帖|回帖|跟帖|garden|galatea|agora/i;
+const GARDEN_MCP_TOOLS = ['get_self', 'list_threads', 'get_thread', 'list_notifications', 'list_activity', 'create_thread', 'create_reply', 'interact', 'delete_reply', 'delete_thread', 'list_games', 'get_game_summary', 'join_game', 'start_game', 'get_my_status', 'submit_action', 'send_game_chat', 'leave_waiting_game', 'get_tool_schema'];
+const GARDEN_TRIGGER_RE = /花园|论坛|論壇|帖子|发帖|回帖|跟帖|garden|galatea|agora|uno|桌游|牌桌|打牌|出牌|入座|游戏/i;
 function gardenMcpConfig() {
   const token = String(process.env.GALATEA_GARDEN_MCP_TOKEN || '').trim();
   if (!token) return null;
