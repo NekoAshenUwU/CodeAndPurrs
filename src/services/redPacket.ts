@@ -31,11 +31,12 @@ export function addPacket(from: Sender, amount: number, note: string): RedPacket
 // 记录，就是个固定数字)，棠棠和予予两边一样多。
 export const PRINCIPAL_AMOUNT = 5200;
 
-// 某一方口袋里累积了多少：本金 + 对方发的红包金额总和
+// 某一方口袋里有多少：本金 + 对方发给自己的 − 自己发给对方的
 export function balanceOf(who: Sender, list: RedPacket[] = loadPackets()): number {
   const senderOfOther: Sender = who === 'user' ? 'ai' : 'user';
-  const gifts = list.filter((p) => p.from === senderOfOther).reduce((sum, p) => sum + p.amount, 0);
-  return PRINCIPAL_AMOUNT + gifts;
+  const received = list.filter((p) => p.from === senderOfOther).reduce((sum, p) => sum + p.amount, 0);
+  const sent = list.filter((p) => p.from === who).reduce((sum, p) => sum + p.amount, 0);
+  return PRINCIPAL_AMOUNT + received - sent;
 }
 
 // 早期版本把"开局本金"当成两条普通红包记录塞进账本，会被当成载具浮出来。
