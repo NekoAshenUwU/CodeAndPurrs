@@ -6988,3 +6988,22 @@ a {
 .room-tile__img[src*="his-playlist"] {
   transform: scale(1.4);
 }
+
+
+/* ===== home-clarity-v3：紫灯柔光晕；全站去掉蓝色点击高亮 ===== */
+.room-tile__dot.is-ready {
+  background: radial-gradient(circle at 38% 35%, #ffffff 0%, #e6d6ff 30%, #b28cf2 70%, #9a6fe6 100%);
+  box-shadow:
+    0 0 0 1.5px rgba(255, 255, 255, 0.95),
+    0 0 8px 3px rgba(150, 95, 255, 0.85),
+    0 0 18px 7px rgba(175, 120, 255, 0.5);
+  animation: cp-dot-breathe 3.2s ease-in-out infinite;
+}
+@keyframes cp-dot-breathe {
+  0%, 100% { box-shadow: 0 0 0 1.5px rgba(255,255,255,0.95), 0 0 8px 3px rgba(150,95,255,0.85), 0 0 18px 7px rgba(175,120,255,0.5); }
+  50%      { box-shadow: 0 0 0 1.5px rgba(255,255,255,1), 0 0 11px 4px rgba(150,95,255,0.95), 0 0 24px 10px rgba(175,120,255,0.6); }
+}
+@media (prefers-reduced-motion: reduce) { .room-tile__dot.is-ready { animation: none; } }
+
+html, body, * { -webkit-tap-highlight-color: transparent; }
+*:focus:not(:focus-visible) { outline: none; }
