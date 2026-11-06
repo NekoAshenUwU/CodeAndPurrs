@@ -1050,6 +1050,14 @@ function logClaudeCodeUsage(model, result, toolCalls) {
   );
 }
 
+// ---------- 上网：Claude Code 自带的 WebSearch / WebFetch ----------
+const WEB_TOOLS_ON = String(process.env.CC_WEB_TOOLS || '').trim().toLowerCase() !== 'off';
+const WEB_TOOLS = 'WebSearch,WebFetch';
+const WEB_RULE =
+  '\n\n【上网】本轮可以用 WebSearch 搜索网页、用 WebFetch 打开网页。' +
+  '老婆问到新闻、天气、价格、营业时间、某个网页或你不确定的最新信息时，先查再答，并说清楚是从哪里看到的；' +
+  '普通聊天不用查。查不到或打不开就如实说，不许编造网页内容。';
+
 async function callClaudeCode({ res, token, model, messages, stickerGallery, thinking, withMemory = true }) {
   let system = messages
     .filter((m) => m.role === 'system')
@@ -1116,6 +1124,7 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
   const mem = withMemory ? tangMemoryBridgeConfig() : null;
   if (mem) system += MEMORY_MCP_RULE;
 
+  if (mem && WEB_TOOLS_ON) system += WEB_RULE;
   const args = [
     '-p',
     '--system-prompt', system || '你是予予。',
@@ -1138,9 +1147,9 @@ async function callClaudeCode({ res, token, model, messages, stickerGallery, thi
     // Task… 整套内置工具的说明书每条消息都会被塞进上下文白烧额度。--tools 只管内置
     // 工具，MCP 记忆工具不受影响。
     args.push(
-      '--tools', '',
+      '--tools', WEB_TOOLS_ON ? WEB_TOOLS : '',
       '--mcp-config', mcpConfig,
-      '--allowedTools', allowedMemoryTools,
+      '--allowedTools', WEB_TOOLS_ON ? `${allowedMemoryTools},${WEB_TOOLS}` : allowedMemoryTools,
       '--permission-mode', 'dontAsk',
     );
   } else {
