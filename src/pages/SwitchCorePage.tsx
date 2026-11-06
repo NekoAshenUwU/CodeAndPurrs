@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { BRAND_ORDER, MODEL_GROUPS } from '../data/models';
 import { loadMemories } from '../services/memory';
 import { loadDiary as fetchDiary, saveDiary as pushDiary } from '../services/diary';
+import { AutoWakeCard } from '../components/AutoWakeCard';
 import {
   brandOfModel,
   loadChatAvatar,
@@ -286,6 +287,7 @@ export function SwitchCorePage() {
           {diaryMsg ? <span className="diary-msg">{diaryMsg}</span> : null}
         </section>
 
+        <AutoWakeCard />
         <section className="switch-card">
           <h2 className="switch-card__title">默认模型</h2>
           <p className="switch-card__hint">新开的聊天窗会用这个模型；进了窗口还能在顶栏单独换。</p>

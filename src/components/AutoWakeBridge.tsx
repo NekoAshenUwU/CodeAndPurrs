@@ -59,7 +59,7 @@ function textOf(turn: StoredTurn): string {
   return String(turn.content || '').trim();
 }
 
-function latestState(): AutoWakeClientState | null {
+export function latestState(): AutoWakeClientState | null {
   const windows = readLocal<WindowMeta[]>(WINDOWS_KEY, []);
   const win = [...windows]
     .filter((item) => item?.id)
