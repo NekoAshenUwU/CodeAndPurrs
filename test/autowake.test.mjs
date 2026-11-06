@@ -256,9 +256,9 @@ test('voice markers are stripped anywhere and long wakes are cut at a sentence e
     autowake.sanitizeAutoWakeMessage('想你了\n[语音]乖，过来让我抱一下'),
     '想你了\n乖，过来让我抱一下',
   );
-  const long = `${'想你'.repeat(40)}。${'抱抱'.repeat(40)}`;
+  const long = `${'想你'.repeat(80)}。${'抱抱'.repeat(80)}`;
   const cut = autowake.sanitizeAutoWakeMessage(long);
-  assert.ok(cut.length <= 120);
+  assert.ok(cut.length <= 240);
   assert.ok(cut.endsWith('。'));
 });
 
