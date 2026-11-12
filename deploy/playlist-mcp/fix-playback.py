@@ -14,12 +14,39 @@ import py_compile, re, shutil, subprocess, sys, time
 from pathlib import Path
 
 TARGET = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/root/playlist-mcp/server.py")
-SERVICE = "codeandpurrs-mcp.service"
 MARK = "playlist-fix-v1"
+
+
+def find_service() -> str | None:
+    """找出真正在跑点歌工具的 systemd 服务（不靠猜名字）。"""
+    units = sorted(Path("/etc/systemd/system").glob("*.service"))
+    texts = {u.name: u.read_text(encoding="utf-8", errors="replace") for u in units}
+    # 1) 服务文件里直接写了 playlist-mcp
+    hits = [name for name, text in texts.items() if "playlist-mcp" in text]
+    if hits:
+        return hits[0]
+    # 2) 某个主 server.py 里 import 了 /root/playlist-mcp/server.py → 找跑这个目录的服务
+    for py in list(Path("/root").glob("*/server.py")) + [Path("/root/server.py")]:
+        try:
+            if py.resolve() == TARGET.resolve() or "playlist-mcp/server.py" not in py.read_text(encoding="utf-8", errors="replace"):
+                continue
+        except OSError:
+            continue
+        for name, text in texts.items():
+            if str(py) in text or str(py.parent) in text:
+                return name
+    return None
 
 def fail(why: str) -> None:
     print(f"没改任何东西：{why}")
     sys.exit(1)
+
+SERVICE = find_service() if len(sys.argv) == 1 else "test"
+if not SERVICE:
+    print("没改任何东西：找不到是哪个服务在跑点歌工具。把下面这几行截图给 CC：")
+    subprocess.run("grep -l -r 'playlist' /etc/systemd/system/*.service; systemctl list-units --type=service --all | grep -i -E 'mcp|playlist|purr'; grep -l 'playlist-mcp/server.py' /root/*/server.py /root/server.py", shell=True)
+    sys.exit(1)
+print(f"点歌工具跑在：{SERVICE}")
 
 src = TARGET.read_text(encoding="utf-8")
 if MARK in src:
